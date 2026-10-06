@@ -153,6 +153,26 @@ await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', {
     Рядом: `Count pill` удалён во всех инстансах сайдбара; `Show verification` истинно в сете и
     ложно во всех 9 инстансах; у дефолта текстового свойства `Body#769:1` текст расходится с тем,
     что нарисовано в варианте. **Источник истины — то, что нарисовано.**
+27. **В CSS нет длины штриха пунктира.** Пунктир 6/6 Figma Chrome рисует как 3/3: свойства
+    `stroke-dasharray` у `border` не существует. Решение — рамка оверлеем SVG (тогда и 1.5px, и 6/6
+    совпадают точно), но **фаза** пунктира всё равно не совпадёт: Figma начинает узор заново на
+    каждой стороне, а SVG ведёт его непрерывно по периметру (замерено: +3 / +4 / −2 / 0 px по
+    сторонам). Оверлей обязан рисоваться **после** контента, иначе кнопка внутри перекрывает его
+    целиком — так и вышло с первого раза (ноль пикселей рамки).
+28. **Скрытый компонент нельзя сверить визуально.** `Pharos/App/Offer terms` скрыт в Figma вместе
+    со всеми шестью инстансами, экспорт даёт PNG 1×1 — числа сняты с дерева узлов, рендера нет.
+    То же было у `Offer preview`. Пока дизайн не расчехлит компонент, пиксельная сверка невозможна,
+    и это надо помечать как непроверенное, а не считать закрытым.
+29. **В ассетах Figma бывают дефекты данных.** У бельгийского флага ведущая полоса задана
+    `#000000` — и в квадратном сете (`249:1668`), и в круглом (`198:1645`), то есть это уже
+    отгружено в `belgium.svg`. Порт ни при чём: экспорт верен, чинить надо дизайн и потом
+    переэкспортировать оба ассета.
+30. **UA-стили и preflight протекают в слоты.** `<button>` приносит `text-align: center` — текст
+    в слоте уезжал на 44px, пока не добавили `text-left`; `img { max-width: 100% }` из preflight
+    Tailwind молча обрезал круглый флаг 24px до 20px, хотя в Figma он переполняет слот (нужен
+    `max-w-none`). Ещё: текстовый слой клавиши в Figma — бокс 20px высотой при `lineHeight: 24`,
+    строка переполняет слой и чернила сидят на 2px ниже центра, так что флекс-центрирование даёт
+    другой результат, чем `items-start pt-[11px]`.
 
 ---
 
@@ -190,28 +210,28 @@ await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', {
 | Pharos/App/Driver profile | `769:10428` | 9 | `src/components/DriverProfile.tsx` (+ `DriverAvatar`) | done |
 | Pharos/Load card | `14:146` | 8 | `src/components/LoadCard.tsx` | done |
 | Pharos/Rate offer card | `384:368` | 8 | `src/components/RateOfferCard.tsx` | done |
-| Pharos/App/Offer route | `693:995` | 8 | — | todo |
+| Pharos/App/Offer route | `693:995` | 8 | `src/components/OfferRoute.tsx` | done |
 | Pharos/App/Day item | `2021:2666` | 8 | `src/components/DayItem.tsx` | done |
 | Pharos/Chat/Cargo context | `2188:8055` | 8 | `src/components/ChatCargoContext.tsx` | done |
 | Pharos/App/Trip steps | `2728:26593` | 8 | `src/components/TripSteps.tsx` (+ `ProgressStep`) | done |
-| Pharos/Select | `344:51` | 8 | — | todo |
+| Pharos/Select | `344:51` | 8 | `src/components/Select.tsx` — Closed / Open / Disabled | done |
 | Pharos/Country flag Rectangle | `249:1646` | 8 | `src/components/Flag.tsx` | done |
 | Pharos/App/Trip preparation | `2715:1617` | 7 | `src/components/TripPreparation.tsx` | done |
 | Pharos/App/Trip checklist | `2715:1596` | 7 | `src/components/TripChecklist.tsx` — только `State=Awaiting` (`2715:25520`), нужен Content=Request у Bottom sheet | review |
 | Pharos/Chat/Composer | `2188:7944` | 7 | `src/components/ChatComposer.tsx` | done |
-| Pharos/Empty details panel | `129:46` | 6 | — | todo |
-| Pharos/App/Offer terms | `693:1013` | 6 | — | todo |
+| Pharos/Empty details panel | `129:46` | 6 | `src/components/EmptyDetailsPanel.tsx` | done |
+| Pharos/App/Offer terms | `693:1013` | 6 | `src/components/OfferTerms.tsx` | done (без визуального эталона — скрыт в Figma) |
 | Pharos/App/Route summary | `671:977` | 6 | `src/components/RouteSummary.tsx` | done |
 | Pharos/Filter chip | `338:211` | 6 | `src/components/FilterChip.tsx` | done |
 | Pharos/Route summary | `26:27` | 4 | `src/components/RouteSummaryWeb.tsx` — мобильно-веб сводка страницы 21 (не путать с `671:977`) | done |
 | Pharos/Payment summary | `412:389` | 3 | `src/components/PaymentSummary.tsx` | done |
 | Pharos/App/Application progress | `734:426` | 3 | `src/components/ApplicationProgress.tsx` (+ `ProgressStep`) | done |
-| Pharos/Location suggestions | `190:117` | 3 | — | todo |
-| Pharos/App/Keyboard | `2776:1613` | 3 | — | todo |
+| Pharos/Location suggestions | `190:117` | 3 | `src/components/LocationSuggestions.tsx` | done |
+| Pharos/App/Keyboard | `2776:1613` | 3 | `src/components/AppKeyboard.tsx` | done |
 | Pharos/Bottom sheet | `2197:8841` | 3 | `src/components/BottomSheet.tsx` + `BottomSheetHeader` (в нём же) · `RouteFields.tsx` · `SuggestionCard.tsx` · `SheetField.tsx` · `SortBy.tsx` · `TripChecklist.tsx` | done |
 | Pharos/Chat/Rate offer | `2189:8453` | 3 | `src/components/ChatRateOffer.tsx` | done |
-| Pharos/App/Upload field | `2013:3064` | 2 | — | todo |
-| Pharos/Upload field/Driving licence preview | `2091:441` | 2 | — | todo |
+| Pharos/App/Upload field | `2013:3064` | 2 | `src/components/UploadField.tsx` — Empty / Chosen / Rejected / Uploading | done |
+| Pharos/Upload field/Driving licence preview | `2091:441` | 2 | `src/components/DrivingLicencePreview.tsx` — собрано поверх UploadField | done |
 | Pharos/Route map | `330:164` | 1 | `src/components/RouteMap.tsx` | done |
 | Lucide/Icon/Clock | `2006:17` | 36 | `src/components/Icon.tsx` | done |
 | Lucide/Icon/Calendar | `2006:13` | 64 | `src/components/Icon.tsx` | done |
@@ -682,6 +702,27 @@ Application progress `734:426`): все 33 коробки совпали точ�
 `#586d79`), прайс-строка 324×32 на y121 с «360 €» 24/32 Manrope Bold слева и «111 km loaded»
 12/16 справа — всё совпало. Ловушка 20 здесь **не** срабатывает: дети в потоке, поэтому border+pad
 дают те же 17px, что и inside-stroke в Figma.
+
+### 4.10. Волна 3 (продолжение) — ввод, загрузка и оффер
+
+**Select** `344:51`, **Offer route** `693:995`, **Empty details panel** `129:46`,
+**Offer terms** `693:1013`, **Location suggestions** `190:117`, **Keyboard** `2776:1613`,
+**Upload field** `2013:3064`, **Driving licence preview** `2091:441`. Все восемь сошлись по
+габаритам: 370×76, 370×215, 370×174 (инстанс `2207:8233`; сет 648×154), 370×256, 370×166 на 370,
+402×258, 370×180, 370×180.
+
+Решения по композиции: `Select` **намеренно не** собран из `Input` — у него нет слота под MapPin,
+нет подсказки, нет focus-ring, это кнопка с шевроном по SPACE_BETWEEN и панелью 118 в высоту;
+`DrivingLicencePreview` наоборот **собран поверх** `UploadField` через слоты `preview`/`previewTone`;
+`LocationSuggestions` — это панель-дропдаун, а не поле. У `Offer terms` чат — настоящая `Button`
+в слоте 82px (инстанс Figma на 16px шире естественного hug).
+
+Два места, где честно **не** удалось совпасть: **фаза пунктира** у Upload field Empty (ловушка 27)
+и **толщина 1.5px** (ловушка 24) — обе задокументированы в контрактах файлов. Плюс `Offer terms`
+вообще не имеет рендера для сверки (ловушка 28).
+
+Токены, добавленные по заявкам: `text.caption-10` (10/12), `size-icon.xl` (32px), `radius.5` (5px),
+`color-select.option-selected-bg`. Ни одного нового цветового токена сверх этого не потребовалось.
 
 ## 5. Иконки
 

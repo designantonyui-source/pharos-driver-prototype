@@ -82,11 +82,12 @@ export const ICONS = {
 
 export type IconName = keyof typeof ICONS;
 
-/** The three sizes the design tokens cover. Figma also instances 11/12/14 px — pass a number there. */
+/** The sizes the design tokens cover. Figma also instances 11/12/14 px — pass a number there. */
 const BOX = {
   sm: 'h-[var(--size-icon-sm)] w-[var(--size-icon-sm)]',
   md: 'h-[var(--size-icon-md)] w-[var(--size-icon-md)]',
   lg: 'h-[var(--size-icon-lg)] w-[var(--size-icon-lg)]',
+  xl: 'h-[var(--size-icon-xl)] w-[var(--size-icon-xl)]',
 } as const;
 
 export function Icon({

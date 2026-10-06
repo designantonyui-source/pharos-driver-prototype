@@ -39,6 +39,14 @@ File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **
 | `Pharos/App/Approach map` | `719:355` | `src/components/ApproachMap.tsx` — artwork `719:356` exported to `src/assets/maps/approach-402x646.svg` |
 | `Pharos/App/Trip checklist` | `2715:1596` | `src/components/TripChecklist.tsx` — only `State=Awaiting` `2715:25520` (used by Bottom sheet Content=Request) |
 | `Pharos/App/Progress step` | `2553:1238` | `src/components/ProgressStep.tsx` — Done `2553:1225` / Current `2553:1231` / Next `2553:1237`; shared by Trip steps and Application progress |
+| `Pharos/Select` | `344:51` | `src/components/Select.tsx` — Closed `344:26` / Open `344:32` / Disabled `344:45` (redrawn, not composed from `Input`) |
+| `Pharos/App/Offer route` | `693:995` | `src/components/OfferRoute.tsx` — the `View map` affordance is hidden in the component and in all 8 instances |
+| `Pharos/Empty details panel` | `129:46` | `src/components/EmptyDetailsPanel.tsx` — icon is an INSTANCE_SWAP; the Refreshing copy uses `Lucide/Icon/Loader` |
+| `Pharos/App/Offer terms` | `693:1013` | `src/components/OfferTerms.tsx` — **hidden in Figma with all 6 instances**, export is a 1×1 PNG, so it has no visual reference |
+| `Pharos/Location suggestions` | `190:117` | `src/components/LocationSuggestions.tsx` — Results `190:59` / Loading `190:85` / Empty `190:98` / Error `190:107`; the flag swap is the round flag component `198:1640`/`198:1645`, not the rectangular `249:1646` |
+| `Pharos/App/Keyboard` | `2776:1613` | `src/components/AppKeyboard.tsx` — a static visual mock (31 keys, no focus/interaction, as in Figma) |
+| `Pharos/App/Upload field` | `2013:3064` | `src/components/UploadField.tsx` — Empty `2013:3060` / Chosen `2013:3061` / Rejected `2013:3062` / Uploading `2013:3063`; the 1.5px dashed stroke is an SVG overlay |
+| `Pharos/Upload field/Driving licence preview` | `2091:441` | `src/components/DrivingLicencePreview.tsx` — built on top of `UploadField` via `preview` / `previewTone` |
 | `Pharos/Message bubble` | `384:355` | `src/components/MessageBubble.tsx` — Incoming `384:347` / Outgoing `384:351`, plus `skin="plain"` for the 15 page-30 instances |
 | `Pharos/Chat/Cargo context` | `2188:8055` | `src/components/ChatCargoContext.tsx` |
 | `Pharos/Chat/Composer` | `2188:7944` | `src/components/ChatComposer.tsx` — Empty `2188:7863` / Draft `2188:7896` / Disabled `2188:7913` |

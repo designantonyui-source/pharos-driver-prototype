@@ -102,6 +102,7 @@
   --spacing-32: 32px;
   --spacing-40: 40px;
   --spacing-48: 48px;
+  --radius-5: 5px;
   --radius-6: 6px;
   --radius-none: 0px;
   --radius-2xs: 2px;
@@ -115,7 +116,9 @@
   --size-icon-sm: 16px;
   --size-icon-md: 20px;
   --size-icon-lg: 24px;
+  --size-icon-xl: 32px;
   --color-chat-bubble-outgoing-bg: #def5f0;
+  --color-select-option-selected-bg: #ebf3f7;
 
   /* typography (Pharos text styles) */
   --text-heading-32: 32px;
@@ -166,6 +169,10 @@
   --text-caption-12--line-height: 16px;
   --text-caption-12--font-weight: 400;
   --text-caption-12--font-family: var(--font-ui);
+  --text-caption-10: 10px;
+  --text-caption-10--line-height: 12px;
+  --text-caption-10--font-weight: 500;
+  --text-caption-10--font-family: var(--font-ui);
   --text-ios-body: 17px;
   --text-ios-body--line-height: 20px;
   --text-ios-body--font-weight: 400;
@@ -197,7 +204,8 @@
 .text-body-14,
 .text-label-14,
 .text-label-12,
-.text-caption-12 { font-family: var(--font-ui); }
+.text-caption-12,
+.text-caption-10 { font-family: var(--font-ui); }
 .text-ios-body,
 .text-ios-caption,
 .text-ios-symbol { font-family: var(--font-ios); }
