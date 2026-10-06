@@ -1,12 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { ScreenFrame } from '../components/layout/AppShell';
+import { ScreenFrame } from './ScreenFrame';
 
-const meta = { title: 'App shell/ScreenFrame', component: ScreenFrame, parameters: { layout: 'centered' } } satisfies Meta<typeof ScreenFrame>;
+/** The assembled 402x874 screen: status bar + nav bar + content + tab bar + home indicator. */
+const meta = {
+  title: 'App shell/ScreenFrame',
+  component: ScreenFrame,
+  parameters: { layout: 'fullscreen' },
+} satisfies Meta<typeof ScreenFrame>;
 export default meta;
 type Story = StoryObj<typeof ScreenFrame>;
 
-export const LoadsTab: Story = {
-  args: { title: 'Loads' },
+export const LoadsHome: Story = {
+  args: { title: 'Loads', activeTab: 'Loads' },
   render: (args) => (
     <ScreenFrame {...args}>
       <div className="absolute inset-x-0 top-[138px] px-[16px]">
@@ -18,4 +23,9 @@ export const LoadsTab: Story = {
       </div>
     </ScreenFrame>
   ),
+};
+
+export const LoadDetails: Story = {
+  args: { title: 'Load details', back: true, activeTab: 'Loads' },
+  render: (args) => <ScreenFrame {...args} />,
 };

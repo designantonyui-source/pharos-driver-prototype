@@ -25,8 +25,11 @@ File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **
 | `Pharos/Alert` | `575:9632` | `src/components/Alert.tsx` — Info / Warning / Error / Success / Neutral |
 | `Pharos/Button` | `12:38` | `src/components/Button.tsx` |
 | `Pharos/Button link` | `168:118` | `src/components/Button.tsx` — exports `ButtonLink` |
-| `Pharos/App/Tab bar` | — | `src/components/layout/TabBar.tsx` |
-| `Pharos/App/Status bar` / `Navigation bar` / `Home indicator` | — | `src/components/layout/*` |
+| `Pharos/App/Tab bar` | `586:67` | `src/components/layout/TabBar.tsx` — Active=Loads/Applications/My day/Account |
+| `Pharos/App/Status bar` | `2353:26430` | `src/components/layout/StatusBar.tsx` — Type=IOS `2305:25330` / Type=Default `586:20` |
+| `Pharos/App/Navigation bar` | `586:33` | `src/components/layout/NavigationBar.tsx` — Type=Home `586:25` / Type=Back `586:32` |
+| `Pharos/App/Home indicator` | `586:70` | `src/components/layout/HomeIndicator.tsx` |
+| — (402×874 screen) | — | `src/components/layout/ScreenFrame.tsx` — composes the five shell parts |
 
 ## Shell metrics (fixed by the design)
 

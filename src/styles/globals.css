@@ -8,7 +8,9 @@
   --screen-w: 402px;
   --screen-h: 874px;
   --status-bar-h: 62px;
+  --status-bar-default-h: 54px;
   --nav-bar-h: 76px;
+  --nav-bar-back-h: 60px;
   --sticky-bar-h: 64px;
   --viewport-h: 614px;
   --tab-bar-y: 757px;
