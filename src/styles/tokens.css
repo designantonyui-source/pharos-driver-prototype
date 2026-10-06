@@ -38,6 +38,16 @@
   --color-status-danger-text: #b8332f;
   --color-status-match-bg: #bce5d5;
   --color-status-match-text: #1c5644;
+  --color-alert-neutral-bg: #eff2f5;
+  --color-alert-info-bg: #ebf3f7;
+  --color-alert-success-bg: #e8f6ef;
+  --color-alert-warning-bg: #fff4df;
+  --color-alert-danger-bg: #fdedea;
+  --color-alert-neutral-text: #526773;
+  --color-alert-info-text: #225d74;
+  --color-alert-success-text: #216547;
+  --color-alert-warning-text: #855300;
+  --color-alert-danger-text: #b8332f;
   --color-nav-bg: #173647;
   --color-nav-hover: #244858;
   --color-nav-active: #315d70;
