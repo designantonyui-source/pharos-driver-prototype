@@ -110,6 +110,22 @@ await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', {
     `Reports`, `Help` в доке не видны, хотя у компонентов есть видимые векторы с обводкой
     `#172a35` — то есть скриншот страницы как источник истины для иконок не годится, нужен
     разбор содержимого компонента.
+20. **1px INSIDE stroke в Figma ≠ CSS `border-box`.** Если обводка фрейма нарисована внутрь, то в
+    CSS комбинация `padding` + `border` сдвигает содержимое на 1px и увеличивает коробку на 2px по
+    обеим осям: `RouteSummary` сначала отрендерился 372×94 вместо 370×92. Лечится `box-border` и
+    уменьшением паддинга на толщину рамки, а не подгонкой чисел.
+21. **API и рендер могут расходиться.** У ссылки `Navigate` в Route card Figma **рисует**
+    подчёркивание, а `textDecoration` читается как `NONE`. Проверка трёх узлов по отдельности
+    показала, что подчёркивание настоящее, а у `View application` в Offer его нет.
+    **Правило: при конфликте верить рендеру и документировать расхождение.**
+22. **Счётчик инстансов из грубого обхода врёт.** Первый обход страниц дал у `Arrow right` 1
+    инстанс, адресный подсчёт — 120. Для решений «какой из двух одноимённых сетов используется»
+    нужен адресный подсчёт с резолвом main component: на грубом счёте агент B заключил, что
+    `26:27` не используется, и ошибся (поправка в 4.7).
+23. **Высоты вариантов в Figma могут быть растянуты, а не выведены из содержимого.** У 8 вариантов
+    `Pharos/Bottom sheet` стоит `primaryAxisSizingMode = FIXED`, и рамка растянута под самую
+    высокую карточку в ряду: у `2197:8081` дети дают 406, а рамка 454. Экспорт PNG у таких узлов
+    тоже обрезан, поэтому пиксельная сверка по ним невозможна — сверять надо численно по детям.
 
 ---
 
@@ -123,15 +139,15 @@ await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', {
 | Pharos/Button | `12:38` | 250 | `src/components/Button.tsx` | done |
 | Pharos/App/Status bar | `2353:26430` | 139 | `src/components/layout/StatusBar.tsx` | done |
 | Pharos/App/Navigation bar | `586:33` | 139 | `src/components/layout/NavigationBar.tsx` | done |
-| Pharos/Information section | `2576:2265` | 116 | — | todo |
+| Pharos/Information section | `2576:2265` | 116 | `src/components/InformationSection.tsx` | done |
 | Pharos/Status | `11:148` | 109 | `src/components/StatusPill.tsx` | done |
 | Pharos/App/Home indicator | `586:70` | 97 | `src/components/layout/HomeIndicator.tsx` | done |
 | Pharos/Input | `12:166` | 76 | `src/components/Input.tsx` | done |
 | Pharos/App/Tab bar | `586:67` | 61 | `src/components/layout/TabBar.tsx` | done |
 | Pharos/Alert | `575:9632` | 54 | `src/components/Alert.tsx` | done |
-| Pharos/App/Offer | `2594:22063` | 46 | `src/components/OfferCard.tsx` | exists |
+| Pharos/App/Offer | `2594:22063` | 46 | `src/components/OfferCard.tsx` | done |
 | Pharos/App/View switch | `2041:411` | 42 | — | todo |
-| Pharos/Offer preview | `26:73` | 32 | — | todo |
+| Pharos/Offer preview | `26:73` | 32 | `src/components/OfferPreview.tsx` | done |
 | Pharos/Sidebar | `82:150` | 30 | — | todo |
 | Pharos/Page header | `167:65` | 30 | — | todo |
 | Pharos/Message bubble | `384:355` | 25 | — | todo |
@@ -140,13 +156,13 @@ await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', {
 | Pharos/Route search + filters | `340:404` | 18 | — | todo |
 | Pharos/Avatar | `74:64` | 15 | `src/components/Avatar.tsx` | done |
 | Pharos/App/Approach map | `719:355` | 15 | — | todo |
-| Pharos/App/Route card | `2715:1535` | 15 | — | todo |
+| Pharos/App/Route card | `2715:1535` | 15 | `src/components/RouteCard.tsx` | done |
 | Pharos/Mobile header | `26:24` | 14 | — | todo |
 | Pharos/App/Onboarding progress | `2062:410` | 13 | — | todo |
 | Pharos/Filter chip v2 | `2621:1288` | 11 | — | todo |
 | Pharos/App/Driver profile | `769:10428` | 9 | — | todo |
-| Pharos/Load card | `14:146` | 8 | — | todo |
-| Pharos/Rate offer card | `384:368` | 8 | — | todo |
+| Pharos/Load card | `14:146` | 8 | `src/components/LoadCard.tsx` | done |
+| Pharos/Rate offer card | `384:368` | 8 | `src/components/RateOfferCard.tsx` | done |
 | Pharos/App/Offer route | `693:995` | 8 | — | todo |
 | Pharos/App/Day item | `2021:2666` | 8 | — | todo |
 | Pharos/Chat/Cargo context | `2188:8055` | 8 | — | todo |
@@ -154,18 +170,18 @@ await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', {
 | Pharos/Select | `344:51` | 8 | — | todo |
 | Pharos/Country flag Rectangle | `249:1646` | 8 | `src/components/Flag.tsx` | done |
 | Pharos/App/Trip preparation | `2715:1617` | 7 | — | todo |
-| Pharos/App/Trip checklist | `2715:1596` | 7 | — | todo |
+| Pharos/App/Trip checklist | `2715:1596` | 7 | `src/components/TripChecklist.tsx` — только `State=Awaiting` (`2715:25520`), нужен Content=Request у Bottom sheet | review |
 | Pharos/Chat/Composer | `2188:7944` | 7 | — | todo |
 | Pharos/Empty details panel | `129:46` | 6 | — | todo |
 | Pharos/App/Offer terms | `693:1013` | 6 | — | todo |
-| Pharos/App/Route summary | `671:977` | 6 | — | todo |
+| Pharos/App/Route summary | `671:977` | 6 | `src/components/RouteSummary.tsx` | done |
 | Pharos/Filter chip | `338:211` | 6 | — | todo |
-| Pharos/Route summary | `26:27` | 4 | — | todo |
-| Pharos/Payment summary | `412:389` | 3 | — | todo |
+| Pharos/Route summary | `26:27` | 4 | — (страница 21, второй компонент) | todo |
+| Pharos/Payment summary | `412:389` | 3 | `src/components/PaymentSummary.tsx` | done |
 | Pharos/App/Application progress | `734:426` | 3 | — | todo |
 | Pharos/Location suggestions | `190:117` | 3 | — | todo |
 | Pharos/App/Keyboard | `2776:1613` | 3 | — | todo |
-| Pharos/Bottom sheet | `2197:8841` | 3 | `src/components/BottomSheet.tsx` | exists |
+| Pharos/Bottom sheet | `2197:8841` | 3 | `src/components/BottomSheet.tsx` + `BottomSheetHeader` (в нём же) · `RouteFields.tsx` · `SuggestionCard.tsx` · `SheetField.tsx` · `SortBy.tsx` · `TripChecklist.tsx` | done |
 | Pharos/Chat/Rate offer | `2189:8453` | 3 | — | todo |
 | Pharos/App/Upload field | `2013:3064` | 2 | — | todo |
 | Pharos/Upload field/Driving licence preview | `2091:441` | 2 | — | todo |
@@ -389,6 +405,154 @@ SVG в репозитории — точный экспорт этого рис�
 **`Pharos/App/Offer` (`2594:22063`) существует, но не сверялся.** В коде есть `OfferCard.tsx`
 с состояниями Default/Disabled/Loading/Pending — геометрия с Figma не сверялась ни разу.
 
+### 4.6. `Pharos/Bottom sheet` — 13 вариантов, композиция из шести блоков
+
+Выдуманный компонент «шторка карты» удалён и заменён настоящим сетом. Один контейнер плюс блоки
+содержимого, у каждого свои стори; варианты, отличающиеся только наличием под-блока, выражены
+пропсами, а не копипастой.
+
+| Файл | Что это в Figma | Стори |
+|---|---|---|
+| `BottomSheet.tsx` → `BottomSheet` | поверхность: белая, скругление сверху 16, паддинг группы, gap 16 | 13 (все варианты) |
+| `BottomSheet.tsx` → `BottomSheetHeader` | `Pharos/Bottom sheet/Header` `2197:7908` (один компонент, не сет) | — |
+| `BottomSheet.tsx` → `VehicleMatchingLine`, `SheetHint` | текстовые строки `2197:8103` / `2197:8189` / `2664:23032` | — |
+| `RouteFields.tsx` | `Route / Connected stops` `2197:7929` — 354×144 | `Filled` · `DestinationEmpty` · `Empty` |
+| `SuggestionCard.tsx` | внутренний `Frame` 354×80 четырёх состояний current/suggestions | `Lille` · `Brussels` |
+| `SheetField.tsx` | инстансы `Pharos/Input` в Content=Price `2197:8787`, `2197:8796` | `YourRate` · `Comment` · `Empty` |
+| `TripChecklist.tsx` | `Pharos/App/Trip checklist` `2715:1596`, только `State=Awaiting` `2715:25520` | `Awaiting` |
+| `SortBy.tsx` | четыре строки 370×48 из `2767:27860` | `HighestPerKm` · `SoonestDeadline` |
+
+**Геометрия контейнера.** Поверхность одна и та же во всех вариантах; различается только паддинг:
+`Content=Route`/`Price` — 12/24/34/24, `Content=Sort`/`Request` — 12/16/24/16. Отсюда проп
+`pad="route" | "sort"`.
+
+| Что | Figma | Замер |
+|---|---|---|
+| поверхность | r16 сверху, `#ffffff`, gap 16 | `rgb(255,255,255)`, r16, gap 16 |
+| ручка `Sheet / Drag handle` | 354×4, пилюля 36×4 r2 `#d7e0e6` | 354×4, пилюля 36×4 r4 `rgb(215,224,230)` |
+| заголовок | 48 высотой, Manrope SemiBold 20/28 `#172a35` | 354×48, Manrope 600 20/28 `rgb(23,42,53)` |
+| `Route / Connected stops` | 354×144 r16 `#f4f6f8` | 354×144 r16 `rgb(244,246,248)` |
+| строка From/To | 354×72, pad 10/16/10/16, gap 12 | 354×72, pad 10/16/10/16, gap 12 |
+| маркер | 8×8, обводка 1.5px `#225d74` INSIDE; origin залит, destination — канвас | 8×8; заливка и рамка совпали, толщину проверял по пикселям при dpr 8: 8 физ. px из 64 = 1 px CSS = 1.5 физ. px |
+| коннектор | 1×64 `#d7e0e6` на x=20, y=40..104 | 1×64 на (20,40) `rgb(215,224,230)` |
+| подписи строк | From/To: DM Sans Medium 12/16 `#586d79`; город: Manrope SemiBold 20/28 `#172a35` | совпало |
+| строка сопоставления | 354×16 DM Sans Medium 12/16 `#586d79` | 354×16, fw500, 12/16, совпало |
+| `Hint` | 354×32 DM Sans Regular 12/16 | 354×32, совпало |
+| карточка предложения | 354×80 pad16 gap4 r12 `#f4f6f8` | 354×80, pad16, gap4, r12, `rgb(244,246,248)` |
+| поле `Pharos/Input` | 354×76 (label 20 + gap 8 + control 48) | 354×76 |
+| trip checklist | 370×190, pad16 gap12 r12, рамка `#d7e0e6`, 4 строки 20 | 370×190, pad16, gap12, r12 |
+| строка Sort | 370×48, pad 12/0/12/0, gap 8, DM Sans Regular 16/24 `#172a35` | 370×48, pad 12/0, gap 8, 16/24 fw400 |
+| галочка Sort | `Lucide/Icon/Circle Check` 20×20 `#225d74`, 2px | 20×20 `rgb(34,93,116)` |
+
+**Высоты.** Три варианта сходятся с Figma точно, у остальных расхождение объясняется тем, что
+высота фрейма в Figma задана вручную (`primaryAxisSizingMode = FIXED`) и не равна высоте
+содержимого. Я рендерю настоящую hug-высоту и привожу её рядом с Figma:
+
+| Вариант | Figma h | Сумма детей + gap 16 + паддинг | Мой замер |
+|---|---|---|---|
+| Route filled `2197:7919` | 406 | 406 | **406** |
+| Route empty `2197:8167` | 454 | 454 | **454** |
+| Route empty vehicle `2197:8383` | 454 | 454 | **454** |
+| Trip data `2715:25486` | 494 | 494 | **494** |
+| Route filled vehicle `2197:8081` | 454 | **406** | 406 |
+| Route origin selected `2197:8222` | 454 | **406** | 406 |
+| Origin/Destination suggestions `2197:8277`/`8330` | 454 | **414** | 414 |
+| Route origin selected vehicle `2197:8438` | 494 | **406** | 406 |
+| Origin/Destination current `2197:7975`/`8028` | 406 | **414** | 414 |
+| Price offer `2197:8777` | 494 | **398** | 398 |
+| Sort by `2767:27860` | 360 | **312** | 312 |
+
+Это подтверждено дважды: у `2197:8081` шесть детей дают ровно 406, а `absolutelyBoundingBox`
+фрейма — 454; у `2197:7975` дети стоят на y 12/32/96/188/220/316 с шагом ровно 16, то есть
+содержимое занимает 414, а высота фрейма 406. **Это дефект сета, а не переноса** — в Figma
+варианты растянуты под самую высокую карточку ряда. Если дизайн должен совпадать попиксельно,
+высоты во фреймах надо поправить обратно в Figma (прототип ведёт, дизайн догоняет).
+
+**Чего в сете нет.** Контрола обмена местами (swap) у точек в Figma нет: между строками From и To
+лежит только статичный коннектор 1×64, кликабельных элементов там нет. Строки сделаны
+`<button>` (в четырёх состояниях current/suggestions одна из строк как раз редактируется), но
+иконки swap дизайн не содержит — выдумывать её я не стал.
+
+**Отклонения от прежнего выдуманного компонента** (`git show 45c642a:src/components/BottomSheet.tsx`):
+были состояния Peek/Full, ручка 36×4 на всю ширину, пагинатор `1 of 2` текстом, паддинг 12/24 и
+`pb-[34px]`, рамка `border-t` по верху поверхности и привязка к низу экрана через `absolute`.
+Ни одного из этих элементов в сете нет; пагинатора нет вообще. Стори `Peek`/`Full` удалены,
+вместо них 13 сторей по вариантам Figma.
+
+**Отдельно: `SortBy` и `TripChecklist` брали иконки напрямую из `lucide-react`,** хотя в репозитории
+уже есть реестр `Icon.tsx` (§5) — заменено на `<Icon name="clock" />` и
+`<Icon name="circle-check" />`, размеры те же (16 и 20).
+
+**Токены.** Новых не потребовалось: цвета и типографика взяты из существующих групп (`color-bg-canvas`,
+`color-border-default`, `color-border-brand`, `color-text-*`, `color-status-warning-text`).
+Геометрические числа (`36`, `10`, `1.5`, `1`, `72`, `144`, `64`, `20`, `40`) оставлены литералами,
+как и в остальных контролах репозитория — в `spacing` таких значений нет.
+
+### 4.7. Волна 2 — карточки и информационные блоки
+
+Три агента параллельно, каждый на своих файлах; общие файлы, проверка и коммит — за мной.
+Все замеры перепроверены независимо: семь контрольных боксов совпали до десятых.
+
+**`Pharos/App/Offer` `2594:22063`** (46 инстансов: 41 Default, 3 Pending, 2 Loading,
+**0 Disabled**) — существовавший `OfferCard` сверен и починен, 10 расхождений:
+
+- радиус был 12, в Figma **16**;
+- Disabled гасил всю карточку через `opacity-50`, в Figma хром остаётся, а 38% получают только
+  строки контента → появился токен `--opacity-disabled`;
+- `Distance` и `Schedule` были вторичным цветом, в Figma привязаны к `color/text/primary`;
+- `Deadhead` вместе с иконкой были primary/secondary, в Figma — `offer/text/highlight` `#225d74`;
+- `Decision timer` **скрыт во всех четырёх вариантах и во всех 46 инстансах** → стал пропом
+  `showTimer`, по умолчанию выключен (это изменение поведения для потребителей);
+- строка цены выравнивалась по базовой линии, в Figma — по нижнему краю (counterAxis MAX);
+- у пилюли таймера радиус был 8, в Figma — пилюля;
+- скелетон Loading был выдуман; заменён на реальные полосы Figma (72×24, 68×16, 42×16, 149×20,
+  129×16, 158×16, 217×16; ряды 36/28/24/20/20, gap 8, r4, `#e8edf0`).
+
+Замеры: Default 370×190, r16, рамка 1px `#d7e0e6`, pad 16, gap 8 — точно; **Loading — 0 из 71 780
+пикселей** отличий от рендера Figma; Pending 370×255.
+
+**`Pharos/Offer preview` `26:73`** — новый `OfferPreview.tsx`. 32 инстанса, и **все Size=Desktop**
+(460/628 ширины), поэтому размер по умолчанию `desktop` и есть проп `full`. 440×148, 440×182 и
+мобильные 358×290, 358×318 воспроизведены. Ограничения честные: у мобильных вариантов вложенные
+инстансы в Figma **пустые** (подписи неизвестны, взяты с десктопа), а сам сет Figma не рендерит —
+экспорт даёт PNG 1×1, поэтому визуального эталона нет и сверялись с десктопными инстансами на
+странице 21.
+
+**`Pharos/App/Route card` `2715:1535`** — новый `RouteCard.tsx`: Expected `2715:1465` 370×235 и
+Known `2715:1500` 370×339. Pixel diff для Expected — **0 отличий**. Находка: Figma **рисует**
+ссылку Known «Navigate» подчёркнутой, хотя API отдаёт `textDecoration: NONE`; проверка трёх узлов
+по отдельности показала, что у однотипной ссылки в Offer подчёркивания нет → у `ButtonLink`
+появился проп `underline` (по умолчанию `false`, поведение существующих вызовов не меняется).
+
+**`Pharos/Information section` `2576:2265`** (116 инстансов — второй по частоте элемент) — новый
+`InformationSection.tsx`, 11 сторей, все 4 варианта (Wide `140:49`, Compact Payment `2466:14783`,
+`14795`, `14807`), три булевых свойства Figma стали слотами (`country`, `status`, `action`).
+Ключевое открытие: **чип статуса и «key fact» взаимоисключающие** — чип заменяет key fact в
+ведущей строке. Найденное расхождение: 3 из 4 вариантов нарисованы высотой 142, а контент
+заканчивается на y=110 — 20px мёртвого места; доказано временным инстансом (создан и удалён).
+Стори `CompactPaymentPendingFixed142` фиксирует 142, как нарисовано.
+
+**`Route summary` — поправка к выбору агента.** Агент B выбрал `671:977` и заявил, что `26:27` на
+страницах водителя не инстанцируется вовсе. Адресный подсчёт (ловушка 22) показал иначе: используются
+**оба**, просто на разных страницах.
+
+| Сет | Инстансов | Где |
+|---|---|---|
+| `Pharos/App/Route summary` `671:977` (370×92) | 6 | страница 30 — iOS App / Driver |
+| `Pharos/Route summary` `26:27` (358×170) | 4 | страница 21 — Driver / Search and request |
+| локальный фрейм `2668:14790` «Route summary v2» (370×78) | — | экраны Loads, **не библиотечный компонент** |
+
+Значит `RouteSummary.tsx` покрывает страницу 30; при переносе экранов страницы 21 понадобится второй
+компонент из `26:27`, а для `/loads` — свой блок из `2668:14790`.
+
+**Геометрия переехала в токены.** Все три агента независимо упёрлись в то, что метрики оболочки и
+карточек лежат в `globals.css`, а не в `design/tokens.json`. Перенёс группами `screen`, `status-bar`,
+`nav-bar`, `sticky-bar`, `viewport`, `tab-bar`, `home-indicator`, `card`, `control`; добавил
+`opacity.disabled` (0.38), `spacing.10` (10px), `shadow.card`. Имена переменных сохранены, поэтому
+ни один компонент не пришлось править, `globals.css` теперь содержит только `body`. Аудит токенов
+подтвердил, что ни одна из 20 переменных не потерялась. Заодно ушли два приближения: спейсеры
+10px в Offer Pending и Route card теперь настоящие (были 8px, из-за чего кнопка стояла на 2px левее).
+
 ## 5. Иконки
 
 Иконки — не мелочь: на экранах водителя их **19 разных, суммарно 900+ инстансов**, самая частая
@@ -478,9 +642,26 @@ _Остальные экраны — в работе._
   16/20, `Map pin` 11/16/20, `Search` 14/20/24, `Clock` 12/16/20), а токены есть только на
   16/20/24. Реестр принимает число, но по правилу 1 это хардкод — нужен либо токен на 12/14,
   либо подтверждение, что эти размеры вне системы.
-- **Часть компонентов ещё импортирует `lucide-react` напрямую** (`OfferCard.tsx` и файлы, которые
-  сейчас пишут агенты). Все они должны перейти на `src/components/Icon.tsx`, чтобы маппинг имён
-  остался в одном месте.
+- **Часть компонентов ещё импортирует `lucide-react` напрямую** — остались только те, что писались
+  агентами до появления реестра; все должны перейти на `src/components/Icon.tsx`, чтобы маппинг
+  имён остался в одном месте (проверять `grep -rn "from 'lucide-react'" src/`).
+- **Арт встроенной карты в Load card не портирован** (`TODO(asset)`): `Show map` рендерит
+  корректную по размеру заглушку, поэтому раскрытая карточка на ~142px короче Figma-инстансов
+  `541:2650`/`541:3640`. `Show map=false` у всех 8 инстансов на страницах водителя, так что в
+  приложении это состояние недостижимо. Решение: экспортировать арт как SVG, как сделано с флагами.
+- **`Route summary` со страницы 21 не портирован**: `26:27` (358×170) инстанцируется 4 раза на
+  странице «Driver / Search and request», а `RouteSummary.tsx` построен по `671:977` со страницы 30.
+  Плюс экраны Loads рисуют свой локальный фрейм `2668:14790` (370×78) — под него нужен третий блок.
+- **`Offer preview` нечем сверить визуально**: Figma отдаёт PNG 1×1 для всего сета, а мобильные
+  варианты содержат пустые вложенные инстансы, поэтому их подписи выведены с десктопа. Нужен
+  либо рабочий экспорт из Figma, либо решение дизайна по мобильным подписям.
+- **`Trip checklist` перенесён только в `State=Awaiting`** (единственное состояние, которое
+  использует Bottom sheet); остальные состояния не портированы.
+- **Высоты вариантов `Pharos/Bottom sheet` в Figma не равны содержимому** (см. §4.6): это
+  `primaryAxisSizingMode = FIXED`, выставленный по самой высокой карточке ряда. Прототип
+  отрендерен по настоящей hug-высоте, поэтому числа расходятся на 8-96 px. Нужно решение дизайна:
+  либо во фреймах выставить `AUTO` по вертикали, либо зафиксировать высоты сознательно и тогда
+  перенести их в код как токены.
 - **Шрифты идут с Google Fonts (CDN).** Офлайн-сборка уедет в `system-ui`. Если нужна
   автономность — скачать woff2 в `public/fonts` и заменить ссылки на `@font-face`.
 - **Hover и Pressed нельзя показать стори.** Это CSS-псевдоклассы, поэтому в Storybook они не

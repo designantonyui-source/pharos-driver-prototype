@@ -18,6 +18,8 @@ import type { ReactNode } from 'react';
  *
  * figma: 168:118 · Pharos/Button link — Size × State (12 variants)
  *   no fill, pad x16, r8, hug width, label color/action/text; loading adds the 20x20 spinner (width + 28)
+ *   the master label `Resend code` (168:89) is UNDERLINE; the app instances mostly override it away,
+ *   but `Pharos/App/Route card` still renders it — hence the `underline` prop
  *
  * tokens: color-action-*, color-border-default, color-focus-ring, radius-sm, radius-md,
  *         size-control-web, size-control-mobile, text-label-14
@@ -113,6 +115,7 @@ export function ButtonLink({
   loading = false,
   focus = false,
   icon,
+  underline = false,
   onClick,
 }: {
   label: string;
@@ -121,6 +124,10 @@ export function ButtonLink({
   loading?: boolean;
   focus?: boolean;
   icon?: ReactNode;
+  /** label text-decoration. The Button link master `168:87` is UNDERLINE; `Pharos/App/Route card`
+   *  2715:1535 renders "Navigate" underlined while the same component inside `Pharos/App/Offer`
+   *  2718:2203 does not — Figma reports `textDecoration: NONE` for both, so the render decides. */
+  underline?: boolean;
   onClick?: () => void;
 }) {
   const tone = disabled
@@ -132,7 +139,7 @@ export function ButtonLink({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`relative flex ${HEIGHT[size]} items-center justify-start gap-[8px] rounded-[var(--radius-sm)] px-[16px] text-label-14 ${tone}`}
+      className={`relative flex ${HEIGHT[size]} items-center justify-start gap-[8px] rounded-[var(--radius-sm)] px-[16px] text-label-14 ${tone}${underline ? ' underline' : ''}`}
     >
       {loading && <Spinner />}
       {label}

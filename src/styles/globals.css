@@ -1,32 +1,9 @@
 @import 'tailwindcss';
 /* Design tokens — generated from design/tokens.json (exported from Figma).
-   Never hardcode a design value in a component: use a token (see AGENTS.md). */
+   Never hardcode a design value in a component: use a token (see AGENTS.md).
+   The shell metrics and component geometry live in tokens.json too, so every design
+   value in the project has exactly one source. */
 @import './tokens.css';
-
-/* App shell metrics — fixed by the design (402 x 874) */
-:root {
-  --screen-w: 402px;
-  --screen-h: 874px;
-  --status-bar-h: 62px;
-  --status-bar-default-h: 54px;
-  --nav-bar-h: 76px;
-  --nav-bar-back-h: 60px;
-  --sticky-bar-h: 64px;
-  --viewport-h: 614px;
-  --tab-bar-y: 757px;
-  --tab-bar-h: 83px;
-  --home-indicator-y: 840px;
-  --home-indicator-h: 34px;
-
-  /* component geometry from Figma (Pharos/App/Offer = 370x190) */
-  --card-w: 370px;
-  --card-h: 190px;
-  --card-h-loading: 194px;
-  --card-h-pending: 255px;
-  --card-pad: 16px;
-  --card-gap: 8px;
-  --control-h: 48px;
-}
 
 body {
   margin: 0;
