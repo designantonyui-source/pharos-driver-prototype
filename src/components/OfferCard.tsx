@@ -48,7 +48,6 @@ export function OfferCard({
   showCargo = false,
   company = 'NordCargo · 4.8 ★ · paid in 7 days',
   badge,
-  showCargo = false,
   state = 'default',
 }: OfferCardProps) {
   /*
