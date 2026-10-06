@@ -1,12 +1,12 @@
-import type { Preview } from '@storybook/react-vite';
+import type { Decorator, Preview } from '@storybook/react-vite';
 import '../src/styles/globals.css';
 
 /**
- * Every component story is rendered inside the real screen context:
- * 402 x 874 with the 16px page padding from the design. Without it `w-full`
- * components have no parent width and look nothing like the Figma frames.
+ * Every component story renders inside the real screen context:
+ * 402 x 874 with the 16px design padding. Without it `w-full` components have no
+ * parent width and look nothing like the Figma frames.
  */
-const withScreen = (Story: () => JSX.Element, context: { parameters?: { layout?: string } }) => {
+const withScreen: Decorator = (Story, context) => {
   if (context.parameters?.layout === 'fullscreen') return <Story />;
   return (
     <div
