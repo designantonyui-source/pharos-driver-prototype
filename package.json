@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o storybook-static",
-    "tokens": "node tools/export-tokens.mjs"
+    "tokens": "node tools/export-tokens.mjs",
+    "check": "tsc --noEmit -p tsconfig.json && vite build"
   },
   "dependencies": {
     "lucide-react": "^1.52.0",
