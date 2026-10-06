@@ -1,23 +1,7 @@
 @import 'tailwindcss';
-
 /* Design tokens — generated from design/tokens.json (exported from Figma).
-   Run `pnpm tokens` after editing tokens.json; never hardcode values in components. */
+   Never hardcode a design value in a component: use a token (see AGENTS.md). */
 @import './tokens.css';
-
-@theme {
-  /* Tailwind theme bridge: names here come from tokens.css */
-  --font-sans: var(--font-family-base);
-  --radius-card: var(--radius-md);
-
-  --color-surface: var(--color-bg-surface);
-  --color-surface-subtle: var(--color-bg-subtle);
-  --color-border-subtle: var(--color-border-subtle);
-  --color-text-primary: var(--color-text-primary);
-  --color-text-secondary: var(--color-text-secondary);
-  --color-text-tertiary: var(--color-text-tertiary);
-  --color-text-link: var(--color-text-link);
-  --color-text-price: var(--color-text-price);
-}
 
 /* App shell metrics — fixed by the design (402 x 874) */
 :root {
@@ -26,6 +10,7 @@
   --status-bar-h: 62px;
   --nav-bar-h: 76px;
   --sticky-bar-h: 64px;
+  --viewport-h: 614px;
   --tab-bar-y: 757px;
   --tab-bar-h: 83px;
   --home-indicator-y: 840px;
@@ -34,6 +19,7 @@
 
 body {
   margin: 0;
-  background: #eef1f4;
-  font-family: var(--font-family-base, system-ui, sans-serif);
+  background: var(--color-bg-canvas);
+  font-family: var(--font-ui);
+  color: var(--color-text-primary);
 }
