@@ -1,4 +1,4 @@
-import { CircleCheck, CircleX, Info, TriangleAlert } from 'lucide-react';
+import { Icon, type IconName } from './Icon';
 
 /**
  * figma: 575:9632 · Pharos/Alert — Type=Info `575:9552` · Warning `575:9606` · Error `575:9611` ·
@@ -17,7 +17,7 @@ import { CircleCheck, CircleX, Info, TriangleAlert } from 'lucide-react';
  */
 export type AlertType = 'info' | 'warning' | 'error' | 'success' | 'neutral';
 
-const ICONS = { info: Info, warning: TriangleAlert, error: CircleX, success: CircleCheck, neutral: CircleCheck };
+const ICONS: Record<AlertType, IconName> = { info: 'info', warning: 'triangle-alert', error: 'circle-x', success: 'circle-check', neutral: 'circle-check' };
 /** Figma token suffixes: the Error variant uses the `danger` tokens (alert/bg/danger, alert/text/danger). */
 const TOKEN = { info: 'info', warning: 'warning', error: 'danger', success: 'success', neutral: 'neutral' } as const;
 
@@ -32,13 +32,13 @@ export function Alert({
   detail?: string;
   type?: AlertType;
 }) {
-  const Icon = ICONS[type];
+  const iconName = ICONS[type];
   return (
     <div
       className="flex w-full items-center gap-[12px] rounded-[var(--radius-md)] p-[12px]"
       style={{ background: `var(--color-alert-${TOKEN[type]}-bg)`, color: `var(--color-alert-${TOKEN[type]}-text)` }}
     >
-      <Icon size={20} strokeWidth={2} className="shrink-0" />
+      <Icon name={iconName} />
       <div className="flex flex-col gap-[4px]">
         <span className="text-label-14">{title}</span>
         {children && <span className="text-caption-12">{children}</span>}

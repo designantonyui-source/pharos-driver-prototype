@@ -101,6 +101,15 @@ await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', {
 17. **Инстанс может отменять то, что есть в варианте.** В сетке `Pharos/Input` слой `Hint`
     виден во всех шести вариантах, а на экранах инстансы идут высотой 76 — то есть без подсказки
     (76 = 20 + 8 + 48). Поэтому у Input появился `hint={null}`, который строку убирает.
+18. **У иконки имя компонента тоже врёт, но вложенный глиф не врёт.** Четыре иконки названы не по
+    тому, что рисуют, зато внутри у них лежит фрейм с настоящим именем lucide-глифа:
+    `Lucide/Icon/Orders` → `Lucide/Package`, `Overview` → `Lucide/LayoutDashboard`,
+    `Reports` → `Lucide/ChartNoAxesColumn`, `Users` → `Lucide/Users`. Проверять так же, как
+    в ловушке 1, — по вложенному узлу.
+19. **Часть иконок на странице «03 — Icons» рисуется пустой.** `Bookmark`, `Overview`, `Users`,
+    `Reports`, `Help` в доке не видны, хотя у компонентов есть видимые векторы с обводкой
+    `#172a35` — то есть скриншот страницы как источник истины для иконок не годится, нужен
+    разбор содержимого компонента.
 
 ---
 
@@ -161,13 +170,15 @@ await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', {
 | Pharos/App/Upload field | `2013:3064` | 2 | — | todo |
 | Pharos/Upload field/Driving licence preview | `2091:441` | 2 | — | todo |
 | Pharos/Route map | `330:164` | 1 | — | todo |
-| Lucide/Icon/Clock | `2006:17` | 7 | `lucide-react` | n/a |
-| Lucide/Icon/Calendar | `2006:13` | 6 | `lucide-react` | n/a |
-| Lucide/Icon/Info | `575:9647` | 5 | `lucide-react` | n/a |
-| Lucide/Icon/Map pin | `279:5035` | 4 | `lucide-react` | n/a |
-| Lucide/Icon/Search | `279:5037` | 2 | `lucide-react` | n/a |
-| Lucide/Icon/Loader | `279:5034` | 1 | `lucide-react` | n/a |
-| Lucide/Icon/Arrow right | `279:5033` | 1 | `lucide-react` | n/a |
+| Lucide/Icon/Clock | `2006:17` | 36 | `src/components/Icon.tsx` | done |
+| Lucide/Icon/Calendar | `2006:13` | 64 | `src/components/Icon.tsx` | done |
+| Lucide/Icon/Info | `575:9647` | 19 | `src/components/Icon.tsx` | done |
+| Lucide/Icon/Map pin | `279:5035` | 116 | `src/components/Icon.tsx` | done |
+| Lucide/Icon/Search | `279:5037` | 95 | `src/components/Icon.tsx` | done |
+| Lucide/Icon/Loader | `279:5034` | 3 | `src/components/Icon.tsx` | done |
+| Lucide/Icon/Arrow right | `279:5033` | 120 | `src/components/Icon.tsx` | done |
+| Lucide/Icon/Truck · Bookmark · Shield · User Round · Circle Check · Circle X · Triangle Alert · Camera | см. §5 | 237 | `src/components/Icon.tsx` | done |
+| Lucide/Icon/Orders · Overview · Users · Reports · Help · Sliders horizontal · X · Image | см. §5 | 221 | `src/components/Icon.tsx` | done |
 | Status bar - iPhone 17 Pro | `2305:24705` | 1 | мок iOS | n/a |
 
 ---
@@ -378,9 +389,57 @@ SVG в репозитории — точный экспорт этого рис�
 **`Pharos/App/Offer` (`2594:22063`) существует, но не сверялся.** В коде есть `OfferCard.tsx`
 с состояниями Default/Disabled/Loading/Pending — геометрия с Figma не сверялась ни разу.
 
-## 5. Экраны
+## 5. Иконки
 
-### 5.1. `/search` — iOS / first-search-v2.1 / Loads (refined) · `2772:12931`
+Иконки — не мелочь: на экранах водителя их **19 разных, суммарно 900+ инстансов**, самая частая
+(`Arrow right`) встречается 120 раз. В Figma это отдельная страница `03 — Icons` (`9:5`) с 23
+компонентами; в документации страницы написано: «A single set from Lucide. Size 24 px; 20 px
+instances are used inside controls. Colour is bound to Pharos tokens», плюс правило «An icon-only
+action needs a tooltip or an accessible name. For a driver the interactive area is at least 48 px».
+
+Всё перенесено в один реестр — `src/components/Icon.tsx` (+ стори `Foundations/Icons`).
+Компоненты берут иконку по имени (`<Icon name="map-pin" />`), цвет наследуется через `currentColor`,
+обводка всегда 2px, размеры — из токенов (`--size-icon-sm/md/lg` = 16/20/24).
+Именно поэтому реестр, а не прямые импорты из `lucide-react`: имя в Figma и имя в lucide
+совпадают не всегда, и знать это нужно в одном месте.
+
+| Компонент Figma | Node | lucide | Инстансов |
+|---|---|---|---|
+| `Lucide/Icon/Truck` | `279:5032` | `Truck` | 8 |
+| `Lucide/Icon/Arrow right` | `279:5033` | `ArrowRight` | 120 |
+| `Lucide/Icon/Loader` | `279:5034` | `LoaderCircle` | 3 |
+| `Lucide/Icon/Map pin` | `279:5035` | `MapPin` | 116 |
+| `Lucide/Icon/Bookmark` | `279:5036` | `Bookmark` | 60 |
+| `Lucide/Icon/Search` | `279:5037` | `Search` | 95 |
+| `Lucide/Icon/Shield` | `279:5038` | `Shield` | 38 |
+| `Lucide/Icon/Overview` | `82:114` | **`LayoutDashboard`** | — |
+| `Lucide/Icon/Orders` | `82:120` | **`Package`** | 88 |
+| `Lucide/Icon/Users` | `82:124` | `Users` | — |
+| `Lucide/Icon/Reports` | `82:128` | **`ChartNoAxesColumn`** | — |
+| `Lucide/Icon/Help` | `431:19` | `CircleHelp` | 30 |
+| `Lucide/Icon/Info` | `575:9647` | `Info` | 19 |
+| `Lucide/Icon/Triangle Alert` | `575:9652` | `TriangleAlert` | 16 |
+| `Lucide/Icon/Circle X` | `575:9657` | `CircleX` | 9 |
+| `Lucide/Icon/Circle Check` | `575:9661` | `CircleCheck` | 28 |
+| `Lucide/Icon/User Round` | `754:11` | `UserRound` | 60 |
+| `Lucide/Icon/Calendar` | `2006:13` | `Calendar` | 64 |
+| `Lucide/Icon/Clock` | `2006:17` | `Clock` | 36 |
+| `Lucide/Icon/Camera` | `2008:11` | `Camera` | 2 |
+| `Lucide/Icon/Image` | `2008:16` | `Image` | — |
+| `Lucide/Icon/Sliders horizontal` | `2644:2` | `SlidersHorizontal` | 21 |
+| `Lucide/Icon/X` | `2648:2` | `X` | 11 |
+| *(вне неймспейса)* `Icon / chevron.left` | — | `ChevronLeft` | навбар Back |
+
+Жирным — те четыре, где имя компонента не совпадает с глифом (ловушка 18). Размеры `11/12/14 px`
+в дизайне тоже встречаются, но токенов под них нет — реестр принимает число, а вопрос вынесен в §7.
+
+Проверено: лист иконок (`Foundations/Icons → Sheet`) отрисован и сверён с Figma — 24 иконки,
+все 24×24, `stroke-width: 2px`, глифы совпадают. Стори `Sizes` показывает 16/20/24 и 14 без токена,
+`InheritsColour` — что цвет приходит от родителя.
+
+## 6. Экраны
+
+### 6.1. `/search` — iOS / first-search-v2.1 / Loads (refined) · `2772:12931`
 
 Первый собранный экран; делался только из уже проверенных компонентов (оболочка, Input, Button),
 новых токенов не потребовал. Файл — `src/screens/Search.tsx`, стори `Screens/Search`.
@@ -411,10 +470,17 @@ SVG в репозитории — точный экспорт этого рис�
 
 _Остальные экраны — в работе._
 
-## 6. Открытые вопросы
+## 7. Открытые вопросы
 
 - **Размер Web vs Mobile.** У Button и Input в Figma есть оба размера; приложение водителя
   использует Mobile (48). Реализованы оба, стори показывают Web отдельно.
+- **Размеры иконок 11/12/14 px не покрыты токенами.** В дизайне они встречаются (`Arrow right`
+  16/20, `Map pin` 11/16/20, `Search` 14/20/24, `Clock` 12/16/20), а токены есть только на
+  16/20/24. Реестр принимает число, но по правилу 1 это хардкод — нужен либо токен на 12/14,
+  либо подтверждение, что эти размеры вне системы.
+- **Часть компонентов ещё импортирует `lucide-react` напрямую** (`OfferCard.tsx` и файлы, которые
+  сейчас пишут агенты). Все они должны перейти на `src/components/Icon.tsx`, чтобы маппинг имён
+  остался в одном месте.
 - **Шрифты идут с Google Fonts (CDN).** Офлайн-сборка уедет в `system-ui`. Если нужна
   автономность — скачать woff2 в `public/fonts` и заменить ссылки на `@font-face`.
 - **Hover и Pressed нельзя показать стори.** Это CSS-псевдоклассы, поэтому в Storybook они не

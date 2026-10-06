@@ -32,6 +32,7 @@ File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **
 | `Pharos/App/Navigation bar` | `586:33` | `src/components/layout/NavigationBar.tsx` — Type=Home `586:25` / Type=Back `586:32` |
 | `Pharos/App/Home indicator` | `586:70` | `src/components/layout/HomeIndicator.tsx` |
 | — (402×874 screen) | — | `src/components/layout/ScreenFrame.tsx` — composes the five shell parts |
+| Icons (23 components) | `03 — Icons` page `9:5` | `src/components/Icon.tsx` — one registry; Figma↔lucide mapping in `design/PORT-LOG.md` §5 |
 
 ## Shell metrics (fixed by the design)
 

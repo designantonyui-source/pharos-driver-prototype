@@ -1,4 +1,4 @@
-import { MapPin } from 'lucide-react';
+import { Icon } from './Icon';
 
 /**
  * figma: 12:166 · Pharos/Input — Mobile variants 12:160..12:165
@@ -73,13 +73,13 @@ export function Input({
           style={{ background, border: `${borderWidth}px solid ${borderColor}` }}
         >
           {icon && (
-            <MapPin
-              size={20}
-              className={`shrink-0 ${
+            <Icon
+              name="map-pin"
+              className={
                 active
                   ? 'text-[var(--color-text-primary)]'
                   : 'text-[var(--color-text-secondary)]'
-              }`}
+              }
             />
           )}
           <input

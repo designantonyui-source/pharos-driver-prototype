@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { MapPin } from 'lucide-react';
 import { ScreenFrame } from '../components/layout/ScreenFrame';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
+import { Icon } from '../components/Icon';
 
 /**
  * figma: 2772:12931 · iOS / first-search-v2.1 / Loads (refined) — route `/search`
@@ -61,7 +61,7 @@ export function Search({
         <Button
           label="Use my location"
           appearance="secondary"
-          icon={<MapPin size={20} strokeWidth={2} />}
+          icon={<Icon name="map-pin" />}
         />
         <Button label="Find loads" disabled={origin.length === 0} />
       </div>

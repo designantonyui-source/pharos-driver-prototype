@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ChevronLeft } from 'lucide-react';
+import { Icon } from '../Icon';
 
 /**
  * figma: 586:33 · Pharos/App/Navigation bar — Type=Home `586:25` (402x76) · Type=Back `586:32` (402x60)
@@ -34,7 +34,7 @@ export function NavigationBar({
           aria-label="Back"
           className="flex h-[44px] w-[44px] shrink-0 items-center justify-center text-[var(--color-text-primary)]"
         >
-          <ChevronLeft size={20} strokeWidth={2} />
+          <Icon name="chevron-left" label="Back" />
         </button>
         <span className="flex-1 truncate text-heading-20 text-[var(--color-text-primary)]">{title}</span>
         {trailing}
