@@ -37,7 +37,8 @@ export function Input({
   value?: string;
   placeholder?: string;
   state?: InputState;
-  hint?: string;
+  /** omit for the Figma copy, pass a string to override it, pass null to hide the line (the screens do: 76 tall) */
+  hint?: string | null;
   icon?: boolean;
   required?: boolean;
   onChange?: (v: string) => void;
@@ -98,9 +99,11 @@ export function Input({
         )}
       </span>
 
-      <span className="h-[16px] text-caption-12" style={{ color: hintColor }}>
-        {hint ?? (isError ? ERROR_HINT : DEFAULT_HINT)}
-      </span>
+      {hint !== null && (
+        <span className="h-[16px] text-caption-12" style={{ color: hintColor }}>
+          {hint ?? (isError ? ERROR_HINT : DEFAULT_HINT)}
+        </span>
+      )}
     </label>
   );
 }

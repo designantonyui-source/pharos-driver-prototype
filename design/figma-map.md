@@ -11,7 +11,7 @@ File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **
 | `589:267` | iOS / pending / Application status | `/application/:id` | todo |
 | `735:1152` | iOS / pending-customer / Application status | same route, `status=awaiting-customer` | todo |
 | `589:334` | iOS / order / Trip TR-4821 | `/trip/:id` | todo |
-| `2772:12931` | iOS / first-search-v2.1 / Loads | `/search` | todo |
+| `2772:12931` | iOS / first-search-v2.1 / Loads | `/search` | done |
 | `2768:6789` | iOS / searching-v2 / Loads | `/search/loading` | todo |
 
 ## Component map (Figma component set → code component)

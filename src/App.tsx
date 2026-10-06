@@ -1,5 +1,6 @@
 import { Link, Route, Routes } from 'react-router-dom';
 import { DemoPanel } from './components/DemoPanel';
+import { Search } from './screens/Search';
 
 /**
  * Screen index — every Figma screen gets a route here.
@@ -9,12 +10,14 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
+      <Route path="/search" element={<Search />} />
     </Routes>
   );
 }
 
 function Index() {
   const screens = [
+    ['/search', 'Loads — first search (setup)'],
     ['/loads', 'Loads — list'],
     ['/map', 'Loads — map (peek / full sheet)'],
     ['/load/:id', 'Load details v2 (Send application)'],

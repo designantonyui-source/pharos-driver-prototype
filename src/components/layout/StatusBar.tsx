@@ -1,6 +1,6 @@
 /**
  * figma: 2353:26430 · Pharos/App/Status bar — Type=IOS `2305:25330` · Type=Default `586:20`
- * props: type, time
+ * props: type, time, island
  *
  *   Type=IOS 402x62 · fill color/bg/surface
  *     time 17/22, centered in the 124-wide left box at x 9, y 21 (iOS style)
@@ -9,10 +9,23 @@
  *   Type=Default 402x54 · fill color/bg/canvas · pad(0/24/0/28)
  *     time 16/24 · connectivity "5G · 100%" 12/16 Medium
  *
+ * `island` mirrors a real divergence in the file: the Type=IOS COMPONENT (2305:25330) carries the
+ * Dynamic Island, but every screen INSTANCE (e.g. 2772:12932) was created without it, so the app
+ * screens show no island. Default follows the screens; the `Ios` story passes `island` to mirror
+ * the component variant.
+ *
  * tokens: color-bg-surface, color-bg-canvas, color-system-black, color-text-primary
  * note: the status bar is device chrome, not Pharos UI — its metrics stay literal on purpose.
  */
-export function StatusBar({ type = 'ios', time = '9:41' }: { type?: 'ios' | 'default'; time?: string }) {
+export function StatusBar({
+  type = 'ios',
+  time = '9:41',
+  island = false,
+}: {
+  type?: 'ios' | 'default';
+  time?: string;
+  island?: boolean;
+}) {
   if (type === 'default') {
     return (
       <div className="flex h-[var(--status-bar-default-h)] w-full items-center justify-between bg-[var(--color-bg-canvas)] pl-[28px] pr-[24px]">
@@ -48,7 +61,9 @@ export function StatusBar({ type = 'ios', time = '9:41' }: { type?: 'ios' | 'def
         </svg>
       </span>
 
-      <span className="absolute left-1/2 top-[14px] h-[37px] w-[125px] -translate-x-1/2 rounded-[var(--radius-pill)] bg-[var(--color-system-black)]" />
+      {island && (
+        <span className="absolute left-1/2 top-[14px] h-[37px] w-[125px] -translate-x-1/2 rounded-[var(--radius-pill)] bg-[var(--color-system-black)]" />
+      )}
     </div>
   );
 }
