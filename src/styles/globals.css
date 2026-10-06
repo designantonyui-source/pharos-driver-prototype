@@ -15,6 +15,15 @@
   --tab-bar-h: 83px;
   --home-indicator-y: 840px;
   --home-indicator-h: 34px;
+
+  /* component geometry from Figma (Pharos/App/Offer = 370x190) */
+  --card-w: 370px;
+  --card-h: 190px;
+  --card-h-loading: 194px;
+  --card-h-pending: 255px;
+  --card-pad: 16px;
+  --card-gap: 8px;
+  --control-h: 48px;
 }
 
 body {
