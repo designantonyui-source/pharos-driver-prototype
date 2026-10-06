@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="358" height="320" viewBox="0 0 358 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Waterways and regional roads" clip-path="url(#clip0_0_4)">
+<path id="Vector" d="M0 109.199C74.1083 99.7033 102.611 128.19 179.57 118.694C256.529 109.199 290.732 94.9555 358 109.199" stroke="#DCE9EA" stroke-width="15"/>
+<path id="Vector_2" d="M34.2038 320C74.1083 213.65 148.217 213.65 188.121 156.677C228.025 99.7033 279.331 85.4599 358 33.2344" stroke="#D6DEDC" stroke-width="8"/>
+<path id="Vector_3" d="M0 173.294C74.1083 156.677 148.217 185.163 358 161.424" stroke="#D6DEDC" stroke-width="7"/>
+<path id="Vector_4" d="M108.312 0C102.611 75.9644 119.713 175.668 168.169 320" stroke="#E1E7E2" stroke-width="5"/>
+<path id="Vector_5" d="M239.427 0C228.025 85.4599 290.732 173.294 302.134 320" stroke="#E1E7E2" stroke-width="5"/>
+<path id="Vector_6" d="M42.7548 258.754C91.2102 225.519 94.0605 192.285 136.815 182.789C179.57 173.294 188.121 161.424 208.073 130.564C228.025 99.7033 256.529 98.7537 285.032 73.5905" stroke="white" stroke-width="9" stroke-linecap="round"/>
+<path id="Vector_7" d="M42.7548 258.754C91.2102 225.519 94.0605 192.285 136.815 182.789C179.57 173.294 188.121 161.424 208.073 130.564C228.025 99.7033 256.529 98.7537 285.032 73.5905" stroke="#287D76" stroke-width="4" stroke-linecap="round"/>
+</g>
+<defs>
+<clipPath id="clip0_0_4">
+<rect width="358" height="320" fill="white"/>
+</clipPath>
+</defs>
+</svg>

@@ -34,6 +34,8 @@ File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **
 | `Pharos/Payment summary` | `412:389` | `src/components/PaymentSummary.tsx` — Pending `412:347` / Early available `412:361` / Received `412:375` |
 | `Pharos/Offer preview` | `26:73` | `src/components/OfferPreview.tsx` — Desktop `106:17` `106:35` / Mobile `26:35` `26:53` (all 32 instances are Desktop; Figma cannot render this set) |
 | `Pharos/App/Route card` | `2715:1535` | `src/components/RouteCard.tsx` — Addresses=Expected `2715:1465` / Known `2715:1500` |
+| `Pharos/Route map` | `330:164` | `src/components/RouteMap.tsx` — Size=Desktop `330:2` `330:33` `330:67` / Size=Mobile `330:84` `330:114` `330:147`; artwork in `src/assets/maps` |
+| `Pharos/App/Approach map` | `719:355` | `src/components/ApproachMap.tsx` — artwork `719:356` exported to `src/assets/maps/approach-402x646.svg` |
 | `Pharos/App/Trip checklist` | `2715:1596` | `src/components/TripChecklist.tsx` — only `State=Awaiting` `2715:25520` (used by Bottom sheet Content=Request) |
 | `Pharos/App/Tab bar` | `586:67` | `src/components/layout/TabBar.tsx` — Active=Loads/Applications/My day/Account |
 | `Pharos/App/Status bar` | `2353:26430` | `src/components/layout/StatusBar.tsx` — Type=IOS `2305:25330` / Type=Default `586:20` |

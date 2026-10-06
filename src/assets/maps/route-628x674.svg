@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="628" height="674" viewBox="0 0 628 674" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Waterways and regional roads" clip-path="url(#clip0_0_4)">
+<path id="Vector" d="M0 230C130 210 180 270 315 250C450 230 510 200 628 230" stroke="#DCE9EA" stroke-width="22"/>
+<path id="Vector_2" d="M60 674C130 450 260 450 330 330C400 210 490 180 628 70" stroke="#D6DEDC" stroke-width="12"/>
+<path id="Vector_3" d="M0 365C130 330 260 390 628 340" stroke="#D6DEDC" stroke-width="10"/>
+<path id="Vector_4" d="M190 0C180 160 210 370 295 674" stroke="#E1E7E2" stroke-width="8"/>
+<path id="Vector_5" d="M420 0C400 180 510 365 530 674" stroke="#E1E7E2" stroke-width="8"/>
+<path id="Vector_6" d="M75 545C160 475 165 405 240 385C315 365 330 340 365 275C400 210 450 208 500 155" stroke="white" stroke-width="15" stroke-linecap="round"/>
+<path id="Vector_7" d="M75 545C160 475 165 405 240 385C315 365 330 340 365 275C400 210 450 208 500 155" stroke="#287D76" stroke-width="6" stroke-linecap="round"/>
+</g>
+<defs>
+<clipPath id="clip0_0_4">
+<rect width="628" height="674" fill="white"/>
+</clipPath>
+</defs>
+</svg>

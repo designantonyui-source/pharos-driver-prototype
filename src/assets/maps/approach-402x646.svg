@@ -1,0 +1,17 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="402" height="646" viewBox="0 0 402 646" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Editable roads and approach" clip-path="url(#clip0_0_4)">
+<rect width="402" height="646" fill="white"/>
+<path id="water" d="M-25 470C90 395 82 220 205 115C328 10 370 55 430 -20" stroke="#EBF3F7" stroke-width="22"/>
+<path id="park1" d="M270 65L372 15L418 135L350 179L285 148L270 65Z" fill="#BCE5D5"/>
+<path id="park2" d="M-10 198L70 168L101 233L64 278L-10 270V198Z" fill="#BCE5D5"/>
+<path id="roads-wide" d="M-20 180C60 176 127 183 184 220C241 257 300 309 423 299M-20 400C95 392 178 318 259 251C340 184 330 111 430 129M144 -30C149 100 170 184 205 273C240 362 300 450 296 668M-10 568C100 502 180 511 431 459" stroke="white" stroke-width="17"/>
+<path id="roads-small" d="M45 -20L59 113L85 187L133 241L170 366L177 651M280 -20L263 107L264 179L291 329L370 646M-20 82L193 112L430 188M-20 332L116 299L249 358L430 393M-20 515L122 484L220 416L430 524" stroke="white" stroke-width="8"/>
+<path id="approach-outline" d="M90 365L119 354C129 350 135 340 137 324L144 290C147.333 278 155 272 167 272H220C233.333 272 243.667 266.667 251 256L280 235" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="approach-route" d="M90 365L119 354C129 350 135 340 137 324L144 290C147.333 278 155 272 167 272H220C233.333 272 243.667 266.667 251 256L280 235" stroke="#225D74" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<clipPath id="clip0_0_4">
+<rect width="402" height="646" fill="white"/>
+</clipPath>
+</defs>
+</svg>
