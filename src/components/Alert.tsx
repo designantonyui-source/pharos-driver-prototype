@@ -16,7 +16,7 @@ export function Alert({ title, children, type = 'info' }: { title: string; child
   return (
     <div
       className="flex w-full items-center gap-[12px] rounded-[var(--radius-md)] p-[12px]"
-      style={{ background: `var(--color-alert-bg-${TOKEN[type]})`, color: `var(--color-alert-text-${TOKEN[type]})` }}
+      style={{ background: `var(--color-alert-${TOKEN[type]}-bg)`, color: `var(--color-alert-${TOKEN[type]}-text)` }}
     >
       <Icon size={20} className="shrink-0" />
       <div className="flex flex-col gap-[4px]">
