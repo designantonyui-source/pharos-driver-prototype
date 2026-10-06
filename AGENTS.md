@@ -23,6 +23,13 @@ The prototype leads: design changes go back to Figma afterwards.
 6. **Data access goes through `src/lib/api.ts`.** Screens never talk to `localStorage` or `fetch` directly.
 7. **Shell metrics are fixed**: screen 402×874, status bar 62, nav bar 76, sticky bar 64, viewport 614,
    tab bar y 757 h 83, home indicator y 840 h 34. Always reuse `src/components/layout/*`.
+8. **Every ported component is documented in `design/PORT-LOG.md` in the same commit**: the Figma
+   node ids, the variants covered, the deviations found and the measured numbers that prove the match.
+   Update `design/figma-map.md` too. The log also lists the traps of this Figma file — read it before
+   porting anything, it will save you the same debugging.
+9. **A component is not "ported" until it is measured.** Rendering in Storybook proves nothing:
+   compare geometry, colours and typography against the Figma numbers with Playwright
+   (`channel: 'chrome'`, Storybook already runs on `localhost:6007`). The recipe is in `design/PORT-LOG.md`.
 
 ## Definition of done for a screen
 

@@ -21,7 +21,9 @@ File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **
 | `Pharos/App/Offer` (v2 card) | `2594:22063` | `src/components/OfferCard.tsx` — states Default / Loading / Pending |
 | `Pharos/Bottom sheet` | `2197:8841` | `src/components/BottomSheet.tsx` — Peek / Full |
 | `Pharos/Input` | `12:166` | `src/components/Input.tsx` — Empty / Filled / Focus / Error / Disabled / Readonly (+ hidden `Required` layer) |
-| `Pharos/Status` | `11:148` | `src/components/StatusPill.tsx` — tones |
+| `Pharos/Status` | `11:148` | `src/components/StatusPill.tsx` — 6 tones (Neutral `11:142` · Info `11:143` · Success `11:144` · Warning `11:145` · Danger `11:146` · Match `11:147`), one story each |
+| `Pharos/Avatar` | `74:64` | `src/components/Avatar.tsx` — Size=Small `74:56` / Size=Medium `74:57` |
+| `Pharos/Country flag Rectangle` | `249:1646` | `src/components/Flag.tsx` — Country=France `249:1647` / Country=Belgium `249:1649` (set 24×24, app instances 18×18) |
 | `Pharos/Alert` | `575:9632` | `src/components/Alert.tsx` — Info / Warning / Error / Success / Neutral |
 | `Pharos/Button` | `12:38` | `src/components/Button.tsx` |
 | `Pharos/Button link` | `168:118` | `src/components/Button.tsx` — exports `ButtonLink` |

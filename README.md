@@ -29,6 +29,7 @@ pnpm storybook    # витрина компонентов на http://localhost:
 | `src/lib/store.ts` | состояние заявки, persist в localStorage |
 | `design/tokens.json` | токены (экспорт из Figma) → `src/styles/tokens.css` через `pnpm tokens` |
 | `design/figma-map.md` | таблица «node-id в Figma ↔ файл/компонент в коде» |
+| `design/PORT-LOG.md` | журнал переноса: метод сверки, ловушки Figma-файла, замеры по каждому компоненту |
 
 ## Правила (важно для агентов)
 

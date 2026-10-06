@@ -1,0 +1,363 @@
+# PORT-LOG — перенос Figma → код
+
+Рабочий журнал переноса дизайн-системы Pharos в этот репозиторий. Ведётся по ходу работ:
+каждый компонент получает запись с node-id, найденными расхождениями, правками и **замерами**,
+которыми проверено совпадение с Figma.
+
+- Файл Figma: `sve9YrMmfz91XQX5IpZjGO`
+- Страницы приложения водителя: `21 — Driver / Search and request` (`21:3`), `30 — iOS App / Driver` (`586:9`)
+- Карта «node-id ↔ файл»: [figma-map.md](figma-map.md)
+
+Статусы: `done` — сверен и проверен замерами · `review` — в работе · `exists` — есть в коде, но с Figma не сверялся · `todo` — не начат · `n/a` — не компонент Pharos.
+
+---
+
+## 1. Метод сверки (повторяемый)
+
+Сверка делается **по числам**, а не на глаз. Порядок для каждого компонента:
+
+1. **Спека из Figma.** `use_figma` (read-only) отдаёт список вариантов, а затем дерево с геометрией,
+   заливками, обводками, радиусами, паддингами и типографикой.
+   Обязательно: сначала прочитать скилл `skill://figma/figma-use/SKILL.md`.
+2. **Скриншот Figma** (`get_screenshot`) — визуальный эталон, читается глазами.
+3. **Правка кода** по спеке, значения — только из токенов.
+4. **Стори** на каждый вариант Figma.
+5. **Замер в живом Storybook** через Playwright и **скриншот** своей стори.
+6. **Запись в этот журнал** и в `figma-map.md`.
+
+Storybook для проверки уже запущен на `http://localhost:6007`; второй поднимать не нужно.
+
+```js
+// Замер: Playwright управляет установленным Google Chrome.
+// Встроенный Chromium Playwright не скачан — всегда channel: 'chrome'.
+const { chromium } = require('playwright');           // запускать node из корня репозитория
+const b = await chromium.launch({ channel: 'chrome' });
+const p = await b.newPage({ viewport: { width: 500, height: 500 } });
+await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', { waitUntil: 'networkidle' });
+// дальше p.evaluate(...) с getComputedStyle/getBoundingClientRect и сравнение с числами Figma
+// если скрипт лежит в /tmp: NODE_PATH="$(pwd)/node_modules" node /tmp/script.cjs
+```
+
+Список id сторей: `curl -s http://localhost:6007/index.json`.
+
+---
+
+## 2. Ловушки этого Figma-файла
+
+Собраны по фактическим ошибкам, каждая стоила отдельной отладки.
+
+1. **Имена слоёв врут.** Название инстанса не равно содержимому. Примеры: у таб-бара слой
+   «Icon / doc.text» рисует кубик (`Lucide/Package`), «Icon / truck.box» — календарь; у Alert
+   Neutral слой «Icon / Info», а главный компонент `Lucide/Icon/Circle Check`.
+   **Правило: резолвить `getMainComponentAsync().name`, а не `node.name`.**
+2. **`node.x/y` внутри auto-layout дают мусор** (отрицательные координаты за пределами фрейма).
+   **Правило: считать смещения через `absoluteBoundingBox`.**
+3. **`figma-map.md` врал по node-id.** `12:104` числился как `Pharos/Input`, а это вложенный
+   текстовый слой `Label`. Реальный сет — `12:166`.
+4. **Несуществующие CSS-переменные молчат.** `var(--color-input-*)` не была определена нигде;
+   невалидный `var()` внутри шортката **отбрасывает объявление целиком** — контрол рендерился
+   без рамки и фона и выглядел «пустым», а не сломанным. Аудит переменных — обязательный шаг.
+5. **Tailwind не видит интерполяцию в классах.** `border-[${cond ? 'a' : 'b'}]` не сканируется,
+   класс не генерируется, `border-color` падает в `currentColor`. **Правило: только литеральные классы.**
+6. **Абсолютный элемент позиционируется от padding box, а не от border box.** Из-за focus-рамки
+   2px кольцо садилось на 4px меньше; смещение пришлось считать как 4px + ширина рамки.
+7. **Loading ≠ Disabled.** В Figma Loading сохраняет активные цвета и добавляет спиннер.
+8. **Состояния могут быть в токенах, но не в коде.** `color-action-*-hover/-pressed` лежали
+   в `tokens.json` и не использовались ни одним компонентом.
+9. **Focus ring — отдельный слой.** Не тень: 2px на 4px наружу, радиус 12 (у Input и Button совпадает).
+10. **`figma.get_metadata` без nodeId показывает не все страницы** — в файле их 17, а инструмент
+    вернул одну. Список страниц надёжнее получать через `figma.root.children`.
+11. **Шрифты не были подключены вообще.** В `tokens.json` названы DM Sans и Manrope, но ни
+    `@font-face`, ни ссылки на Google Fonts не было — ни в `index.html`, ни в Storybook.
+    `document.fonts.check('500 12px "DM Sans"')` возвращал `true` **только потому, что DM Sans
+    установлен в macOS**; на другой машине всё молча уезжало в `system-ui`. Проверять надо не
+    `check()`, а список `[...document.fonts]`.
+12. **Tailwind v4 игнорирует `--text-<name>--font-family`.** В пространстве `--text-*` переносятся
+    размер, line-height, letter-spacing и вес, а семейство — нет. Поэтому **все заголовки
+    рендерились в DM Sans вместо Manrope**, и Manrope не загружался ни разу. Лечится мостом
+    в генераторе токенов (см. 4.3).
+13. **Голый текстовый узел не измерить и структура расходится с Figma.** Если лейбл отрендерен
+    как `{label}` без обёртки, в DOM нет узла, соответствующего слою `Label`, и замер шрифта
+    приходится делать по родителю. Обёртка `<span>` дешевле, чем потеря проверяемости.
+14. **Ширина текста — не показатель совпадения.** Пилюля Status до подключения шрифтов давала
+    51.27px при Figma 51, после — 50.28. Прежнее «совпадение» было случайным: мерился фолбэк.
+15. **Шрифт текстового узла может не резолвиться.** У времени в статус-баре (`Type=IOS`)
+    `fontName` возвращает `mixed`, а `getRangeFontName(i, i+1)` — `undefined` для всех символов:
+    текстовый слой набран шрифтом, которого в файле нет (`listAvailableFontsAsync` не содержит
+    ни SF Pro, ни другого подходящего). Значит и в самой Figma он рендерится фолбэком, и
+    «сверить шрифт» тут не с чем — это надо фиксировать как неизвестность, а не подгонять.
+
+---
+
+## 3. Инвентарь области работ
+
+Скоуп определён точно: **компоненты, которые реально инстансируются на двух страницах водителя** —
+58 штук (всего в файле 43 component set). Из них 6 — иконки Lucide и мок iOS-статус-бара, они не переносятся.
+
+| Компонент | Figma | Инстансов | Файл | Статус |
+|---|---|---|---|---|
+| Pharos/Button | `12:38` | 250 | `src/components/Button.tsx` | done |
+| Pharos/App/Status bar | `2353:26430` | 139 | `src/components/layout/StatusBar.tsx` | done |
+| Pharos/App/Navigation bar | `586:33` | 139 | `src/components/layout/NavigationBar.tsx` | done |
+| Pharos/Information section | `2576:2265` | 116 | — | todo |
+| Pharos/Status | `11:148` | 109 | `src/components/StatusPill.tsx` | done |
+| Pharos/App/Home indicator | `586:70` | 97 | `src/components/layout/HomeIndicator.tsx` | done |
+| Pharos/Input | `12:166` | 76 | `src/components/Input.tsx` | done |
+| Pharos/App/Tab bar | `586:67` | 61 | `src/components/layout/TabBar.tsx` | done |
+| Pharos/Alert | `575:9632` | 54 | `src/components/Alert.tsx` | done |
+| Pharos/App/Offer | `2594:22063` | 46 | `src/components/OfferCard.tsx` | exists |
+| Pharos/App/View switch | `2041:411` | 42 | — | todo |
+| Pharos/Offer preview | `26:73` | 32 | — | todo |
+| Pharos/Sidebar | `82:150` | 30 | — | todo |
+| Pharos/Page header | `167:65` | 30 | — | todo |
+| Pharos/Message bubble | `384:355` | 25 | — | todo |
+| Pharos/Filters button | `2646:1314` | 21 | — | todo |
+| Pharos/Button link | `168:118` | 20 | `src/components/Button.tsx` (`ButtonLink`) | done |
+| Pharos/Route search + filters | `340:404` | 18 | — | todo |
+| Pharos/Avatar | `74:64` | 15 | `src/components/Avatar.tsx` | done |
+| Pharos/App/Approach map | `719:355` | 15 | — | todo |
+| Pharos/App/Route card | `2715:1535` | 15 | — | todo |
+| Pharos/Mobile header | `26:24` | 14 | — | todo |
+| Pharos/App/Onboarding progress | `2062:410` | 13 | — | todo |
+| Pharos/Filter chip v2 | `2621:1288` | 11 | — | todo |
+| Pharos/App/Driver profile | `769:10428` | 9 | — | todo |
+| Pharos/Load card | `14:146` | 8 | — | todo |
+| Pharos/Rate offer card | `384:368` | 8 | — | todo |
+| Pharos/App/Offer route | `693:995` | 8 | — | todo |
+| Pharos/App/Day item | `2021:2666` | 8 | — | todo |
+| Pharos/Chat/Cargo context | `2188:8055` | 8 | — | todo |
+| Pharos/App/Trip steps | `2728:26593` | 8 | — | todo |
+| Pharos/Select | `344:51` | 8 | — | todo |
+| Pharos/Country flag Rectangle | `249:1646` | 8 | `src/components/Flag.tsx` | done |
+| Pharos/App/Trip preparation | `2715:1617` | 7 | — | todo |
+| Pharos/App/Trip checklist | `2715:1596` | 7 | — | todo |
+| Pharos/Chat/Composer | `2188:7944` | 7 | — | todo |
+| Pharos/Empty details panel | `129:46` | 6 | — | todo |
+| Pharos/App/Offer terms | `693:1013` | 6 | — | todo |
+| Pharos/App/Route summary | `671:977` | 6 | — | todo |
+| Pharos/Filter chip | `338:211` | 6 | — | todo |
+| Pharos/Route summary | `26:27` | 4 | — | todo |
+| Pharos/Payment summary | `412:389` | 3 | — | todo |
+| Pharos/App/Application progress | `734:426` | 3 | — | todo |
+| Pharos/Location suggestions | `190:117` | 3 | — | todo |
+| Pharos/App/Keyboard | `2776:1613` | 3 | — | todo |
+| Pharos/Bottom sheet | `2197:8841` | 3 | `src/components/BottomSheet.tsx` | exists |
+| Pharos/Chat/Rate offer | `2189:8453` | 3 | — | todo |
+| Pharos/App/Upload field | `2013:3064` | 2 | — | todo |
+| Pharos/Upload field/Driving licence preview | `2091:441` | 2 | — | todo |
+| Pharos/Route map | `330:164` | 1 | — | todo |
+| Lucide/Icon/Clock | `2006:17` | 7 | `lucide-react` | n/a |
+| Lucide/Icon/Calendar | `2006:13` | 6 | `lucide-react` | n/a |
+| Lucide/Icon/Info | `575:9647` | 5 | `lucide-react` | n/a |
+| Lucide/Icon/Map pin | `279:5035` | 4 | `lucide-react` | n/a |
+| Lucide/Icon/Search | `279:5037` | 2 | `lucide-react` | n/a |
+| Lucide/Icon/Loader | `279:5034` | 1 | `lucide-react` | n/a |
+| Lucide/Icon/Arrow right | `279:5033` | 1 | `lucide-react` | n/a |
+| Status bar - iPhone 17 Pro | `2305:24705` | 1 | мок iOS | n/a |
+
+---
+
+## 4. Журнал
+
+### 4.0. До начала работ
+
+Первым делом сверялся Input — и оказался сломан (см. ловушку 4). Починка: `5a3a93f`.
+Заведена проверочная обвязка (Playwright + Chrome), `b102ee3`.
+
+### 4.1. Волна 0 — оболочка экрана · коммит `d62f804`
+
+`AppShell.tsx` разбит на пять файлов (`layout/*`), у каждого появились стори; удалён `Icons.tsx`
+(самодельные дубликаты `lucide-react`, который остальные компоненты уже используют).
+
+**Pharos/App/Status bar** `2353:26430` — типы IOS `2305:25330` (402×62) и Default `586:20` (402×54).
+
+| Что | Figma | Замер |
+|---|---|---|
+| высота, фон | 62, `#ffffff` | 62, `rgb(255,255,255)` |
+| время | 17/22 SemiBold, центр бокса 124 на x=9 → центр 71 | 17/22, fw600, центр 71 |
+| индикаторы | 129×13, отступ справа 9 | 129×13, отступ 9 |
+| Dynamic Island | 125×37, r-pill, центр, y=14 | 125×37, r999, центр 202 при центре экрана 201, y=14 |
+
+До правки: `Dynamic Island` отсутствовал, фон не задавался, тип Default не существовал.
+
+**Pharos/App/Navigation bar** `586:33` — Home `586:25` (76) и Back `586:32` (60).
+
+| Что | Figma | Замер |
+|---|---|---|
+| Home: высота, заголовок | 76, 24/32 Bold, x=16, w=370 | 76, 24/32 fw700, x=16, w=370 |
+| Back: высота, кнопка | 60, 44×44 на x=16 | 60, 44×44 на x=16 |
+| Back: заголовок | 20/28 SemiBold, x=68 | 20/28 fw600, x=68 |
+| фон | `#f4f6f8` (канвас) | `rgb(244,246,248)` |
+
+До правки: одна высота 76 на оба типа, заголовок по центру, «назад» — текстовый символ `←`.
+
+**Pharos/App/Tab bar** `586:67` — четыре варианта (по активной вкладке).
+
+| Что | Figma | Замер |
+|---|---|---|
+| корень | 402×83, pad top 8, белый | 402×83, `rgb(255,255,255)` |
+| вкладки | 90×50, позиции 16 / 110 / 203 / 297 | 90×50, позиции 16 / 109 / 203 / 296 |
+| активная | фон `#eff2f5`, r-pill | `rgb(239,242,245)`, r999 |
+| лейбл активный / обычный | `#225d74` / `#586d79`, 12/16 Medium | `rgb(34,93,116)` / `rgb(88,109,121)`, 12/16 fw500 |
+| иконки | 20×20, 2px, `#172a35` в обоих состояниях | 20×20, `rgb(23,42,53)` |
+
+До правки: пилюля 64×32 вокруг иконки вместо всей вкладки 90×50, иконки 22px, активный лейбл `text-primary`.
+
+**Pharos/App/Home indicator** `586:70` — 402×34, полоса 134×5 r3 `#172a35`. Замер совпал.
+
+**ScreenFrame** (`src/components/layout/ScreenFrame.tsx`) — композиция пяти частей, метрики шелла
+фиксированы: 402×874, статус-бар 62 (Default 54), навбар 76/60, таб-бар y757 h83, home indicator y840 h34.
+
+### 4.2. Волна 1 — атомы · коммиты `591adcb`, Input ранее `5a3a93f`
+
+**Pharos/Button** `12:38` — 24 варианта: Appearance Primary/Secondary × Size Web(40)/Mobile(48) ×
+State Default/Hover/Pressed/Focus/Disabled/Loading.
+
+| Что | Figma | Замер |
+|---|---|---|
+| primary | `#225d74`, текст белый, h48, r8 | `rgb(34,93,116)`, fw500 14/20, h48, r8 |
+| primary hover / pressed | `#1b4f65` / `#153f50` | `rgb(27,79,101)` / `rgb(21,63,80)` |
+| secondary | `#ffffff`, рамка 1px `#8093a0`, текст `#225d74` | совпало |
+| secondary hover / pressed | `#ebf3f7` / `#d8e9f0` | `rgb(235,243,247)` / `rgb(216,233,240)` |
+| disabled (оба) | фон `#c3d0d8`, текст `#80929e`; у secondary рамка `#d7e0e6` | совпало |
+| loading | активные цвета + спиннер 20×20 (кольцо 15×15, 2px) | фон `#225d74`, бокс 20, кольцо 15 |
+| focus | рамка 2px + кольцо 378×56 r12 при offset −4 | 378×56, offset −4, r12 |
+| Size=Web | высота 40 | 40 |
+
+Найдено и исправлено: hover/pressed не были подключены к существующим токенам; loading выглядел
+выключенным; у secondary disabled был белый фон; focus ring был тенью 4px; рамка secondary падала
+в `currentColor` из-за интерполяции класса (ловушка 5); не было размера Web.
+
+**Pharos/Button link** `168:118` — 12 вариантов.
+
+| Что | Figma | Замер |
+|---|---|---|
+| бокс | hug 118×48, pad x16, без фона | 118×48 |
+| текст | 14/20 Medium `#225d74` | совпало |
+| hover / pressed | фон `#ebf3f7` / `#d8e9f0` | `rgb(235,243,247)` / `rgb(216,233,240)` |
+| disabled | текст `#80929e` | `rgb(128,146,158)` |
+| loading | ширина 146 (+спиннер 20 и gap 8) | 146 |
+
+До правки: `w-full` без паддингов, ни одного состояния.
+
+**Pharos/Alert** `575:9632` — 5 типов, каждый 546×64.
+
+| Что | Figma | Замер |
+|---|---|---|
+| бокс | pad12 gap12 r12, иконка 20×20 по центру | h64, r12, иконка 20 |
+| title / description | 14/20 Medium, 12/16 Regular | 14/20 fw500, 12/16 fw400 |
+| Info / Error / Neutral фон | `#ebf3f7` / `#fdedea` / `#eff2f5` | совпало |
+| текст по типу | `#225d74` / `#b8332f` / `#526773` | совпало |
+| иконки | Info, Triangle Alert, **Circle X**, Circle Check, **Circle Check** | исправлено |
+
+Найдено: Error использовал `CircleAlert` вместо `CircleX`; Neutral показывал Info, хотя главный
+компонент — `Circle Check` (слой назван неверно). Добавлена опциональная третья строка —
+скрытый в Figma слой «Waiting detail».
+
+**Pharos/Input** `12:166` — мобильные варианты `12:160`–`12:165` (Web `12:154`–`12:159`).
+
+| Что | Figma | Замер |
+|---|---|---|
+| контрол | h48, r8, pad 0/12, рамка 1px `#8093a0`, фон белый | совпало |
+| focus | рамка 2px `#225d74` + кольцо 368×56 r12 offset −4 | совпало |
+| ошибка | рамка 1px `#b8332f`, подсказка `#b8332f` | совпало |
+| disabled / readonly | фон `#eff2f5`, рамка та же | совпало |
+| hint | есть во всех шести состояниях, 12/16 | есть |
+
+### 4.3. Волна 1 (продолжение) — Status, Avatar, Country flag · коммит `8a58a9c`
+
+**Pharos/Status** `11:148` — шесть тонов (Neutral `11:142`, Info `11:143`, Success `11:144`,
+Warning `11:145`, Danger `11:146`, Match `11:147`), каждый 87×28. Свойства компонента в Figma:
+текстовое `Label` = «In transit» и булево `Show dot`.
+
+| Что | Figma | Замер |
+|---|---|---|
+| бокс | hug, pad 6/12, gap 6, radius 999 | 86.28×28, pad 6/12, gap 6, r999 |
+| точка | 6×6, цвет текста тона | 6×6 на (12,11) |
+| лейбл | DM Sans Medium 12/16 | 12/16 fw500, DM Sans |
+| цвета тонов | `#eff2f5/#526773`, `#ebf3f7/#225d74`, `#e8f6ef/#216547`, `#fff4df/#855300`, `#fdedea/#b8332f`, `#bce5d5/#1c5644` | все шесть совпали |
+
+Правки: высота была прибита `h-[28px]` вместо hug-паддингов Figma; `gap`/`px` были сырыми
+числами, переведены на `--spacing-6`/`--spacing-12`; точка получила `bg-current` и `aria-hidden`;
+шапка-контракт не содержала props и id вариантов и ссылалась на несуществующий токен;
+единственная стори `Tones` с выдуманными подписями заменена на шесть сторей по тонам с текстом из Figma.
+Отдельно: лейбл был голым текстовым узлом — обёрнут в `<span>`, чтобы соответствовать слою `Label`
+(ловушка 13).
+
+**Pharos/Avatar** `74:64` — новый компонент. Size=Small `74:56` (32×32, Label/12) и
+Size=Medium `74:57` (40×40, Label/14); радиус 999, фон `color/avatar/bg`, инициалы
+`color/avatar/text`; свойство `Initials` = «AK». Все 24 инстанса в приложении — Medium 40×40,
+поэтому размер по умолчанию `medium`.
+
+| Что | Figma | Замер |
+|---|---|---|
+| размеры | 32×32 и 40×40, radius 999 | 32×32 и 40×40, r999 |
+| цвета | `#bce5d5` / `#1c5644` | `rgb(188,229,213)` / `rgb(28,86,68)` |
+| шрифт | 12/16 fw500 и 14/20 fw500 | совпало |
+
+**Pharos/Country flag Rectangle** `249:1646` — Country=France `249:1647`, Country=Belgium `249:1649`,
+оба 24×24 (bbox сета 136×72 — это просто раскладка). В Figma: белый бокс 24×24, рисунок 3:2
+высотой 16 по центру (y=4), обводка 1px `#cbd5da`, радиус 2.
+
+SVG в репозитории — точный экспорт этого рисунка в масштабе 0.75, а приложение инстансит сет
+в 18×18 (Offer `2658:1312`/`2658:1322`), поэтому `size = 18` оставлен значением по умолчанию:
+смена молча изменила бы размер флагов в `OfferCard`. Добавлена стори на оба варианта в
+геометрии сета (24×24) и шапка-контракт. Пиксельная сверка с рендерами Figma: **572 из 576
+пикселей идентичны**, остальные 4 — сглаживание скруглённых углов; цвет обводки совпал точно.
+
+### 4.4. Типографика — до и после
+
+Проверка шрифтов вскрыла две системные проблемы (ловушки 11 и 12): **ни DM Sans, ни Manrope
+не подключались**, а Tailwind игнорировал семейство из текстовых токенов, из-за чего заголовки
+шли DM Sans'ом.
+
+Сделано:
+
+1. `index.html` и `.storybook/preview-head.html` — подключение DM Sans (400/500/700) и Manrope (600/700)
+   с Google Fonts. Storybook подхватывает `preview-head.html` без перезапуска.
+2. `tools/export-tokens.mjs` теперь генерирует **мост font-family**: по одному правилу на семейство,
+   вне `@layer` (поэтому оно выигрывает у утилит Tailwind). Файл `tokens.css` больше не содержит
+   бесполезных строк `--text-*--font-family`, зато содержит реальные правила.
+
+Соответствие проверено прямо в Figma (семейство каждого текстового стиля):
+
+| Текстовый стиль | Figma | Токен |
+|---|---|---|
+| Button label, Input label, Alert title, Status label, Tab label | DM Sans Medium | `text-label-14`, `text-label-12` (DM Sans) |
+| Navigation bar Type=Home | **Manrope** Bold 24/32 | `text-heading-24` |
+| Navigation bar Type=Back | **Manrope** SemiBold 20/28 | `text-heading-20` |
+| Offer card «Rate» €360 | **Manrope** Bold 28/36 | `text-metric-28` |
+
+После правки заголовок навбара считается как `Manrope, system-ui, sans-serif` и вес Manrope 700
+числится загруженным. **Важно для честности:** ширина лейбла Status до правки была 51.27px
+(фолбэк) против Figma 51, после — 50.28px. То есть прежнее совпадение было случайным.
+
+Заодно в `tokens.json` добавлено семейство `font.ios`, а генератор больше не хардкодит iOS-стек:
+все три семейства (`--font-ui`, `--font-heading`, `--font-ios`) теперь выводятся из токенов,
+а `--text-*--font-family` ссылается на них через переменную.
+
+**Что осталось неизвестным.** Время в статус-баре `Type=IOS` набрано шрифтом, которого в файле
+нет (ловушка 15), поэтому сверить его не с чем. В коде оно наследует UI-семейство (DM Sans) —
+это детерминированно и совпадает с тем, как Figma рисует фолбэк. Стили `text-ios-*` используют
+стек SF Pro Text → system-ui: на устройствах Apple это системный шрифт, на остальных — фолбэк.
+Отдельно: у типа `Type=Default` время — уже честный DM Sans Regular 16/24, это сверено.
+
+---
+
+## 5. Открытые вопросы
+
+- **Размер Web vs Mobile.** У Button и Input в Figma есть оба размера; приложение водителя
+  использует Mobile (48). Реализованы оба, стори показывают Web отдельно.
+- **Шрифты идут с Google Fonts (CDN).** Офлайн-сборка уедет в `system-ui`. Если нужна
+  автономность — скачать woff2 в `public/fonts` и заменить ссылки на `@font-face`.
+- **Hover и Pressed нельзя показать стори.** Это CSS-псевдоклассы, поэтому в Storybook они не
+  отдельные истории — проверяются замером с настоящим курсором. Если понадобится видеть их
+  в витрине, нужен аддон pseudo-states.
+- **Свойства компонентов не становятся стори.** У Status есть `Show dot` и `Label`, у Input —
+  скрытый `Required`: это properties, а не варианты, поэтому стори ровно по вариантам.
+- **`NavigationBar` держит свой `AvatarInitials` 44×44** — в Figma это отдельный фрейм `Profile`,
+  а не инстанс `Pharos/Avatar` (там 40×40), так что дублирование оправдано, но при появлении
+  третьего размера аватара это стоит свести в один компонент.
+- **`storybook-static/` устаревает** после каждой правки — перед публикацией нужен `pnpm build-storybook`.
+- **Встроенный Chromium Playwright не скачан** (загрузка висела). Проверки идут через
+  установленный Google Chrome (`channel: 'chrome'`).

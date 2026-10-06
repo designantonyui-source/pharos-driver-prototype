@@ -20,7 +20,8 @@ export function StatusPill({ label, tone = 'neutral', dot = true }: { label: str
           className="h-[var(--spacing-6)] w-[var(--spacing-6)] shrink-0 rounded-[var(--radius-pill)] bg-current"
         />
       )}
-      {label}
+      {/* its own node, like the Figma "Label" layer */}
+      <span className="text-label-12">{label}</span>
     </span>
   );
 }
