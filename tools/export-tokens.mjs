@@ -34,6 +34,6 @@ lines.push(`  --font-ui: ${tokens.font.ui};`);
 lines.push(`  --font-heading: ${tokens.font.heading};`);
 count += 2;
 
-const css = `/* AUTO-GENERATED from design/tokens.json — do not edit by hand (pnpm tokens).\n   Tailwind v4 @theme: every token is both a CSS variable and a utility. */\n@theme {\n${lines.join('\n')}\n}\n`;
+const css = `/* AUTO-GENERATED from design/tokens.json — do not edit by hand (pnpm tokens).\n   Tailwind v4 @theme: every token is both a CSS variable and a utility. */\n/* static: emit every token, even the ones referenced through dynamic names */\n@theme static {\n${lines.join('\n')}\n}\n`;
 writeFileSync(new URL('../src/styles/tokens.css', import.meta.url), css);
 console.log(`tokens.css written: ${count} variables`);

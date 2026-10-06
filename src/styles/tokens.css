@@ -1,6 +1,7 @@
 /* AUTO-GENERATED from design/tokens.json — do not edit by hand (pnpm tokens).
    Tailwind v4 @theme: every token is both a CSS variable and a utility. */
-@theme {
+/* static: emit every token, even the ones referenced through dynamic names */
+@theme static {
   --color-bg-canvas: #f4f6f8;
   --color-bg-surface: #ffffff;
   --color-bg-subtle: #eff2f5;
