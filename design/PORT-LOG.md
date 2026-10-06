@@ -203,7 +203,7 @@ await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', {
 | Pharos/App/Offer terms | `693:1013` | 6 | — | todo |
 | Pharos/App/Route summary | `671:977` | 6 | `src/components/RouteSummary.tsx` | done |
 | Pharos/Filter chip | `338:211` | 6 | `src/components/FilterChip.tsx` | done |
-| Pharos/Route summary | `26:27` | 4 | — (страница 21, второй компонент) | todo |
+| Pharos/Route summary | `26:27` | 4 | `src/components/RouteSummaryWeb.tsx` — мобильно-веб сводка страницы 21 (не путать с `671:977`) | done |
 | Pharos/Payment summary | `412:389` | 3 | `src/components/PaymentSummary.tsx` | done |
 | Pharos/App/Application progress | `734:426` | 3 | `src/components/ApplicationProgress.tsx` (+ `ProgressStep`) | done |
 | Pharos/Location suggestions | `190:117` | 3 | — | todo |
@@ -672,6 +672,16 @@ Application progress `734:426`): все 33 коробки совпали точ�
 (`#def5f0`). Проверено в Figma: **радиусы 2 и 6 в файле вообще не привязаны к переменным** —
 в коллекции радиусов только none/xs/sm/md/lg/pill, то есть у самого дизайн-файла есть сырые
 значения, которые репозиторий токенизирует.
+
+**`Route summary` `26:27`** — последний компонент из инвентаря. Это одиночный компонент (не сет),
+358×170, и он **мобильно-веб сводка страницы 21**: три инстанса в 390-широких экранах
+(«03 · Проверка заявки», «04 · Заявка отправлена», «05 · Заявка принята») шириной 324/358 и один в
+1440-фрейме. Это **другой** компонент, чем `671:977` со страницы 30 (370×92 с рельсой остановок),
+а не его вариант — поэтому отдельный файл `RouteSummaryWeb.tsx`. Замеры: 358×170, r16, рамка 1px
+`#d7e0e6`, pad 16, gap 12, строки на y17 (20/28 Manrope SemiBold), y57 и y89 (14/20 DM Sans Regular
+`#586d79`), прайс-строка 324×32 на y121 с «360 €» 24/32 Manrope Bold слева и «111 km loaded»
+12/16 справа — всё совпало. Ловушка 20 здесь **не** срабатывает: дети в потоке, поэтому border+pad
+дают те же 17px, что и inside-stroke в Figma.
 
 ## 5. Иконки
 

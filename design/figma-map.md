@@ -28,7 +28,8 @@ File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **
 | `Pharos/Button` | `12:38` | `src/components/Button.tsx` |
 | `Pharos/Button link` | `168:118` | `src/components/Button.tsx` — exports `ButtonLink` |
 | `Pharos/Information section` | `2576:2265` | `src/components/InformationSection.tsx` — Wide `140:49` / Compact Payment `2466:14783` · `14795` · `14807` |
-| `Pharos/App/Route summary` | `671:977` | `src/components/RouteSummary.tsx` — page 30 (6 instances). Page 21 uses `Pharos/Route summary` `26:27` (358×170, 4 instances, not ported yet), and the Loads screens use a local frame `2668:14790` «Route summary v2» 370×78 |
+| `Pharos/App/Route summary` | `671:977` | `src/components/RouteSummary.tsx` — page 30 (6 instances, marker rail + From/To rows). The Loads screens use a local frame `2668:14790` «Route summary v2» 370×78 |
+| `Pharos/Route summary` | `26:27` | `src/components/RouteSummaryWeb.tsx` — a DIFFERENT component from `671:977`: the 358×170 mobile-web summary of page 21 (3 instances in the 390-wide screens, 1 in a 1440 frame) |
 | `Pharos/Load card` | `14:146` | `src/components/LoadCard.tsx` — Mobile/Desktop × Available/Requested/Assigned |
 | `Pharos/Rate offer card` | `384:368` | `src/components/RateOfferCard.tsx` — Proposed `384:356` / Counter `384:360` / Accepted `384:364` |
 | `Pharos/Payment summary` | `412:389` | `src/components/PaymentSummary.tsx` — Pending `412:347` / Early available `412:361` / Received `412:375` |
