@@ -37,8 +37,16 @@ pnpm storybook    # витрина компонентов на http://localhost:
    ```
 
    Дальше любой из вариантов:
-   - **GitHub Pages** — workflow уже лежит в `.github/workflows/storybook.yml`; нужно один раз
-     включить Settings → Pages → Source: **GitHub Actions**. Адрес будет
+   - **GitHub Pages** — готовый workflow лежит в [`design/storybook-pages.workflow.yml`](design/storybook-pages.workflow.yml).
+     Он не в `.github/workflows/` намеренно: GitHub отказывается принимать файлы в этом каталоге
+     от токена без scope `workflow` (`refusing to allow an OAuth App to create or update workflow
+     … without 'workflow' scope`). Включить так:
+     ```bash
+     mkdir -p .github/workflows && git mv design/storybook-pages.workflow.yml .github/workflows/storybook.yml
+     git commit -m "ci: publish Storybook to Pages" && git push      # нужен токен со scope workflow
+     ```
+     либо просто создать `.github/workflows/storybook.yml` руками в веб-интерфейсе GitHub и вставить
+     содержимое файла. Затем один раз: Settings → Pages → Source: **GitHub Actions**. Адрес будет
      `https://designantonyui-source.github.io/pharos-driver-prototype/`.
      ⚠️ Pages для **приватного** репозитория требует платного плана GitHub (Pro/Team/Enterprise).
    - **Cloudflare Pages / Netlify / Vercel** — подключаются к приватному репозиторию на бесплатном
