@@ -11,9 +11,11 @@
   --color-text-tertiary: #80929e;
   --color-text-inverse: #ffffff;
   --color-text-disabled: #80929e;
+  --color-text-danger: #b8332f;
   --color-border-default: #d7e0e6;
   --color-border-strong: #8093a0;
   --color-border-brand: #225d74;
+  --color-border-danger: #b8332f;
   --color-action-primary: #225d74;
   --color-action-primary-hover: #1b4f65;
   --color-action-primary-pressed: #153f50;

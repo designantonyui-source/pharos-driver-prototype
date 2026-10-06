@@ -31,7 +31,7 @@ function Index() {
       <ul className="mt-6 space-y-2">
         {screens.map(([to, label]) => (
           <li key={to}>
-            <Link className="text-[var(--color-text-link)] underline" to={to.replace(':id', 'nordcargo')}>
+            <Link className="text-[var(--color-action-primary)] underline" to={to.replace(':id', 'nordcargo')}>
               {label}
             </Link>
             <span className="ml-2 text-[12px] text-[var(--color-text-tertiary)]">{to}</span>

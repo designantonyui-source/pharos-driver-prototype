@@ -20,11 +20,11 @@ File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **
 |---|---|---|
 | `Pharos/App/Offer` (v2 card) | `2594:22063` | `src/components/OfferCard.tsx` — states Default / Loading / Pending |
 | `Pharos/Bottom sheet` | `2197:8841` | `src/components/BottomSheet.tsx` — Peek / Full |
-| `Pharos/Input` | `12:104` | `src/components/Input.tsx` — Empty / Filled / Focus / Error |
+| `Pharos/Input` | `12:166` | `src/components/Input.tsx` — Empty / Filled / Focus / Error / Disabled / Readonly (+ hidden `Required` layer) |
 | `Pharos/Status` | `11:148` | `src/components/StatusPill.tsx` — tones |
 | `Pharos/Alert` | `575:9632` | `src/components/Alert.tsx` — Info / Warning / Error / Success / Neutral |
 | `Pharos/Button` | `12:38` | `src/components/Button.tsx` |
-| `Pharos/Button link` | `168:118` | `src/components/ButtonLink.tsx` |
+| `Pharos/Button link` | `168:118` | `src/components/Button.tsx` — exports `ButtonLink` |
 | `Pharos/App/Tab bar` | — | `src/components/layout/TabBar.tsx` |
 | `Pharos/App/Status bar` / `Navigation bar` / `Home indicator` | — | `src/components/layout/*` |
 
