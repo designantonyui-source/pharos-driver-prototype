@@ -1,0 +1,10 @@
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Button, ButtonLink } from './Button';
+const meta = { title: 'Components/Button', component: Button } satisfies Meta<typeof Button>;
+export default meta;
+type Story = StoryObj<typeof Button>;
+export const Primary: Story = { args: { label: 'Send application' } };
+export const Disabled: Story = { args: { label: 'Find loads', disabled: true } };
+export const Loading: Story = { args: { label: 'Use my location', loading: true, appearance: 'secondary' } };
+export const Secondary: Story = { args: { label: 'View load details', appearance: 'secondary' } };
+export const AsLink: Story = { render: () => <ButtonLink label="My applications" /> };

@@ -1,0 +1,10 @@
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { OfferCard } from './OfferCard';
+const meta = { title: 'Components/OfferCard', component: OfferCard, parameters: { layout: 'centered' } } satisfies Meta<typeof OfferCard>;
+export default meta;
+type Story = StoryObj<typeof OfferCard>;
+const base = { rate: '€320', perKm: '€3.05/km loaded', distance: '105 km loaded', lane: 'Tourcoing → Brussels', window: 'Today · 15:00–16:00', deadhead: '26 km to pickup · about 35 min', company: 'BelRoute · 4.7 ★ · paid in 14 days' };
+export const Default: Story = { args: base };
+export const WithBadge: Story = { args: { ...base, badge: { label: 'Needs approval', tone: 'warning' } } };
+export const Loading: Story = { args: { ...base, state: 'loading' } };
+export const Pending: Story = { args: { ...base, badge: { label: 'Awaiting dispatcher', tone: 'neutral' } } };
