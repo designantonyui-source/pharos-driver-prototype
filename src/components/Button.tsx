@@ -20,6 +20,9 @@ import type { ReactNode } from 'react';
  *   no fill, pad x16, r8, hug width, label color/action/text; loading adds the 20x20 spinner (width + 28)
  *   the master label `Resend code` (168:89) is UNDERLINE; the app instances mostly override it away,
  *   but `Pharos/App/Route card` still renders it — hence the `underline` prop
+ *   master `168:87` is primaryAxisAlignItems CENTER; a hug link is 118 wide so START and CENTER
+ *   render identically, but `Pharos/Chat/Rate offer` (2189:8453) stretches its link to 266 and the
+ *   label stays centred — hence `full` (= w-full + justify-center)
  *
  * tokens: color-action-*, color-border-default, color-focus-ring, radius-sm, radius-md,
  *         size-control-web, size-control-mobile, text-label-14
@@ -116,6 +119,7 @@ export function ButtonLink({
   focus = false,
   icon,
   underline = false,
+  full = false,
   onClick,
 }: {
   label: string;
@@ -128,6 +132,9 @@ export function ButtonLink({
    *  2715:1535 renders "Navigate" underlined while the same component inside `Pharos/App/Offer`
    *  2718:2203 does not — Figma reports `textDecoration: NONE` for both, so the render decides. */
   underline?: boolean;
+  /** stretch to the parent width and centre the label — the instance in `Pharos/Chat/Rate offer`
+   *  2188:8106 is FIXED at 266 inside a 302 card with primaryAxisAlignItems CENTER */
+  full?: boolean;
   onClick?: () => void;
 }) {
   const tone = disabled
@@ -139,7 +146,7 @@ export function ButtonLink({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`relative flex ${HEIGHT[size]} items-center justify-start gap-[8px] rounded-[var(--radius-sm)] px-[16px] text-label-14 ${tone}${underline ? ' underline' : ''}`}
+      className={`relative flex ${HEIGHT[size]} items-center gap-[8px] rounded-[var(--radius-sm)] px-[16px] text-label-14 ${full ? 'w-full justify-center' : 'justify-start'} ${tone}${underline ? ' underline' : ''}`}
     >
       {loading && <Spinner />}
       {label}

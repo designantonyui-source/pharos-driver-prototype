@@ -133,6 +133,26 @@ await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', {
     `Pharos/Bottom sheet` стоит `primaryAxisSizingMode = FIXED`, и рамка растянута под самую
     высокую карточку в ряду: у `2197:8081` дети дают 406, а рамка 454. Экспорт PNG у таких узлов
     тоже обрезан, поэтому пиксельная сверка по ним невозможна — сверять надо численно по детям.
+    То же у Message bubble (6 из 15 инстансов растянуты на 20px) и у Application progress.
+24. **Chrome округляет `border-width` до целых CSS-пикселей.** Обводку 1.5px внутри фрейма
+    воспроизвести нельзя: замерено 1px при dpr 1, 2 и 3 — Blink снапит толщину рамки, это не
+    округление растеризации. Лечится тем, что рисуется 1px, а недостающие 0.5px уходят в padding,
+    поэтому коробка и позиция контента совпадают, а толщина штриха — нет. Касается **каждого**
+    штриха 1.5px в файле (Day item, халo карт, маркеры Bottom sheet).
+25. **Рендер и API могут расходиться по языку и контенту.** У `Pharos/Route search + filters`
+    `get_screenshot` рисует поисковую строку по-русски («Текущее местоположение», «Лиль, Франция»),
+    а Plugin API возвращает английский текст и для `characters`, и для свойств компонента, и не
+    показывает оверрайдов. Слой локализации/контент-переменных управляет рендером, но через API
+    не виден — та же семья, что ловушка 21. Отгружено по-английски (правило 5), решение вынесено
+    в §7.
+26. **Внутри компонентов бывают строительные дефекты, а не дизайн-решения.** У четырёх иконок
+    сайдбара (`Orders`, `Overview`, `Users`, `Reports` — те самые, чьи имена врут, ловушка 18)
+    вложенный фрейм `Glyph` не отмасштабировали при уменьшении инстанса в слот 20px, поэтому глиф
+    рисуется в нативных 24px и вылезает на 2px с каждой стороны. В прототипе все шесть рисуются
+    20px: воспроизводить дефект — значит делать 4 строки списка заметно крупнее соседних.
+    Рядом: `Count pill` удалён во всех инстансах сайдбара; `Show verification` истинно в сете и
+    ложно во всех 9 инстансах; у дефолта текстового свойства `Body#769:1` текст расходится с тем,
+    что нарисовано в варианте. **Источник истины — то, что нарисовано.**
 
 ---
 
@@ -155,41 +175,41 @@ await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', {
 | Pharos/App/Offer | `2594:22063` | 46 | `src/components/OfferCard.tsx` | done |
 | Pharos/App/View switch | `2041:411` | 42 | — | todo |
 | Pharos/Offer preview | `26:73` | 32 | `src/components/OfferPreview.tsx` | done |
-| Pharos/Sidebar | `82:150` | 30 | — | todo |
-| Pharos/Page header | `167:65` | 30 | — | todo |
-| Pharos/Message bubble | `384:355` | 25 | — | todo |
+| Pharos/Sidebar | `82:150` | 30 | `src/components/Sidebar.tsx` — веб-хром страницы 21 | done |
+| Pharos/Page header | `167:65` | 30 | `src/components/PageHeader.tsx` — веб-хром страницы 21 | done |
+| Pharos/Message bubble | `384:355` | 25 | `src/components/MessageBubble.tsx` — тинт-сет + `skin="plain"` под инстансы | done |
 | Pharos/Filters button | `2646:1314` | 21 | — | todo |
 | Pharos/Button link | `168:118` | 20 | `src/components/Button.tsx` (`ButtonLink`) | done |
 | Pharos/Route search + filters | `340:404` | 18 | — | todo |
 | Pharos/Avatar | `74:64` | 15 | `src/components/Avatar.tsx` | done |
 | Pharos/App/Approach map | `719:355` | 15 | `src/components/ApproachMap.tsx` | done |
 | Pharos/App/Route card | `2715:1535` | 15 | `src/components/RouteCard.tsx` | done |
-| Pharos/Mobile header | `26:24` | 14 | — | todo |
-| Pharos/App/Onboarding progress | `2062:410` | 13 | — | todo |
+| Pharos/Mobile header | `26:24` | 14 | `src/components/MobileHeader.tsx` — мобильный веб страницы 21 | done |
+| Pharos/App/Onboarding progress | `2062:410` | 13 | `src/components/OnboardingProgress.tsx` | done |
 | Pharos/Filter chip v2 | `2621:1288` | 11 | — | todo |
-| Pharos/App/Driver profile | `769:10428` | 9 | — | todo |
+| Pharos/App/Driver profile | `769:10428` | 9 | `src/components/DriverProfile.tsx` (+ `DriverAvatar`) | done |
 | Pharos/Load card | `14:146` | 8 | `src/components/LoadCard.tsx` | done |
 | Pharos/Rate offer card | `384:368` | 8 | `src/components/RateOfferCard.tsx` | done |
 | Pharos/App/Offer route | `693:995` | 8 | — | todo |
-| Pharos/App/Day item | `2021:2666` | 8 | — | todo |
-| Pharos/Chat/Cargo context | `2188:8055` | 8 | — | todo |
-| Pharos/App/Trip steps | `2728:26593` | 8 | — | todo |
+| Pharos/App/Day item | `2021:2666` | 8 | `src/components/DayItem.tsx` | done |
+| Pharos/Chat/Cargo context | `2188:8055` | 8 | `src/components/ChatCargoContext.tsx` | done |
+| Pharos/App/Trip steps | `2728:26593` | 8 | `src/components/TripSteps.tsx` (+ `ProgressStep`) | done |
 | Pharos/Select | `344:51` | 8 | — | todo |
 | Pharos/Country flag Rectangle | `249:1646` | 8 | `src/components/Flag.tsx` | done |
-| Pharos/App/Trip preparation | `2715:1617` | 7 | — | todo |
+| Pharos/App/Trip preparation | `2715:1617` | 7 | `src/components/TripPreparation.tsx` | done |
 | Pharos/App/Trip checklist | `2715:1596` | 7 | `src/components/TripChecklist.tsx` — только `State=Awaiting` (`2715:25520`), нужен Content=Request у Bottom sheet | review |
-| Pharos/Chat/Composer | `2188:7944` | 7 | — | todo |
+| Pharos/Chat/Composer | `2188:7944` | 7 | `src/components/ChatComposer.tsx` | done |
 | Pharos/Empty details panel | `129:46` | 6 | — | todo |
 | Pharos/App/Offer terms | `693:1013` | 6 | — | todo |
 | Pharos/App/Route summary | `671:977` | 6 | `src/components/RouteSummary.tsx` | done |
 | Pharos/Filter chip | `338:211` | 6 | — | todo |
 | Pharos/Route summary | `26:27` | 4 | — (страница 21, второй компонент) | todo |
 | Pharos/Payment summary | `412:389` | 3 | `src/components/PaymentSummary.tsx` | done |
-| Pharos/App/Application progress | `734:426` | 3 | — | todo |
+| Pharos/App/Application progress | `734:426` | 3 | `src/components/ApplicationProgress.tsx` (+ `ProgressStep`) | done |
 | Pharos/Location suggestions | `190:117` | 3 | — | todo |
 | Pharos/App/Keyboard | `2776:1613` | 3 | — | todo |
 | Pharos/Bottom sheet | `2197:8841` | 3 | `src/components/BottomSheet.tsx` + `BottomSheetHeader` (в нём же) · `RouteFields.tsx` · `SuggestionCard.tsx` · `SheetField.tsx` · `SortBy.tsx` · `TripChecklist.tsx` | done |
-| Pharos/Chat/Rate offer | `2189:8453` | 3 | — | todo |
+| Pharos/Chat/Rate offer | `2189:8453` | 3 | `src/components/ChatRateOffer.tsx` | done |
 | Pharos/App/Upload field | `2013:3064` | 2 | — | todo |
 | Pharos/Upload field/Driving licence preview | `2091:441` | 2 | — | todo |
 | Pharos/Route map | `330:164` | 1 | `src/components/RouteMap.tsx` | done |
@@ -596,6 +616,62 @@ Selected · `330:67` Loading) и Size=Mobile 358×320 (`330:84` · `330:114` · 
 правилу 5 приложение английское. Дефолты компонента английские; заголовок пришлось сделать короче
 («Loads on route») — дословный перевод «Loads on your route» в бокс 187px не влезает, переносится
 на вторую строку и карточка вырастает с 74 до 102px.
+
+### 4.9. Волна 3 — фильтры, чат, рейс, веб-хром
+
+Пять агентов параллельно; ниже — то, что они нашли, с моими перепроверками. Общее число
+перенесённых компонентов выросло с 21 до 50.
+
+**Область работ уточнилась, и это важно.** Часть «компонентов водителя» на самом деле —
+**веб-хром страницы 21**, а не iOS-оболочка страницы 30:
+
+| Сет | Инстансов | Где живёт |
+|---|---|---|
+| `Pharos/Sidebar` `82:150` | 30 | страница 21, только 1440-широкие веб-фреймы |
+| `Pharos/Page header` `167:65` | 30 | страница 21, те же 1440-фреймы (Inline 18, Actions 12) |
+| `Pharos/Mobile header` `26:24` | 14 | страница 21, 390-широкие мобильно-веб фреймы |
+| `Pharos/Route search + filters` `340:404` | 18 | страница 21, **все 1112 шириной**; в телефоне нет ни одного |
+
+То есть страница 21 держит и веб-портал водителя (1440, сайдбар + page header), и его
+мобильно-веб версию (390, mobile header). `MobileHeader` — не замена `NavigationBar`: другой сет,
+другая страница, другая поверхность (390 против 402, 80 против 76/60, текстовая кнопка Back
+88×48 против иконки-шеврона 44×44, инициалы 48 против 44). Компоновать их не стали, `ScreenFrame`
+не тронут. **Телефонный sticky bar — это не библиотечный компонент, а screen-local фрейм
+`2668:14779` (402×64) → `2668:14780` (370×48), собранный из Filters button + View switch**, а
+применённые чипы живут отдельной строкой `2551:12646` (370×40).
+
+**Фильтры** (View switch `2041:411`, Filters button `2646:1314`, Filter chip `338:211`,
+Filter chip v2 `2621:1288`, Route search `340:404`): геометрия сошлась точно — сегменты 110×42
+на 3/113/223, коробки 226×48 / 336×48 / 123×48 / 108×34 / 92×44 / 106×40, панель поиска 246
+ровно, ряды на y25/y61/y153, колонки 253.5 / 257.5. Пиксельная разница панели фильтров — **1.31%**,
+и вся она на строках текста. Два задокументированных отклонения: hug-ширины на 0–1px уже
+(Figma округляет текстовые боксы вверх: «Filters» 40.5 → 41) и галочка в чипе v2 — рукописный
+вектор Figma `M 0 4 L 3 7 L 9 0`, а не lucide-глиф (взяли lucide `Check` и подняли `strokeWidth`
+до `2*24/14`, чтобы нарисованный штрих был 2px, как в Figma).
+
+**Чат** (Message bubble `384:355`, Cargo context `2188:8055`, Composer `2188:7944`,
+Chat/Rate offer `2189:8453`): коробки 280×94, 370×64, 370×48, 302×216 сошлись. Два содержательных
+момента: у Message bubble **все 15 инстансов на странице 30 переопределяют вариант** (294 шириной,
+r16, gap 6, без обводки, без строки отправителя, исходящий фон `#def5f0`) — добавлен `skin="plain"`,
+дефолт следует экранам; а Empty-состояние Composer'а несёт Button `State=Disabled`, то есть
+отправлять можно только из Draft (это поймал замер, первая версия рисовала активную кнопку).
+`Chat/Rate offer` — **не** `Rate offer card`: 2 варианта против 3, 302 против 280, белая
+поверхность без обводки против тонированной с рамкой, и живут они на разных страницах.
+
+**Рейс и профиль** (Onboarding progress `2062:410`, Progress step `2553:1238`, Driver profile
+`769:10428`, Trip steps `2728:26593`, Day item `2021:2666`, Trip preparation `2715:1617`,
+Application progress `734:426`): все 33 коробки совпали точно (370×4, 338×24, 370×82/100, 370×278,
+370×87/86/72, 370×110/90, 370×180/148). Попутно построен `ProgressStep` — он не был в инвентаре,
+но Trip steps и Application progress инстансят его 14 раз. `DriverAvatar` (`755:366`) — отдельный
+компонент от `Pharos/Avatar`: 48×48, `#eff2f5`, инициалы Manrope Bold 24/32 против 40×40,
+`#bce5d5`, DM Sans Medium 14/20.
+
+**Токены, добавленные по заявкам агентов** (все — реальные пробелы, а не самодеятельность):
+`spacing.14` (14px), `radius.2xs` (2px), `radius.6` (6px), `text.heading-12` и `text.heading-14`
+(Manrope SemiBold — рампа заголовков начиналась с 20/28), `color-chat.bubble-outgoing-bg`
+(`#def5f0`). Проверено в Figma: **радиусы 2 и 6 в файле вообще не привязаны к переменным** —
+в коллекции радиусов только none/xs/sm/md/lg/pill, то есть у самого дизайн-файла есть сырые
+значения, которые репозиторий токенизирует.
 
 ## 5. Иконки
 

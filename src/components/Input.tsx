@@ -3,7 +3,15 @@ import { Icon } from './Icon';
 /**
  * figma: 12:166 · Pharos/Input — Mobile variants 12:160..12:165
  *        (Web 12:154..12:159 differ only by the 40px control and the 368x48 ring)
- * props: label, value, placeholder, state, hint, icon, required, onChange
+ * props: label, value, placeholder, state, size, hint, icon, required, onChange
+ *
+ * `size = 'web'` selects the Web variants 12:154..12:159 — the only difference in Figma is the
+ * 40px control (`size-control-web`) instead of 48. `RouteSearch` (340:404) uses it for the five
+ * fields of its Expanded `Filter panel`, whose hug height (246) only closes at 68 per field row.
+ *
+ * `label = null` hides the 20px label row — `Pharos/Chat/Composer` (2188:7944) deletes the
+ * `Label row` from every one of its three `Pharos/Input` instances, leaving only `Control`.
+ * (Same class of instance override as PORT-LOG trap 17, where `hint = null` removes the hint.)
  *
  *   root VERTICAL gap8, no padding · label row h20 gap4 (Label/14 Medium + optional '*' danger)
  *   control h48 r8 pad(0/12/0/12) gap8 · borders: default/error 1px, focus 2px
@@ -19,6 +27,13 @@ import { Icon } from './Icon';
  *         color-text-danger, radius-sm, radius-md
  */
 export type InputState = 'empty' | 'filled' | 'focus' | 'error' | 'disabled' | 'readonly';
+export type InputSize = 'mobile' | 'web';
+
+/** Literal classes only — Tailwind cannot see `h-[var(--control-${size})]` (PORT-LOG trap 5). */
+const CONTROL_H: Record<InputSize, string> = {
+  mobile: 'h-[var(--control-h)]',
+  web: 'h-[var(--size-control-web)]',
+};
 
 const DEFAULT_HINT = 'Start typing a city name';
 const ERROR_HINT = 'Choose a city from the list';
@@ -28,15 +43,19 @@ export function Input({
   value,
   placeholder = 'Enter a city',
   state = 'empty',
+  size = 'mobile',
   hint,
   icon = true,
   required = false,
   onChange,
 }: {
-  label: string;
+  /** pass null to drop the label row (the Figma instance in `Pharos/Chat/Composer` does) */
+  label?: string | null;
   value?: string;
   placeholder?: string;
   state?: InputState;
+  /** 'web' = the 40px control of Figma 12:154..12:159; the app's phone screens use 'mobile' */
+  size?: InputSize;
   /** omit for the Figma copy, pass a string to override it, pass null to hide the line (the screens do: 76 tall) */
   hint?: string | null;
   icon?: boolean;
@@ -58,18 +77,20 @@ export function Input({
 
   return (
     <label className="flex w-full flex-col gap-[8px]">
-      <span className="flex h-[20px] items-center gap-[4px]">
-        <span className="text-label-14 text-[var(--color-text-primary)]">{label}</span>
-        {required && (
-          <span aria-hidden className="text-label-14 text-[var(--color-text-danger)]">
-            *
-          </span>
-        )}
-      </span>
+      {label != null && label !== '' && (
+        <span className="flex h-[20px] items-center gap-[4px]">
+          <span className="text-label-14 text-[var(--color-text-primary)]">{label}</span>
+          {required && (
+            <span aria-hidden className="text-label-14 text-[var(--color-text-danger)]">
+              *
+            </span>
+          )}
+        </span>
+      )}
 
       <span className="relative block">
         <span
-          className="flex h-[var(--control-h)] items-center gap-[8px] rounded-[var(--radius-sm)] px-[12px]"
+          className={`flex ${CONTROL_H[size]} items-center gap-[8px] rounded-[var(--radius-sm)] px-[12px]`}
           style={{ background, border: `${borderWidth}px solid ${borderColor}` }}
         >
           {icon && (

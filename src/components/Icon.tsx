@@ -4,6 +4,8 @@ import {
   Calendar,
   Camera,
   ChartNoAxesColumn,
+  Check,
+  ChevronDown,
   ChevronLeft,
   CircleCheck,
   CircleHelp,
@@ -39,9 +41,15 @@ import {
  *   `Lucide/Icon/Users`    `82:124` → Users            (nested frame `Lucide/Users`)
  *   `Lucide/Icon/Loader`   `279:5034` → LoaderCircle   (one 18x18 arc — not the 8-spoke `Loader`)
  * `chevron-left` is used by the nav bar but lives outside the `Lucide/Icon/*` namespace.
+ * `check` and `chevron-down` were added for the filter cluster: the check mark of
+ * `Pharos/Filter chip v2` State=Selected (`2621:1280` "Check path", 14x14) and the chevron of
+ * `Pharos/Select` (`344:30` "Chevron down", 16x16) — both are bare lucide glyphs, not registered
+ * components on the `03 — Icons` page.
  *
  * tokens: size-icon-sm 16 · size-icon-md 20 · size-icon-lg 24
  * colour: never set here — the glyph inherits `currentColor` from its parent
+ * stroke: 2 lucide units by default, i.e. 2 * size/24 CSS px. Only the check mark of
+ *   `Pharos/Filter chip v2` needs another value — see the note in `FilterChipV2.tsx`.
  */
 export const ICONS = {
   'arrow-right': ArrowRight,
@@ -49,6 +57,8 @@ export const ICONS = {
   calendar: Calendar,
   camera: Camera,
   'chart-column': ChartNoAxesColumn,
+  check: Check,
+  'chevron-down': ChevronDown,
   'chevron-left': ChevronLeft,
   'circle-check': CircleCheck,
   'circle-help': CircleHelp,
@@ -82,11 +92,14 @@ const BOX = {
 export function Icon({
   name,
   size = 'md',
+  strokeWidth = 2,
   className,
   label,
 }: {
   name: IconName;
   size?: keyof typeof BOX | number;
+  /** lucide units (the glyph is drawn in a 24 viewBox): 2 = the design rule. */
+  strokeWidth?: number;
   className?: string;
   /** accessible name for an icon-only action; without it the icon is hidden from assistive tech */
   label?: string;
@@ -96,7 +109,7 @@ export function Icon({
   return (
     <Glyph
       size={typeof size === 'number' ? size : 24}
-      strokeWidth={2}
+      strokeWidth={strokeWidth}
       className={`shrink-0 ${box ?? ''} ${className ?? ''}`}
       aria-hidden={label ? undefined : true}
       aria-label={label}

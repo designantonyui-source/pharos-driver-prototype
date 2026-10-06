@@ -31,6 +31,7 @@
   --color-system-black: #000000;
   --color-map-land: #f2f6f4;
   --color-map-halo: #d1ede8;
+  --color-map-label: #384f59;
   --color-avatar-bg: #bce5d5;
   --color-avatar-text: #1c5644;
   --shadow-card: 0 6px 20px rgba(23, 42, 53, 0.055);
@@ -94,13 +95,16 @@
   --spacing-8: 8px;
   --spacing-10: 10px;
   --spacing-12: 12px;
+  --spacing-14: 14px;
   --spacing-16: 16px;
   --spacing-20: 20px;
   --spacing-24: 24px;
   --spacing-32: 32px;
   --spacing-40: 40px;
   --spacing-48: 48px;
+  --radius-6: 6px;
   --radius-none: 0px;
+  --radius-2xs: 2px;
   --radius-xs: 4px;
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -111,6 +115,7 @@
   --size-icon-sm: 16px;
   --size-icon-md: 20px;
   --size-icon-lg: 24px;
+  --color-chat-bubble-outgoing-bg: #def5f0;
 
   /* typography (Pharos text styles) */
   --text-heading-32: 32px;
@@ -121,6 +126,14 @@
   --text-heading-24--line-height: 32px;
   --text-heading-24--font-weight: 700;
   --text-heading-24--font-family: var(--font-heading);
+  --text-heading-12: 12px;
+  --text-heading-12--line-height: 16px;
+  --text-heading-12--font-weight: 600;
+  --text-heading-12--font-family: var(--font-heading);
+  --text-heading-14: 14px;
+  --text-heading-14--line-height: 20px;
+  --text-heading-14--font-weight: 600;
+  --text-heading-14--font-family: var(--font-heading);
   --text-heading-20: 20px;
   --text-heading-20--line-height: 28px;
   --text-heading-20--font-weight: 600;
@@ -175,6 +188,8 @@
 /* font-family bridge — see tools/export-tokens.mjs */
 .text-heading-32,
 .text-heading-24,
+.text-heading-12,
+.text-heading-14,
 .text-heading-20,
 .text-metric-28,
 .text-rate-24 { font-family: var(--font-heading); }

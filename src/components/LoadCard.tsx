@@ -1,6 +1,7 @@
+import inlineMap from '../assets/maps/loadcard-inline-382x162.svg';
 import { Icon } from './Icon';
 import { Alert } from './Alert';
-import { Button, ButtonLink } from './Button';
+import { Button } from './Button';
 import { Flag } from './Flag';
 import { StatusPill, type Tone } from './StatusPill';
 
@@ -377,11 +378,28 @@ export function LoadCard({
       <div className="flex w-full flex-col gap-[var(--spacing-12)]">
         {showMap && (
           <div className="flex w-full flex-col gap-[var(--spacing-8)]">
-            {/* TODO(asset) — the map vector artwork is not ported; this is a sized placeholder */}
-            <span className="h-[162px] w-full rounded-[var(--radius-md)] bg-[var(--color-bg-subtle)]" />
-            <span className="flex w-full justify-end">
-              <ButtonLink label="Open full map" size="web" />
-            </span>
+            {/* Figma `Inline route map` 494:279 / viewport 494:283. The artwork frame is 382x162 while
+                the disclosure it sits in is only 324 wide, so the map is rendered at the card width and
+                keeps the 382:162 ratio; the two city labels are live text placed in % so they track the
+                artwork. `Open full map` is hand-rolled: the Figma instance is 32 high with pad 0, which
+                ButtonLink cannot express (same reason the "Show map" toggle above is hand-rolled). */}
+            <div className="relative aspect-[382/162] w-full overflow-hidden rounded-[var(--radius-md)] bg-[var(--color-map-land)]">
+              <img src={inlineMap} alt="" className="pointer-events-none absolute inset-0 h-full w-full" />
+              <span className="absolute text-label-12 font-semibold text-[var(--color-map-label)]" style={{ left: '3.14%', top: '81.48%' }}>
+                Lille
+              </span>
+              <span className="absolute text-label-12 font-semibold text-[var(--color-map-label)]" style={{ left: '62.3%', top: '6.17%' }}>
+                Brussels
+              </span>
+            </div>
+            <div className="flex h-[32px] w-full items-center justify-end">
+              <button
+                type="button"
+                className="flex h-[32px] items-center text-label-14 text-[var(--color-action-text)]"
+              >
+                Open full map
+              </button>
+            </div>
           </div>
         )}
 

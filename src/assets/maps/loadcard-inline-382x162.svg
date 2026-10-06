@@ -1,0 +1,21 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="382" height="162" viewBox="0 0 382 162" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Route and roads" clip-path="url(#clip0_0_4)">
+<rect width="382" height="162" fill="white"/>
+<path id="Vector" d="M-11.8634 112C78.2981 60 130.497 52 201.677 85C272.857 118 304.888 56 403.354 28" stroke="#DCE6E3" stroke-width="15"/>
+<g id="Vector_2">
+<path d="M49.8261 -15L130.497 178ZM259.807 -10L300.143 181Z" fill="black"/>
+<path d="M49.8261 -15L130.497 178M259.807 -10L300.143 181" stroke="#E3EAE8" stroke-width="10"/>
+</g>
+<path id="Vector_3" d="M35.5901 120C102.025 130 121.006 100 179.137 95C237.267 90 294.211 68 335.733 40" stroke="white" stroke-width="9" stroke-linecap="round"/>
+<path id="Vector_4" d="M35.5901 120C102.025 130 121.006 100 179.137 95C237.267 90 294.211 68 335.733 40" stroke="#287D79" stroke-width="4" stroke-linecap="round"/>
+<path id="Vector_5" d="M35.5901 128C40.8316 128 45.0807 124.418 45.0807 120C45.0807 115.582 40.8316 112 35.5901 112C30.3485 112 26.0994 115.582 26.0994 120C26.0994 124.418 30.3485 128 35.5901 128Z" fill="white" stroke="#23617A" stroke-width="2.5"/>
+<path id="Vector_6" d="M35.5901 122.5C37.228 122.5 38.5559 121.381 38.5559 120C38.5559 118.619 37.228 117.5 35.5901 117.5C33.9521 117.5 32.6242 118.619 32.6242 120C32.6242 121.381 33.9521 122.5 35.5901 122.5Z" fill="#23617A"/>
+<path id="Vector_7" d="M335.733 48C340.974 48 345.224 44.4183 345.224 40C345.224 35.5817 340.974 32 335.733 32C330.491 32 326.242 35.5817 326.242 40C326.242 44.4183 330.491 48 335.733 48Z" fill="white" stroke="#23617A" stroke-width="2.5"/>
+<path id="Vector_8" d="M335.733 42.5C337.371 42.5 338.699 41.3807 338.699 40C338.699 38.6193 337.371 37.5 335.733 37.5C334.095 37.5 332.767 38.6193 332.767 40C332.767 41.3807 334.095 42.5 335.733 42.5Z" fill="#23617A"/>
+</g>
+<defs>
+<clipPath id="clip0_0_4">
+<rect width="382" height="162" fill="white"/>
+</clipPath>
+</defs>
+</svg>

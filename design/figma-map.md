@@ -37,6 +37,25 @@ File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **
 | `Pharos/Route map` | `330:164` | `src/components/RouteMap.tsx` — Size=Desktop `330:2` `330:33` `330:67` / Size=Mobile `330:84` `330:114` `330:147`; artwork in `src/assets/maps` |
 | `Pharos/App/Approach map` | `719:355` | `src/components/ApproachMap.tsx` — artwork `719:356` exported to `src/assets/maps/approach-402x646.svg` |
 | `Pharos/App/Trip checklist` | `2715:1596` | `src/components/TripChecklist.tsx` — only `State=Awaiting` `2715:25520` (used by Bottom sheet Content=Request) |
+| `Pharos/App/Progress step` | `2553:1238` | `src/components/ProgressStep.tsx` — Done `2553:1225` / Current `2553:1231` / Next `2553:1237`; shared by Trip steps and Application progress |
+| `Pharos/Message bubble` | `384:355` | `src/components/MessageBubble.tsx` — Incoming `384:347` / Outgoing `384:351`, plus `skin="plain"` for the 15 page-30 instances |
+| `Pharos/Chat/Cargo context` | `2188:8055` | `src/components/ChatCargoContext.tsx` |
+| `Pharos/Chat/Composer` | `2188:7944` | `src/components/ChatComposer.tsx` — Empty `2188:7863` / Draft `2188:7896` / Disabled `2188:7913` |
+| `Pharos/Chat/Rate offer` | `2189:8453` | `src/components/ChatRateOffer.tsx` — Pending `2188:8107` / Accepted `2188:8129` (a different component from `Rate offer card` `384:368`) |
+| `Pharos/App/Onboarding progress` | `2062:410` | `src/components/OnboardingProgress.tsx` — Filled=1..5 |
+| `Pharos/App/Driver profile` | `769:10428` | `src/components/DriverProfile.tsx` + `DriverAvatar` (`755:366`, distinct from `Pharos/Avatar`) |
+| `Pharos/App/Trip steps` | `2728:26593` | `src/components/TripSteps.tsx` — 8 variants |
+| `Pharos/App/Day item` | `2021:2666` | `src/components/DayItem.tsx` — Trip / Decision / Free |
+| `Pharos/App/Trip preparation` | `2715:1617` | `src/components/TripPreparation.tsx` — 4 variants |
+| `Pharos/App/Application progress` | `734:426` | `src/components/ApplicationProgress.tsx` — 5 variants (Direct/DirectAssigned are never instanced) |
+| `Pharos/App/View switch` | `2041:411` | `src/components/ViewSwitch.tsx` — 5 variants |
+| `Pharos/Filters button` | `2646:1314` | `src/components/FiltersButton.tsx` — Badge=Shown `2646:1288` / Hidden `2646:1302` |
+| `Pharos/Filter chip` | `338:211` | `src/components/FilterChip.tsx` |
+| `Pharos/Filter chip v2` | `2621:1288` | `src/components/FilterChipV2.tsx` — Default / Selected / Disabled / Applied `2650:1306` |
+| `Pharos/Route search + filters` | `340:404` | `src/components/RouteSearch.tsx` — **desktop, 1112 wide, page 21**; the phone sticky bar is a screen-local frame `2668:14779` |
+| `Pharos/Sidebar` | `82:150` | `src/components/Sidebar.tsx` — **web chrome, page 21** — Role=Driver `82:146` / Dispatcher / FleetManager / Admin |
+| `Pharos/Page header` | `167:65` | `src/components/PageHeader.tsx` — **web chrome, page 21** — Inline `167:49` / Actions `167:57` |
+| `Pharos/Mobile header` | `26:24` | `src/components/MobileHeader.tsx` — **mobile web, page 21** — Type=Home `26:8` / Type=Back `26:13`; not the iOS `NavigationBar` |
 | `Pharos/App/Tab bar` | `586:67` | `src/components/layout/TabBar.tsx` — Active=Loads/Applications/My day/Account |
 | `Pharos/App/Status bar` | `2353:26430` | `src/components/layout/StatusBar.tsx` — Type=IOS `2305:25330` / Type=Default `586:20` |
 | `Pharos/App/Navigation bar` | `586:33` | `src/components/layout/NavigationBar.tsx` — Type=Home `586:25` / Type=Back `586:32` |
