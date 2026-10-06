@@ -1,0 +1,14 @@
+/* AUTO-GENERATED from design/tokens.json — do not edit by hand.
+   Placeholder values until the Figma export runs (pnpm tokens). */
+:root {
+  --font-family-base: 'DM Sans', system-ui, sans-serif;
+  --color-bg-surface: #ffffff;
+  --color-bg-subtle: #f1f4f6;
+  --color-border-subtle: #e3e8ec;
+  --color-text-primary: #16232e;
+  --color-text-secondary: #5b6b78;
+  --color-text-tertiary: #8b98a3;
+  --color-text-link: #1f6f7a;
+  --color-text-price: #1f6f7a;
+  --radius-md: 12px;
+}

@@ -1,0 +1,15 @@
+{
+  "name": "pharos-driver-prototype",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Clickable HTML/Tailwind prototype of the Pharos driver app, 1:1 with the Figma design",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build -o storybook-static",
+    "tokens": "node tools/export-tokens.mjs"
+  }
+}
