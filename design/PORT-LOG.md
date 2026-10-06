@@ -173,20 +173,20 @@ await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', {
 | Pharos/App/Tab bar | `586:67` | 61 | `src/components/layout/TabBar.tsx` | done |
 | Pharos/Alert | `575:9632` | 54 | `src/components/Alert.tsx` | done |
 | Pharos/App/Offer | `2594:22063` | 46 | `src/components/OfferCard.tsx` | done |
-| Pharos/App/View switch | `2041:411` | 42 | — | todo |
+| Pharos/App/View switch | `2041:411` | 42 | `src/components/ViewSwitch.tsx` | done |
 | Pharos/Offer preview | `26:73` | 32 | `src/components/OfferPreview.tsx` | done |
 | Pharos/Sidebar | `82:150` | 30 | `src/components/Sidebar.tsx` — веб-хром страницы 21 | done |
 | Pharos/Page header | `167:65` | 30 | `src/components/PageHeader.tsx` — веб-хром страницы 21 | done |
 | Pharos/Message bubble | `384:355` | 25 | `src/components/MessageBubble.tsx` — тинт-сет + `skin="plain"` под инстансы | done |
-| Pharos/Filters button | `2646:1314` | 21 | — | todo |
+| Pharos/Filters button | `2646:1314` | 21 | `src/components/FiltersButton.tsx` | done |
 | Pharos/Button link | `168:118` | 20 | `src/components/Button.tsx` (`ButtonLink`) | done |
-| Pharos/Route search + filters | `340:404` | 18 | — | todo |
+| Pharos/Route search + filters | `340:404` | 18 | `src/components/RouteSearch.tsx` — десктоп, 1112, страница 21 | done |
 | Pharos/Avatar | `74:64` | 15 | `src/components/Avatar.tsx` | done |
 | Pharos/App/Approach map | `719:355` | 15 | `src/components/ApproachMap.tsx` | done |
 | Pharos/App/Route card | `2715:1535` | 15 | `src/components/RouteCard.tsx` | done |
 | Pharos/Mobile header | `26:24` | 14 | `src/components/MobileHeader.tsx` — мобильный веб страницы 21 | done |
 | Pharos/App/Onboarding progress | `2062:410` | 13 | `src/components/OnboardingProgress.tsx` | done |
-| Pharos/Filter chip v2 | `2621:1288` | 11 | — | todo |
+| Pharos/Filter chip v2 | `2621:1288` | 11 | `src/components/FilterChipV2.tsx` | done |
 | Pharos/App/Driver profile | `769:10428` | 9 | `src/components/DriverProfile.tsx` (+ `DriverAvatar`) | done |
 | Pharos/Load card | `14:146` | 8 | `src/components/LoadCard.tsx` | done |
 | Pharos/Rate offer card | `384:368` | 8 | `src/components/RateOfferCard.tsx` | done |
@@ -202,7 +202,7 @@ await p.goto('http://localhost:6007/iframe.html?id=<story-id>&viewMode=story', {
 | Pharos/Empty details panel | `129:46` | 6 | — | todo |
 | Pharos/App/Offer terms | `693:1013` | 6 | — | todo |
 | Pharos/App/Route summary | `671:977` | 6 | `src/components/RouteSummary.tsx` | done |
-| Pharos/Filter chip | `338:211` | 6 | — | todo |
+| Pharos/Filter chip | `338:211` | 6 | `src/components/FilterChip.tsx` | done |
 | Pharos/Route summary | `26:27` | 4 | — (страница 21, второй компонент) | todo |
 | Pharos/Payment summary | `412:389` | 3 | `src/components/PaymentSummary.tsx` | done |
 | Pharos/App/Application progress | `734:426` | 3 | `src/components/ApplicationProgress.tsx` (+ `ProgressStep`) | done |
