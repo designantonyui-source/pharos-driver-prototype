@@ -76,3 +76,14 @@ File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **
 
 screen 402 × 874 · status bar 62 · nav bar 76 · sticky bar 64 · content viewport 614 ·
 tab bar y 757 h 83 · home indicator y 840 h 34
+
+## v2 — simplified driver journey (prototype-led, branch `driver-v2`)
+
+No Figma node yet: these screens lead and go back to Figma afterwards. Source of truth for flow logic:
+`design/DRIVER-FLOWS.md` + `~/pharos-driver-flow-stories.md`. Old Figma-measured screens above are untouched.
+
+| Route | Screen | Components (new, `src/components/v2/`) | Status |
+|---|---|---|---|
+| `/v2` | Loads — map-first home: filters, load carousel, one-tap apply, live banner, status sheet | V2Frame, LoadTile, LoadSheet, ApplicationBanner, StatusSheet, Sheet, DemoToggle | prototype |
+| `/v2/trips` | Trips (Applications + My day merged) | placeholder `screens/v2/Soon.tsx` | todo |
+| `/v2/account` | Account | placeholder `screens/v2/Soon.tsx` | todo |

@@ -1,22 +1,38 @@
 import { Link, Route, Routes } from 'react-router-dom';
 import { DemoPanel } from './components/DemoPanel';
 import { Search } from './screens/Search';
+import { Home as HomeV2 } from './screens/v2/Home';
+import { DemoToggle } from './components/v2/DemoToggle';
+import { V2Soon } from './screens/v2/Soon';
 
 /**
  * Screen index — every Figma screen gets a route here.
  * See design/figma-map.md for the node-id <-> route table.
+ * `/v2/*` is the simplified driver journey (design/DRIVER-FLOWS.md); the Figma-measured screens stay untouched.
  */
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/search" element={<Search />} />
+      <Route
+        path="/v2"
+        element={
+          <>
+            <HomeV2 />
+            <DemoToggle />
+          </>
+        }
+      />
+      <Route path="/v2/trips" element={<V2Soon active="Trips" title="Trips" />} />
+      <Route path="/v2/account" element={<V2Soon active="Account" title="Account" />} />
     </Routes>
   );
 }
 
 function Index() {
   const screens = [
+    ['/v2', 'NEW · Loads — map-first home (apply in one tap)'],
     ['/search', 'Loads — first search (setup)'],
     ['/loads', 'Loads — list'],
     ['/map', 'Loads — map (peek / full sheet)'],

@@ -7,8 +7,15 @@
  *  2. later: real backend — replace these functions, nothing else changes
  */
 import { store, type Status } from './store';
+import { V2_LOADS, type V2Load } from './v2/loads';
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Driver v2: loads near the driver, already sorted by what pays best per km. */
+export async function getLoads(): Promise<V2Load[]> {
+  await wait(300);
+  return [...V2_LOADS].sort((a, b) => b.perKm - a.perKm);
+}
 
 export async function searchLoads(route: { from: string; to: string }) {
   await wait(800); // keeps the “Searching loads…” screen real
