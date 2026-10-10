@@ -1,0 +1,96 @@
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApplicationStatus } from '../../lib/models';
+import { store, type LoadApplication } from '../../lib/store';
+import { V2_LOADS } from '../../lib/v2/loads';
+import { CARD_STATE_STYLES, LoadCard, sortLoadsByApplication } from './LoadCard';
+import { SmartLoadList } from './SmartLoadList';
+
+beforeEach(() => store.reset());
+afterEach(() => { store.reset(); vi.useRealTimers(); });
+const load = { ...V2_LOADS[0], onRoute: true, pickupTime: '2026-10-10T14:00:00Z' };
+
+const cases = [
+  [null, 'available', 'On your route', 'Apply for €360', false],
+  [ApplicationStatus.SENT, 'pending', '⏳ In review', 'Application sent', true],
+  [ApplicationStatus.DISPATCHER_REVIEW, 'pending', '⏳ In review', 'Application sent', true],
+  [ApplicationStatus.CUSTOMER_REVIEW, 'pending', '⏳ In review', 'Application sent', true],
+  [ApplicationStatus.CONFIRMED, 'booked', '✓ Booked · TR-nordcargo', 'View trip', false],
+  [ApplicationStatus.REJECTED, 'rejected', '✕ Rejected', 'Application rejected', true],
+  [ApplicationStatus.CANCELLED, 'cancelled', '○ Cancelled', 'Apply again', false],
+] as const;
+
+describe('LoadCard states', () => {
+  it.each(cases)('%s renders %s styles, badge and CTA', (status, state, badge, cta, disabled) => {
+    if (status) store.set({ loadId: load.id, status });
+    render(<MemoryRouter><LoadCard load={load} onOpen={() => undefined} /></MemoryRouter>);
+    const card = screen.getByRole('article');
+    for (const name of CARD_STATE_STYLES[state].container.split(' ')) expect(card).toHaveClass(name);
+    expect(card).toHaveAttribute('data-state', state);
+    expect(screen.getByText(badge, { exact: true })).toBeVisible();
+    const button = screen.getByRole('button', { name: cta });
+    if (disabled) expect(button).toBeDisabled(); else expect(button).toBeEnabled();
+    if (status) expect(screen.queryByText('On your route')).not.toBeInTheDocument();
+    else expect(card).not.toHaveClass('border-l-4');
+  });
+
+  it('available off-route load has no badge', () => {
+    render(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute onOpen={() => undefined} /></MemoryRouter>);
+    expect(screen.queryByText('On your route')).not.toBeInTheDocument();
+  });
+
+  it('updates the booked countdown every minute and clears the timer', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-10T12:00:00Z'));
+    store.set({ loadId: load.id, status: ApplicationStatus.CONFIRMED });
+    const { unmount } = render(<MemoryRouter><LoadCard load={load} onOpen={() => undefined} /></MemoryRouter>);
+    expect(screen.getByText('Pickup in 2h 0m')).toBeVisible();
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(screen.getByText('Pickup in 1h 59m')).toBeVisible();
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each([[ApplicationStatus.CONFIRMED, '/trip/nordcargo'], [ApplicationStatus.REJECTED, '/application/nordcargo']] as const)('tapping %s opens %s', (status, destination) => {
+    store.set({ loadId: load.id, status });
+    render(<MemoryRouter><Routes><Route path="/" element={<LoadCard load={load} onOpen={() => undefined} />} /><Route path={destination} element={<h1>Destination</h1>} /></Routes></MemoryRouter>);
+    fireEvent.click(screen.getByRole('article'));
+    expect(screen.getByRole('heading', { name: 'Destination' })).toBeVisible();
+  });
+
+  it('available card opens details; CTA opens confirmation without also opening details', () => {
+    const onOpen = vi.fn();
+    render(<MemoryRouter><LoadCard load={load} onOpen={onOpen} /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('article'));
+    expect(onOpen).toHaveBeenCalledWith(load);
+    onOpen.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Apply for €360' }));
+    expect(screen.getByRole('heading', { name: 'Быстрая заявка' })).toBeVisible();
+    fireEvent.click(screen.getByText('Автомобиль подходит'));
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+});
+
+describe('pinned sorting', () => {
+  it('pins booked before pending, preserves available order and does not mutate input', () => {
+    const loads = ['available-b', 'pending', 'cancelled', 'booked', 'available-a', 'rejected'].map((id) => ({ ...load, id }));
+    const applications: Record<string, LoadApplication> = Object.fromEntries(([
+      ['pending', ApplicationStatus.SENT], ['booked', ApplicationStatus.CONFIRMED], ['rejected', ApplicationStatus.REJECTED], ['cancelled', ApplicationStatus.CANCELLED],
+    ] as const).map(([loadId, status]) => [loadId, { loadId, status, submittedAt: null }]));
+    expect(sortLoadsByApplication(loads, applications).map((item) => item.id)).toEqual(['booked', 'pending', 'available-b', 'available-a', 'cancelled', 'rejected']);
+    expect(loads[0].id).toBe('available-b');
+  });
+
+  it('list and map use the same pinned order and react to status changes', () => {
+    render(<MemoryRouter><SmartLoadList loads={V2_LOADS} currentRoute={{ from: '', to: '' }} onOpen={() => undefined} /></MemoryRouter>);
+    act(() => {
+      store.set({ loadId: 'belroute', status: ApplicationStatus.SENT });
+      store.set({ loadId: 'calais-lille', status: ApplicationStatus.CONFIRMED });
+    });
+    const order = () => screen.getAllByRole('article').map((card) => card.getAttribute('aria-label'));
+    expect(order()).toEqual(['Load calais-lille', 'Load belroute', 'Load nordcargo']);
+    fireEvent.click(screen.getByRole('tab', { name: 'Map' }));
+    expect(order()).toEqual(['Load calais-lille', 'Load belroute', 'Load nordcargo']);
+  });
+});

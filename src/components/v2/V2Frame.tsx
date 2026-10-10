@@ -22,7 +22,7 @@ const TABS: { label: string; icon: IconName; to: string }[] = [
 
 export function V2Frame({ active = 'Loads', children }: { active?: string; children: ReactNode }) {
   return (
-    <div className="relative h-[var(--screen-h)] w-[var(--screen-w)] overflow-hidden bg-[var(--color-bg-canvas)]">
+    <div data-load-overlay-root className="relative h-[var(--screen-h)] w-[var(--screen-w)] overflow-hidden bg-[var(--color-bg-canvas)]">
       {children}
 
       <div className="absolute inset-x-0 top-0 z-30">

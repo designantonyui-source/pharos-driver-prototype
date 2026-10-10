@@ -1,0 +1,117 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { advanceStatus, cancelApplication, submitApplication } from './api';
+import { ApplicationStatus } from './models';
+import { store } from './store';
+
+describe('application lifecycle', () => {
+  beforeEach(() => {
+    store.reset();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    store.reset();
+    vi.useRealTimers();
+  });
+
+  it.each([ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REVIEW, ApplicationStatus.CUSTOMER_REVIEW])('cancels a matching application in %s', async (status) => {
+    store.set({ loadId: 'nordcargo', status });
+
+    const result = cancelApplication('nordcargo');
+    await vi.advanceTimersByTimeAsync(300);
+
+    await expect(result).resolves.toEqual({
+      loadId: 'nordcargo',
+      status: ApplicationStatus.CANCELLED,
+    });
+    expect(store.get().status).toBe(ApplicationStatus.CANCELLED);
+  });
+
+  it('rejects when the load does not match the active application', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.SENT });
+
+    const assertion = expect(cancelApplication('belroute')).rejects.toThrow('Application not found');
+    await vi.advanceTimersByTimeAsync(300);
+
+    await assertion;
+    expect(store.get().status).toBe(ApplicationStatus.SENT);
+  });
+
+  it('rejects cancellation after the application is confirmed', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+
+    const assertion = expect(cancelApplication('nordcargo')).rejects.toThrow('This application can no longer be cancelled');
+    await vi.advanceTimersByTimeAsync(300);
+
+    await assertion;
+    expect(store.get().status).toBe(ApplicationStatus.CONFIRMED);
+  });
+
+  it('submission stores the load, SENT status and timestamp', async () => {
+    const result = submitApplication('nordcargo');
+    await vi.advanceTimersByTimeAsync(600);
+    await expect(result).resolves.toEqual({ loadId: 'nordcargo', status: ApplicationStatus.SENT });
+    expect(store.get()).toMatchObject({ loadId: 'nordcargo', status: ApplicationStatus.SENT });
+    expect(store.get().submittedAt).toBe(new Date().toISOString());
+  });
+
+  it.each([
+    [ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REVIEW],
+    [ApplicationStatus.DISPATCHER_REVIEW, ApplicationStatus.CONFIRMED],
+  ])('updates a matching application from %s to %s', async (before, after) => {
+    store.set({ loadId: 'nordcargo', status: before });
+    const result = advanceStatus(after, 'nordcargo', before);
+    await vi.advanceTimersByTimeAsync(300);
+    await expect(result).resolves.toEqual({ status: after, updated: true });
+    expect(store.get().status).toBe(after);
+  });
+
+  it('does not overwrite cancellation with a delayed status event', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.SENT });
+    const result = advanceStatus(ApplicationStatus.DISPATCHER_REVIEW, 'nordcargo', ApplicationStatus.SENT);
+    store.set({ status: ApplicationStatus.CANCELLED });
+    await vi.advanceTimersByTimeAsync(300);
+    await expect(result).resolves.toEqual({ status: ApplicationStatus.CANCELLED, updated: false });
+    expect(store.get().status).toBe(ApplicationStatus.CANCELLED);
+  });
+
+  it('rejects a delayed event for a different application', async () => {
+    store.set({ loadId: 'belroute', status: ApplicationStatus.SENT });
+    const assertion = expect(advanceStatus(ApplicationStatus.CONFIRMED, 'nordcargo', ApplicationStatus.SENT)).rejects.toThrow('No active application');
+    await vi.advanceTimersByTimeAsync(300);
+    await assertion;
+    expect(store.get()).toMatchObject({ loadId: 'belroute', status: ApplicationStatus.SENT });
+  });
+  it.each([ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REVIEW, ApplicationStatus.CUSTOMER_REVIEW, ApplicationStatus.CONFIRMED])('rejects a duplicate in %s without changing the application', async (status) => {
+    store.set({ loadId: 'nordcargo', status, submittedAt: 'original' });
+    const assertion = expect(submitApplication('nordcargo')).rejects.toMatchObject({ code: 'ALREADY_APPLIED' });
+    await vi.advanceTimersByTimeAsync(600);
+    await assertion;
+    expect(store.getApplicationForLoad('nordcargo')).toMatchObject({ status, submittedAt: 'original' });
+  });
+
+  it('allows only one of two concurrent submissions', async () => {
+    const result = Promise.allSettled([submitApplication('nordcargo'), submitApplication('nordcargo')]);
+    await vi.advanceTimersByTimeAsync(600);
+    const outcomes = await result;
+    expect(outcomes[0].status).toBe('fulfilled');
+    expect(outcomes[1]).toMatchObject({ status: 'rejected', reason: { code: 'ALREADY_APPLIED' } });
+    expect(Object.keys(store.get().applications)).toEqual(['nordcargo']);
+  });
+
+  it('blocks a repeat submission even after applying for another load', async () => {
+    await Promise.all([submitApplication('nordcargo'), vi.advanceTimersByTimeAsync(600)]);
+    await Promise.all([submitApplication('belroute'), vi.advanceTimersByTimeAsync(600)]);
+    const assertion = expect(submitApplication('nordcargo')).rejects.toMatchObject({ code: 'ALREADY_APPLIED' });
+    await vi.advanceTimersByTimeAsync(600);
+    await assertion;
+  });
+
+  it.each([ApplicationStatus.CANCELLED, ApplicationStatus.REJECTED])('allows a new application after %s', async (status) => {
+    store.set({ loadId: 'nordcargo', status });
+    const result = submitApplication('nordcargo');
+    await vi.advanceTimersByTimeAsync(600);
+    await expect(result).resolves.toMatchObject({ status: ApplicationStatus.SENT });
+  });
+
+});

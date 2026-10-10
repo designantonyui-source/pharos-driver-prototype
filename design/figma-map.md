@@ -5,12 +5,12 @@ File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **
 | Figma node | Name | Route / component | Status |
 |---|---|---|---|
 | `2022:2949` | section «01 · Driver journey» | — | reference |
-| `2689:15268` | iOS / map-unfiltered / NordCargo | `/map` | todo |
-| `2767:27747` | iOS / details-v2 / NordCargo | `/load/:id` | todo |
-| `2219:8598` | iOS / search-pending-dispatcher / Loads | `/loads?applied=:id` | todo |
-| `589:267` | iOS / pending / Application status | `/application/:id` | todo |
-| `735:1152` | iOS / pending-customer / Application status | same route, `status=awaiting-customer` | todo |
-| `589:334` | iOS / order / Trip TR-4821 | `/trip/:id` | todo |
+| `2689:15268` | iOS / map-unfiltered / NordCargo | `/v2` (Map tab) | replaced |
+| `2767:27747` | iOS / details-v2 / NordCargo | `/v2` (load sheet) | replaced |
+| `2219:8598` | iOS / search-pending-dispatcher / Loads | `/application/:id` | replaced by ApplicationTracker |
+| `589:267` | iOS / pending / Application status | `/application/:id` | replaced by ApplicationTracker |
+| `735:1152` | iOS / pending-customer / Application status | `/application/:id` (`CUSTOMER_REVIEW`) | replaced by ApplicationTracker |
+| `589:334` | iOS / order / Trip TR-4821 | `/trip/:id` | prototype-led TripDetails (not a measured Figma port) |
 | `2772:12931` | iOS / first-search-v2.1 / Loads | `/search` | done |
 | `2768:6789` | iOS / searching-v2 / Loads | `/search/loading` | todo |
 
@@ -84,6 +84,16 @@ No Figma node yet: these screens lead and go back to Figma afterwards. Source of
 
 | Route | Screen | Components (new, `src/components/v2/`) | Status |
 |---|---|---|---|
-| `/v2` | Loads — map-first home: filters, load carousel, one-tap apply, live banner, status sheet | V2Frame, LoadTile, LoadSheet, ApplicationBanner, StatusSheet, Sheet, DemoToggle | prototype |
+| `/v2` | Loads — unified List/Map home: filters, route-match markers, quick apply, live banner | V2Frame, SmartLoadList, QuickApplyModal, LoadSheet, ApplicationBanner, Sheet, DemoToggle | prototype |
+| `/application/:id` | Unified application tracker (replaces Pending screens); `?scenario=approve` (default) / `?scenario=reject`; rejection reason, similar loads and appeal mock | ApplicationTracker | prototype |
+| `/trip/:id` | Confirmed trip — pickup/delivery windows, price, customer rating, navigation/documents demos | TripDetails | prototype |
 | `/v2/trips` | Trips (Applications + My day merged) | placeholder `screens/v2/Soon.tsx` | todo |
 | `/v2/account` | Account | placeholder `screens/v2/Soon.tsx` | todo |
+
+### Shared load application action
+
+`src/components/v2/LoadCta.tsx` is the sole entry CTA in SmartLoadList (list and map cards) and LoadSheet. It reads per-load applications from `store.getApplicationForLoad(loadId)`, opens QuickApplyModal, and routes to the matching tracker/trip. Pending states cannot resubmit; rejection opens the reason; cancellation permits reapplying. The API rejects duplicate pending/confirmed applications with `ALREADY_APPLIED`, including concurrent requests. Legacy single-application storage is migrated to the per-load map. No timeout/similar-load block exists in the current source tree; any future such surface should compose LoadCta.
+
+### Stateful load cards
+
+`src/components/v2/LoadCard.tsx` composes LoadCta for both list and map. CARD_STATE_STYLES defines available / pending / booked / rejected / cancelled surfaces, accents and pills; application badges replace route-match badges. Booked cards show a minute-updated countdown from pickupTime and the demo trip identifier. Stable sorting pins booked, then pending, followed by available in existing feed order, then rejected/cancelled. Card taps open trip / tracker / details as appropriate; interactive CTA/modal events do not trigger the card action. Exact requested palette is exported from color-load-state tokens.

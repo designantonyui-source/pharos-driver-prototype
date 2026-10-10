@@ -13,6 +13,10 @@ export type V2Load = {
   to: string;
   day: 'today' | 'tomorrow';
   window: string;
+  pickupTime?: string;
+  onRoute?: boolean;
+  deliveryDay: 'today' | 'tomorrow';
+  deliveryWindow: string;
   pickupKm: number;
   pickupMin: number;
   vehicle: string;
@@ -22,6 +26,14 @@ export type V2Load = {
   /** shared approvals deadline (S8: second deadline) */
   approvalsBy: string;
 };
+
+export function pickupTimestamp(day: V2Load['day'], window: string): string {
+  const date = new Date();
+  if (day === 'tomorrow') date.setDate(date.getDate() + 1);
+  const [hours, minutes] = window.split('–')[0].split(':').map(Number);
+  date.setHours(hours, minutes, 0, 0);
+  return date.toISOString();
+}
 
 export const V2_LOADS: V2Load[] = [
   {
@@ -35,6 +47,9 @@ export const V2_LOADS: V2Load[] = [
     to: 'Brussels',
     day: 'today',
     window: '14:00–15:00',
+    pickupTime: pickupTimestamp('today', '14:00–15:00'),
+    deliveryDay: 'today',
+    deliveryWindow: '17:00–18:00',
     pickupKm: 18,
     pickupMin: 25,
     vehicle: 'Curtainsider · 12.4 t · 18 pallets',
@@ -53,6 +68,9 @@ export const V2_LOADS: V2Load[] = [
     to: 'Antwerp',
     day: 'today',
     window: '16:00–17:00',
+    pickupTime: pickupTimestamp('today', '16:00–17:00'),
+    deliveryDay: 'today',
+    deliveryWindow: '18:00–19:00',
     pickupKm: 42,
     pickupMin: 45,
     vehicle: 'Curtainsider · 10 t · 14 pallets',
@@ -71,6 +89,9 @@ export const V2_LOADS: V2Load[] = [
     to: 'Lille',
     day: 'tomorrow',
     window: '08:00–09:00',
+    pickupTime: pickupTimestamp('tomorrow', '08:00–09:00'),
+    deliveryDay: 'tomorrow',
+    deliveryWindow: '11:00–12:00',
     pickupKm: 64,
     pickupMin: 55,
     vehicle: 'Curtainsider · 12 t · 16 pallets',

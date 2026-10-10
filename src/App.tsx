@@ -1,9 +1,17 @@
-import { Link, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { DemoPanel } from './components/DemoPanel';
 import { Search } from './screens/Search';
 import { Home as HomeV2 } from './screens/v2/Home';
+import { ApplicationTracker } from './screens/v2/ApplicationTracker';
+import { TripDetails } from './screens/v2/TripDetails';
 import { DemoToggle } from './components/v2/DemoToggle';
 import { V2Soon } from './screens/v2/Soon';
+import { BlHome } from './screens/bl/Home';
+import { BlStart } from './screens/bl/Start';
+import { BlSearch } from './screens/bl/Search';
+import { BlList } from './screens/bl/List';
+import { BlRoute } from './screens/bl/Route';
+import { BlProfile } from './screens/bl/Profile';
 
 /**
  * Screen index — every Figma screen gets a route here.
@@ -24,8 +32,17 @@ export default function App() {
           </>
         }
       />
+      <Route path="/application/:id" element={<ApplicationTracker />} />
+      <Route path="/trip/:id" element={<TripDetails />} />
       <Route path="/v2/trips" element={<V2Soon active="Trips" title="Trips" />} />
       <Route path="/v2/account" element={<V2Soon active="Account" title="Account" />} />
+      <Route path="/bl" element={<BlHome />} />
+      <Route path="/bl/start" element={<BlStart />} />
+      <Route path="/bl/search" element={<BlSearch />} />
+      <Route path="/bl/list" element={<BlList />} />
+      <Route path="/bl/route" element={<BlRoute />} />
+      <Route path="/bl/profile" element={<BlProfile />} />
+      <Route path="*" element={<Navigate to="/v2" replace />} />
     </Routes>
   );
 }
@@ -34,18 +51,15 @@ function Index() {
   const screens = [
     ['/v2', 'NEW · Loads — map-first home (apply in one tap)'],
     ['/search', 'Loads — first search (setup)'],
-    ['/loads', 'Loads — list'],
-    ['/map', 'Loads — map (peek / full sheet)'],
-    ['/load/:id', 'Load details v2 (Send application)'],
-    ['/loads?applied=:id', 'Loads with “Application in progress” banner'],
-    ['/application/:id', 'Application status (2 stepper states)'],
-    ['/trip/:id', 'Trip TR-4821'],
+    ['/application/nordcargo', 'Application status tracker'],
+    ['/trip/nordcargo', 'Confirmed trip details'],
+    ['/bl', 'Backloads'],
   ] as const;
   return (
     <div className="mx-auto max-w-[720px] p-6">
       <h1 className="text-[24px] font-semibold">Pharos Driver — prototype</h1>
       <p className="mt-2 text-[14px] text-[var(--color-text-secondary)]">
-        Happy path: list → load → send application → banner → status → trip.
+        Driver flow: loads list/map → quick apply → application status → back to loads.
       </p>
       <ul className="mt-6 space-y-2">
         {screens.map(([to, label]) => (

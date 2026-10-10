@@ -1,17 +1,14 @@
-import { useState } from 'react';
 import type { V2Load } from '../../lib/v2/loads';
-import { Button } from '../Button';
+import { LoadCta } from './LoadCta';
 import { Icon, type IconName } from '../Icon';
 import { Sheet } from './Sheet';
-import { useCountdown } from './useCountdown';
 
 /**
  * v2 · LoadSheet — the single decision screen (flow stories S2–S4), as a sheet over the map.
- * props: load, open, onClose, onApply
+ * props: load, open, onClose
  *
  * Order (S3): money → route → facts → What happens next → CTA.
- * CTA carries the amount and the remaining decision time: `Apply for €360 · 1:20` (S4 + DoorDash timer-in-button).
- * One-tap apply, no confirmation screen (S1: Review is gone). Single shared deadline copy (S4).
+ * Shared LoadCta reads application state and opens the Quick Apply confirmation.
  *
  * tokens: color-offer-text-price, color-text-primary, color-text-secondary, color-bg-subtle, color-offer-text-highlight,
  *         color-border-default, radius-md
@@ -29,22 +26,11 @@ export function LoadSheet({
   load,
   open,
   onClose,
-  onApply,
 }: {
   load: V2Load;
   open: boolean;
   onClose: () => void;
-  onApply: () => Promise<void>;
 }) {
-  const { label } = useCountdown(load.decideMin);
-  const [busy, setBusy] = useState(false);
-
-  async function apply() {
-    setBusy(true);
-    await onApply();
-    setBusy(false);
-  }
-
   return (
     <Sheet open={open} onClose={onClose}>
       <div className="flex items-baseline gap-[8px]">
@@ -84,7 +70,7 @@ export function LoadSheet({
       </div>
 
       <div className="mt-[16px]">
-        <Button label={`Apply for €${load.rate} · ${label}`} loading={busy} onClick={apply} />
+        <LoadCta loadId={load.id} />
       </div>
     </Sheet>
   );
