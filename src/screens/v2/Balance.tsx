@@ -17,7 +17,7 @@ import { Alert } from '../../components/Alert';
 import { Button } from '../../components/Button';
 import { Icon, type IconName } from '../../components/Icon';
 import { Input } from '../../components/Input';
-import { NavigationBar, V2BackBar } from '../../components/layout/NavigationBar';
+import { V2BackBar } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { Sheet } from '../../components/v2/Sheet';
 import {
@@ -35,7 +35,7 @@ function BalanceFrame({ title, backTo, children }: { title: string; backTo?: str
     <div className="absolute inset-x-0 top-0 z-20">
       {backTo
         ? <V2BackBar title={title} fallback={backTo} />
-        : <NavigationBar type="home" title={title} avatar="AK" />}
+        : <V2BackBar title={title} fallback="/v2/account" />}
     </div>
     <main className="absolute inset-x-0 top-[var(--nav-bar-h)] bottom-[calc(var(--tab-bar-h)+var(--home-indicator-h))] overflow-y-auto px-[var(--spacing-16)] pb-[var(--spacing-24)] pt-[var(--spacing-8)] text-[var(--color-text-primary)]">
       <h1 className="sr-only">{title}</h1>
