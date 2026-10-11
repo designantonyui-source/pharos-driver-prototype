@@ -63,10 +63,14 @@ describe('LoadCard states', () => {
     const route = screen.getByRole('button', { name: 'Lille, France to Brussels, Belgium. Open details.' });
     expect(route).toHaveClass('text-heading-20');
     expect(route).not.toHaveTextContent('FR → BE');
-    const facts = container.querySelectorAll('article > p.text-body-14, article > p.text-label-14');
-    expect(facts.length).toBe(2);
-    expect(facts[0]).toHaveClass('text-body-14');
-    expect(facts[1]).toHaveClass('text-label-14');
+    const facts = screen.getByLabelText(/km loaded, .* minutes to pickup/);
+    expect(facts.tagName).toBe('DIV');
+    const lines = facts.querySelectorAll('p');
+    expect(lines.length).toBe(2);
+    expect(lines[0]).toHaveClass('text-body-14');
+    expect(lines[1]).toHaveClass('text-body-14');
+    const trust = container.querySelector('article > p.text-label-14');
+    expect(trust).toBeVisible();
     expect(screen.getByText('NordCargo')).toHaveClass('font-semibold');
     expect(screen.getByText(/cross-border/)).toBeVisible();
   });
@@ -88,9 +92,10 @@ describe('LoadCard states', () => {
 
   it('far pickup reads semibold warning, near pickup stays plain', () => {
     const { rerender } = render(<MemoryRouter><LoadCard load={{ ...V2_LOADS[1], onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
-    expect(screen.getByText('42 km / 45 min to pickup')).toHaveClass('font-semibold');
+    expect(screen.getByLabelText('Today 16:00–17:00, 68 km loaded, 42 km 45 minutes to pickup')).toBeVisible();
+    expect(screen.getByText('42 km').closest('p')).toHaveClass('font-semibold');
     rerender(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
-    expect(screen.getByText('18 km / 25 min to pickup')).not.toHaveClass('font-semibold');
+    expect(screen.getByText('18 km').closest('p')).not.toHaveClass('font-semibold');
   });
 
   it('swipe-to-hide reveals the Hide action and hides the card', () => {

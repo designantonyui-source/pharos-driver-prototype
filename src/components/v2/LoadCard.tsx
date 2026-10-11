@@ -166,7 +166,7 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
   }
 
   return (
-    <div className="relative overflow-hidden rounded-[var(--radius-lg)]">
+    <div className="relative w-full shrink-0 overflow-hidden rounded-[var(--radius-lg)]">
       {canDismiss && (
         <button
           type="button"
@@ -210,9 +210,18 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
       <button type="button" onClick={open} aria-label={routeAriaLabel(load.from, load.to)} className="flex min-h-[44px] items-center gap-[8px] text-left text-heading-20 text-[var(--color-text-primary)]">
         <span className="truncate">{load.from} <span className="text-caption-12 font-normal text-[var(--color-text-tertiary)]">{countryForCity(load.from)}</span></span><Icon name="arrow-right" size="md" /><span className="truncate">{load.to} <span className="text-caption-12 font-normal text-[var(--color-text-tertiary)]">{countryForCity(load.to)}</span></span>
       </button>
-      <p className="text-body-14 text-[var(--color-text-primary)]">
-        {load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window} · <span className={farPickup ? 'font-semibold text-[var(--color-status-warning-text)]' : undefined}>{load.pickupKm} km / {load.pickupMin} min to pickup</span> · {load.km} km loaded
-      </p>
+      <div role="group" aria-label={`${load.day === 'today' ? 'Today' : 'Tomorrow'} ${load.window}, ${load.km} km loaded, ${load.pickupKm} km ${load.pickupMin} minutes to pickup`} className="flex flex-col gap-[2px]">
+        <p aria-hidden="true" className="flex flex-wrap items-center gap-x-[6px] text-body-14 text-[var(--color-text-primary)]">
+          <span className="whitespace-nowrap">{load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window}</span>
+          <span aria-hidden="true" className="text-[var(--color-text-tertiary)]">·</span>
+          <span className="whitespace-nowrap">{load.km} km loaded</span>
+        </p>
+        <p aria-hidden="true" className={`flex flex-wrap items-center gap-x-[6px] text-body-14 ${farPickup ? 'font-semibold text-[var(--color-status-warning-text)]' : 'text-[var(--color-text-secondary)]'}`}>
+          <span className="inline-flex items-center gap-[4px] whitespace-nowrap"><Icon name="map-pin" size={14} />{load.pickupKm} km</span>
+          <span aria-hidden="true" className="font-normal">·</span>
+          <span className="whitespace-nowrap">{load.pickupMin} min to pickup</span>
+        </p>
+      </div>
       <p className="text-label-14 text-[var(--color-text-primary)]">
         <span className="font-semibold">{load.company}</span>
         <span className="font-normal text-[var(--color-text-secondary)]"> · <span className="inline-flex items-center gap-[2px]"><Icon name="star" size={12} />{load.rating.toFixed(1)}</span> Verified · {load.paidIn}{cross ? ' · cross-border' : ''}</span>
