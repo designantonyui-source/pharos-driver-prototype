@@ -197,8 +197,8 @@ describe('pinned sorting', () => {
       store.set({ loadId: 'calais-lille', status: ApplicationStatus.CONFIRMED });
     });
     const order = () => screen.getAllByRole('article').map((card) => card.getAttribute('aria-label'));
-    expect(order()).toEqual(['Load calais-lille', 'Load belroute', 'Load nordcargo']);
+    expect(order()).toEqual(['Load calais-lille', 'Load belroute', 'Load nordcargo', 'Load paris-brussels', 'Load brussels-amsterdam', 'Load lille-paris']);
     fireEvent.click(screen.getByRole('tab', { name: 'Map' }));
-    expect(order()).toEqual(['Load calais-lille', 'Load belroute', 'Load nordcargo']);
+    expect(order()).toEqual(['Load calais-lille', 'Load belroute', 'Load nordcargo', 'Load paris-brussels', 'Load brussels-amsterdam', 'Load lille-paris']);
   });
 });

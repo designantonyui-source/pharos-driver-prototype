@@ -133,6 +133,7 @@ export function Home() {
       <RouteSheet
         open={routeOpen}
         value={{ from: state.route.from, to: destination }}
+        cities={[...new Set((loads ?? []).flatMap((l) => [l.from, l.to]))].sort()}
         countFor={(route) => (loads ?? []).filter((l) =>
           (route.to.trim() === '' || l.to.trim().toLocaleLowerCase() === route.to.trim().toLocaleLowerCase()) &&
           (route.from.trim() === '' || l.from.trim().toLocaleLowerCase() === route.from.trim().toLocaleLowerCase()),

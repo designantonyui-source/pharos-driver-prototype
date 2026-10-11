@@ -44,12 +44,14 @@ export type LoadCardState = keyof typeof CARD_STATE_STYLES;
 const CITY_COUNTRY: Record<string, string> = {
   Lille: 'FR',
   Calais: 'FR',
+  Paris: 'FR',
   Brussels: 'BE',
   Ghent: 'BE',
   Antwerp: 'BE',
+  Amsterdam: 'NL',
 };
 
-const COUNTRY_NAME: Record<string, string> = { FR: 'France', BE: 'Belgium' };
+const COUNTRY_NAME: Record<string, string> = { FR: 'France', BE: 'Belgium', NL: 'Netherlands' };
 
 export function countryForCity(city: string): string | null {
   return CITY_COUNTRY[city] ?? null;

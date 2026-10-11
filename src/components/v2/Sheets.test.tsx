@@ -52,4 +52,20 @@ describe('RouteSheet draft semantics', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show 1 load' }));
     expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
   });
+
+  it('city chips fill the focused field', () => {
+    const onApply = vi.fn();
+    render(
+      <MemoryRouter>
+        <RouteSheet open value={{ from: '', to: '' }} countFor={() => 1} onApply={onApply} onClose={() => undefined} cities={['Paris', 'Brussels']} />
+      </MemoryRouter>,
+    );
+    fireEvent.focus(screen.getByLabelText('Origin city'));
+    fireEvent.click(screen.getByRole('button', { name: 'Use Paris as origin' }));
+    expect(screen.getByLabelText('Origin city')).toHaveValue('Paris');
+    fireEvent.focus(screen.getByLabelText('Destination city'));
+    fireEvent.click(screen.getByRole('button', { name: 'Use Brussels as destination' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show 1 load' }));
+    expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
+  });
 });
