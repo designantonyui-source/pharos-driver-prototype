@@ -1,4 +1,5 @@
 import { Flag } from './Flag';
+import { Icon } from './Icon';
 
 /**
  * figma: 769:10428 · Pharos/App/Driver profile — the set has one variant, Density=Compact (769:10413)
@@ -83,20 +84,17 @@ export function DriverProfile({
           {country && <Flag country={country} size={16} />}
         </div>
 
-        <span className="text-heading-14 text-[var(--color-text-primary)]">
+        <span className="flex items-center gap-[var(--spacing-6)] text-heading-14 text-[var(--color-text-primary)]">
           {keyFact}
-        </span>
-
-        <span className="text-caption-12 text-[var(--color-text-secondary)]">
-          {body}
           {verified && verifiedStyle === 'inline' && (
-            <span className="text-[var(--color-status-success-text)]">
-              {' · '}
-              <span aria-hidden className="mr-[4px] inline-block h-[6px] w-[6px] rounded-[var(--radius-pill)] bg-current align-middle" />
-              Verified
+            <span className="flex items-center gap-[4px] text-label-12 text-[var(--color-status-success-text)]" aria-label="Verified driver">
+              <Icon name="shield-check" size={14} aria-hidden />
+              <span>Verified</span>
             </span>
           )}
         </span>
+
+        <span className="text-caption-12 text-[var(--color-text-secondary)]">{body}</span>
 
         {verified && verifiedStyle === 'row' && (
           <span className="flex h-[var(--spacing-16)] w-fit items-center gap-[var(--spacing-6)] rounded-[var(--radius-pill)] text-label-12 text-[var(--color-status-success-text)]">
