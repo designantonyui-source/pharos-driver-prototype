@@ -33,9 +33,13 @@ Two readability fixes from screenshot review (2026-10-11):
    Error Alerts stay inline (they carry Retry/actions); Sheet confirmations stay modal.
    Convention documented in the Toast contract header. Stories: Success + Interactive.
 3. **Compact verification.** The set's own verification row pushed the Account card
-   82 -> 100. New `verifiedStyle="inline"` puts a shield-check + `Verified` badge on the name line
-   (same dot + `#216547`, no new UI) — card stays 82 tall. `row` keeps the set's
-   state for the `SetVariant` story; Account uses `inline` (`VerifiedInline` story).
+   82 -> 100. First attempt appended `· ● Verified` to the body line — rejected in
+   review (grey caption + green text mixed on one line reads as noise).
+   Final: `verifiedStyle="inline"` puts a shield-check (14px, from the Icon registry,
+   same `#216547`) + `Verified` badge on the **name line** next to `Alexey K.`
+   (name pattern: identity + checkmark, as usual) — body stays clean grey,
+   card stays 82 tall. `row` keeps the set's state for the `SetVariant` story;
+   Account uses `inline` (`VerifiedInline` story).
 
 Coverage: `pnpm test` 104 passed; `pnpm check` passes. Unit assertions moved from
 inline text to `role=status` (toast) / store state where the toast auto-dismisses.

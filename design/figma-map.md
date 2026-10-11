@@ -72,7 +72,8 @@ File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **
 | `Pharos/Chat/Composer` | `2188:7944` | `src/components/ChatComposer.tsx` — Empty `2188:7863` / Draft `2188:7896` / Disabled `2188:7913` |
 | `Pharos/Chat/Rate offer` | `2189:8453` | `src/components/ChatRateOffer.tsx` — Pending `2188:8107` / Accepted `2188:8129` (a different component from `Rate offer card` `384:368`) |
 | `Pharos/App/Onboarding progress` | `2062:410` | `src/components/OnboardingProgress.tsx` — Filled=1..5 |
-| `Pharos/App/Driver profile` | `769:10428` | `src/components/DriverProfile.tsx` + `DriverAvatar` (`755:366`, distinct from `Pharos/Avatar`) |
+| `Pharos/App/Driver profile` | `769:10428` | `src/components/DriverProfile.tsx` + `DriverAvatar` (`755:366`, distinct from `Pharos/Avatar`); set state `Show verification#769:5` = own 16-tall row (100 tall) · `verifiedStyle="inline"` polish = shield-check + `Verified` badge on the name line (82 tall, used by `/v2/account`) |
+| n/a (new proposal, Wave 3 polish) | — | `src/components/v2/Toast.tsx` + `useToast` — single notification pattern; success/info as top toast under the nav bar (`top: calc(var(--nav-bar-h)+8px)`, z-50, auto-dismiss 4s, `role=status`, 180ms slide-in, `prefers-reduced-motion` off); errors stay inline, confirmations stay in `Sheet` |
 | `Pharos/App/Trip steps` | `2728:26593` | `src/components/TripSteps.tsx` — 8 variants |
 | `Pharos/App/Day item` | `2021:2666` | `src/components/DayItem.tsx` — Trip / Decision / Free |
 | `Pharos/App/Trip preparation` | `2715:1617` | `src/components/TripPreparation.tsx` — 4 variants |
