@@ -222,9 +222,9 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
           <span className="whitespace-nowrap">{load.pickupMin} min to pickup</span>
         </p>
       </div>
-      <p className="text-label-14 text-[var(--color-text-primary)]">
-        <span className="font-semibold">{load.company}</span>
-        <span className="font-normal text-[var(--color-text-secondary)]"> · <span className="inline-flex items-center gap-[2px]"><Icon name="star" size={12} />{load.rating.toFixed(1)}</span> Verified · {load.paidIn}{cross ? ' · cross-border' : ''}</span>
+      <p className="flex items-center gap-[4px] overflow-hidden whitespace-nowrap text-label-14 text-[var(--color-text-primary)]" aria-label={`${load.company}, rating ${load.rating.toFixed(1)}, verified, ${load.paidIn}${cross ? ', cross-border' : ''}`}>
+        <span className="shrink-0 font-semibold">{load.company}</span>
+        <span aria-hidden="true" className="shrink-0 font-normal text-[var(--color-text-secondary)]"> · <span className="inline-flex items-center gap-[2px]"><Icon name="star" size={12} />{load.rating.toFixed(1)}</span> Verified · {load.paidIn}</span>
       </p>
       <LoadCta loadId={load.id} onNotice={onNotice} />
       {canDismiss && (

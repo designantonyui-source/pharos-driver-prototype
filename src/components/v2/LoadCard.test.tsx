@@ -72,7 +72,7 @@ describe('LoadCard states', () => {
     const trust = container.querySelector('article > p.text-label-14');
     expect(trust).toBeVisible();
     expect(screen.getByText('NordCargo')).toHaveClass('font-semibold');
-    expect(screen.getByText(/cross-border/)).toBeVisible();
+    expect(screen.getByLabelText('NordCargo, rating 4.8, verified, Paid in 7 days, cross-border')).toBeVisible();
   });
 
   it('domestic route has no cross-border suffix', () => {
