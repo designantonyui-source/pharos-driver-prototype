@@ -1,3 +1,4 @@
+import { CancelApplicationSheet } from './CancelApplicationSheet';
 import { CancelTripSheet } from './CancelTripSheet';
 import { V2_LOADS } from '../../lib/v2/loads';
 import type { Meta, StoryObj } from '@storybook/react-vite';
@@ -62,6 +63,12 @@ export const FilterCatalog: Story = {
       ))}
     </ul>
   ),
+};
+export const CancelApplication: Story = {
+  render: () => <CancelApplicationSheet open load={V2_LOADS[0]} cancelling={false} onConfirm={() => undefined} onClose={() => undefined} />,
+};
+export const CancelApplicationLoading: Story = {
+  render: () => <CancelApplicationSheet open load={V2_LOADS[0]} cancelling onConfirm={() => undefined} onClose={() => undefined} />,
 };
 export const CancelTripWarning: Story = {
   render: () => <CancelTripSheet open load={V2_LOADS[0]} penalty="warning" cancelling={false} onConfirm={() => undefined} onClose={() => undefined} />,

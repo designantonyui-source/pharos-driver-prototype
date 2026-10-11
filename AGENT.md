@@ -100,12 +100,13 @@ pnpm tokens
 - Контакты сохраняются локально и переживают reload.
 - Есть защита несохранённых изменений.
 - Restore/Undo скрытых грузов работает с защитой активных заявок.
-- Unit: 82 passed.
-- E2E Chrome: 8 passed, включая Account и application-flow.
+- Balance Waves 0–3: IBAN+card методы, cash out, ledger/history, invoices+PDF/CSV, schedules+adjustments+statement.
+- Trips hub (`/v2/trips`): active + in review + past; трекер/детали без нативных диалогов (Sheet + top Toast).
+- Unit: 116 passed.
+- E2E Chrome: application-flow + account + balance (incl. schedules + invoices).
 - `pnpm check` проходит.
 - Документы, транспорт, Help, кошелёк, нотификации, логаут и удаление аккаунта не делать без ТЗ.
 - Мультилоад не начинать без переработки верхнеуровневого `loadId/status`.
-- Изменения сейчас незакоммичены.
 
 ## 9. Первые проверки агента
 ```bash

@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ApplicationProgress, type ApplicationStage } from '../../components/ApplicationProgress';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/Icon';
 import { V2BackBar } from '../../components/layout/NavigationBar';
+import { CancelApplicationSheet } from '../../components/v2/CancelApplicationSheet';
+import { Toast, useToast } from '../../components/v2/Toast';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { advanceStatus, cancelApplication, getLoads } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
@@ -80,6 +82,9 @@ export function ApplicationTrackerView({
   const waiting = CANCELLABLE.has(status);
   const positive = status === ApplicationStatus.CONFIRMED;
   const rejected = status === ApplicationStatus.REJECTED;
+  const { toast, show, dismiss } = useToast();
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const closeCancel = useCallback(() => { if (!cancelling) setCancelOpen(false); }, [cancelling]);
 
   return (
     <V2Frame active="Loads">
@@ -121,7 +126,7 @@ export function ApplicationTrackerView({
           {rejected ? (
             <>
               <Button label="Back to loads" onClick={onSimilarLoads} />
-              <Button label="Dispute decision" appearance="secondary" onClick={() => window.alert('Demo: disputing a decision is not connected yet.')} />
+              <Button label="Dispute decision" appearance="secondary" onClick={() => show({ tone: 'info', title: 'Disputing a decision is not connected yet.' })} />
             </>
           ) : null}
           {positive ? <Button label="View trip" onClick={onViewTrip} /> : null}
@@ -129,7 +134,7 @@ export function ApplicationTrackerView({
             label="Contact dispatcher"
             appearance={positive || rejected ? 'secondary' : 'primary'}
             icon={<Icon name="user-round" size="sm" />}
-            onClick={() => window.alert('Dispatcher chat is not connected in this demo.')}
+            onClick={() => show({ tone: 'info', title: 'Dispatcher chat is not connected in this demo.' })}
           />
           {CANCELLABLE.has(status) ? (
             <Button
@@ -139,12 +144,20 @@ export function ApplicationTrackerView({
               disabled={cancelling}
               onClick={() => {
                 if (cancelling) return;
-                if (window.confirm('Cancel this application? The load will be open for other drivers.')) onCancel();
+                setCancelOpen(true);
               }}
             />
           ) : null}
         </div>
       </div>
+      <CancelApplicationSheet
+        open={cancelOpen}
+        load={load}
+        cancelling={cancelling}
+        onConfirm={() => { setCancelOpen(false); onCancel(); }}
+        onClose={closeCancel}
+      />
+      <Toast toast={toast} onClose={dismiss} />
     </V2Frame>
   );
 }

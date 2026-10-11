@@ -5,6 +5,7 @@ import { Icon } from '../../components/Icon';
 import { V2BackBar, useV2Back } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { CancelTripSheet } from '../../components/v2/CancelTripSheet';
+import { Toast, useToast } from '../../components/v2/Toast';
 import { cancelTrip, getLoads } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore, type LoadApplication } from '../../lib/store';
@@ -19,6 +20,7 @@ import type { V2Load } from '../../lib/v2/loads';
 export function TripDetailsView({ load }: { load: V2Load }) {
   const navigate = useNavigate();
   const { state } = useStore();
+  const { toast, show, dismiss } = useToast();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,13 +83,14 @@ export function TripDetailsView({ load }: { load: V2Load }) {
         </main>
 
         <div className="flex shrink-0 flex-col gap-[8px] py-[8px]">
-          {!cancelled && <Button label="Navigation" icon={<Icon name="map-pin" />} onClick={() => window.alert('Navigation is not connected in this demo.')} />}
-          {!cancelled && <Button label="Documents" appearance="secondary" onClick={() => window.alert('Trip documents are not connected in this demo.')} />}
+          {!cancelled && <Button label="Navigation" icon={<Icon name="map-pin" />} onClick={() => show({ tone: 'info', title: 'Navigation is not connected in this demo.' })} />}
+          {!cancelled && <Button label="Documents" appearance="secondary" onClick={() => show({ tone: 'info', title: 'Trip documents are not connected in this demo.' })} />}
           {!cancelled && <Button label="Cancel trip" appearance="secondary" onClick={() => setCancelOpen(true)} />}
           {cancelled && <Button label="Back to loads" onClick={() => navigate('/v2')} />}
         </div>
       </div>
       <CancelTripSheet open={cancelOpen} load={load} penalty="warning" cancelling={cancelling} error={error} onConfirm={confirmCancel} onClose={closeCancel} />
+      <Toast toast={toast} onClose={dismiss} />
     </V2Frame>
   );
 }

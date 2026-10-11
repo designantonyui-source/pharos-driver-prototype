@@ -85,8 +85,9 @@ test('driver submits, sees a status update and cancels an application', async ({
     await page.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(page).toHaveURL(/#\/v2$/);
     await page.getByRole('button', { name: /Awaiting dispatcher/ }).click();
-    page.once('dialog', (confirm) => void confirm.accept());
     await page.getByRole('button', { name: 'Cancel application', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Cancel application Lille to Brussels' })).toBeVisible();
+    await page.getByRole('button', { name: 'Withdraw application', exact: true }).click();
   });
 
   await test.step('7. Return to the list with the cancellation saved', async () => {
@@ -122,11 +123,8 @@ test('confirmed application opens trip details and demo actions', async ({ page 
     ['Navigation', 'Navigation is not connected in this demo.'],
     ['Documents', 'Trip documents are not connected in this demo.'],
   ]) {
-    const dialog = page.waitForEvent('dialog').then(async (alert) => {
-      expect(alert.message()).toBe(message);
-      await alert.accept();
-    });
-    await Promise.all([dialog, page.getByRole('button', { name: button, exact: true }).click()]);
+    await page.getByRole('button', { name: button, exact: true }).click();
+    await expect(page.getByRole('status')).toContainText(message);
   }
   await page.screenshot({ path: test.info().outputPath('trip-details.png') });
 });
@@ -143,11 +141,8 @@ test('reject scenario shows the reason, appeal and return to loads', async ({ pa
   await expect(page.getByText('The customer chose another carrier.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Cancel application', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'View trip', exact: true })).toHaveCount(0);
-  const dialog = page.waitForEvent('dialog').then(async (alert) => {
-    expect(alert.message()).toBe('Demo: disputing a decision is not connected yet.');
-    await alert.accept();
-  });
-  await Promise.all([dialog, page.getByRole('button', { name: 'Dispute decision', exact: true }).click()]);
+  await page.getByRole('button', { name: 'Dispute decision', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Disputing a decision is not connected yet.');
   await page.screenshot({ path: test.info().outputPath('tracker-rejected.png') });
   await page.getByRole('button', { name: 'Back to loads', exact: true }).click();
   await expect(page).toHaveURL(/#\/v2\?scenario=reject$/);

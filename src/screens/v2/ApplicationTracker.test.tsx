@@ -23,30 +23,42 @@ function renderView(status: ApplicationStatus, onCancel: () => void = noop) {
 }
 
 describe('ApplicationTrackerView cancel confirmation', () => {
-  it('asks for confirmation before cancelling', () => {
+  it('opens a sheet before cancelling', () => {
     const onCancel = vi.fn();
     renderView(ApplicationStatus.SENT, onCancel);
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    try {
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel application' }));
-      expect(confirm).toHaveBeenCalledWith(
-        'Cancel this application? The load will be open for other drivers.',
-      );
-      expect(onCancel).not.toHaveBeenCalled();
-    } finally {
-      confirm.mockRestore();
-    }
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel application' }));
+    expect(screen.getByRole('dialog', { name: 'Cancel application Lille to Brussels' })).toBeVisible();
+    expect(onCancel).not.toHaveBeenCalled();
   });
 
-  it('cancels once confirmed', () => {
+  it('cancels once confirmed in the sheet', () => {
     const onCancel = vi.fn();
     renderView(ApplicationStatus.SENT, onCancel);
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    try {
-      fireEvent.click(screen.getByRole('button', { name: 'Cancel application' }));
-      expect(onCancel).toHaveBeenCalledTimes(1);
-    } finally {
-      confirm.mockRestore();
-    }
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel application' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw application' }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the application when the sheet is dismissed', () => {
+    const onCancel = vi.fn();
+    renderView(ApplicationStatus.SENT, onCancel);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel application' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Keep application' }));
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});
+
+describe('ApplicationTrackerView demo notices', () => {
+  it('shows dispatcher chat as a toast, not an alert', () => {
+    renderView(ApplicationStatus.SENT);
+    fireEvent.click(screen.getByRole('button', { name: 'Contact dispatcher' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Dispatcher chat is not connected in this demo.');
+  });
+
+  it('shows dispute as a toast, not an alert', () => {
+    renderView(ApplicationStatus.REJECTED);
+    fireEvent.click(screen.getByRole('button', { name: 'Dispute decision' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Disputing a decision is not connected yet.');
   });
 });
