@@ -13,6 +13,7 @@ export const Success: Story = {
   args: { toast: { tone: 'success', title: 'Bank account saved', detail: 'Cash out will offer it right away.' }, onClose: () => {} },
 };
 export const Interactive: Story = {
+  args: { toast: null, onClose: () => {} },
   render: () => {
     const [toast, setToast] = useState<ToastData>(null);
     return <div className="relative h-[300px] w-[402px] bg-[var(--color-bg-canvas)]">

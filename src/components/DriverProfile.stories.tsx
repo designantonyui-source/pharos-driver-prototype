@@ -20,6 +20,11 @@ export const SetVariant: Story = {
   render: () => <DriverProfile verified />,
 };
 
+/** Compact polish — verification appended to the body line, card stays 82 tall */
+export const VerifiedInline: Story = {
+  render: () => <DriverProfile verified verifiedStyle="inline" />,
+};
+
 /** Figma boolean `Show country flag` = true, instance swap `Country flag` = France (249:1647) */
 export const WithCountryFlag: Story = {
   render: () => <DriverProfile verified country="France" />,

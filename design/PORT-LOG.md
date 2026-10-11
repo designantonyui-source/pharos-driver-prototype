@@ -25,11 +25,17 @@ Two readability fixes from screenshot review (2026-10-11):
    `Verified` inside the card, 82 -> 100 tall). No new UI, just the set's own variant.
 2. **One notification pattern.** Success/info confirmations (contact saved, method
    saved, cash-out sent, auto-run fired, rule saved) were inline `Alert` blocks inside
-   the scroll — glued above the tab bar. Now: a single `Toast` component
-   (`src/components/v2/Toast.tsx` + `useToast`): pinned above the tab bar
-   (bottom 129px, z-50), auto-dismiss 4s, manual close, `role=status`.
+   the scroll, then a toast above the tab bar — which still covered the primary
+   action (see screenshot: `Rule saved` over the CSV button). Now: a single `Toast`
+   component (`src/components/v2/Toast.tsx` + `useToast`) pinned **under the nav bar**
+   (top `calc(var(--nav-bar-h)+8px)`, z-50, iOS-style), auto-dismiss 4s, manual
+   close, `role=status`, 180ms slide-in (off with `prefers-reduced-motion`).
    Error Alerts stay inline (they carry Retry/actions); Sheet confirmations stay modal.
    Convention documented in the Toast contract header. Stories: Success + Interactive.
+3. **Compact verification.** The set's own verification row pushed the Account card
+   82 -> 100. New `verifiedStyle="inline"` appends `· ● Verified` to the body line
+   (same dot + `#216547`, no new UI) — card stays 82 tall. `row` keeps the set's
+   state for the `SetVariant` story; Account uses `inline` (`VerifiedInline` story).
 
 Coverage: `pnpm test` 104 passed; `pnpm check` passes. Unit assertions moved from
 inline text to `role=status` (toast) / store state where the toast auto-dismisses.

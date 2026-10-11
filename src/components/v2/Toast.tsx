@@ -6,11 +6,12 @@
  *   shadow-card, spacing-8/12/16
  *
  * Convention (replaces inline success/error Alerts in content flow):
- * - success/info confirmations appear as an auto-dismissing toast pinned above
- *   the tab bar (bottom-[117px] + 12), never as a block inside the scroll.
+ * - success/info confirmations appear as an auto-dismissing toast pinned under
+ *   the navigation bar (top-[calc(var(--nav-bar-h)+8px)]), iOS-style — it never
+ *   covers the tab bar or the primary action at the bottom of the screen.
  * - destructive/loading states keep inline placement: error Alerts stay in flow
  *   (they need Retry/actions), Sheet confirmations stay modal.
- * - auto-dismiss 4s, pause on hover/focus, manual close button, role=status.
+ * - auto-dismiss 4s, manual close button, role=status, slide-in from top.
  */
 import { useEffect, useState, type ReactNode } from 'react';
 import { Icon } from '../Icon';
@@ -28,10 +29,10 @@ export function Toast({ toast, onClose }: { toast: ToastData; onClose: () => voi
   if (!toast) return null;
   const tone = toast.tone === 'success' ? 'text-[var(--color-status-success-text)]' : 'text-[var(--color-action-text)]';
   return (
-    <div className="pointer-events-none absolute inset-x-[16px] bottom-[129px] z-50 flex justify-center" role="presentation">
+    <div className="pointer-events-none absolute inset-x-[16px] top-[calc(var(--nav-bar-h)+8px)] z-50 flex justify-center" role="presentation">
       <div
         role="status"
-        className="pointer-events-auto flex w-full items-center gap-[12px] rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-[12px] shadow-[var(--shadow-card)]"
+        className="toast-slide-in pointer-events-auto flex w-full items-center gap-[12px] rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-[12px] shadow-[var(--shadow-card)]"
       >
         <span className={`flex h-[20px] w-[20px] shrink-0 items-center justify-center ${tone}`} aria-hidden>
           <Icon name={toast.tone === 'success' ? 'circle-check' : 'info'} size="md" />

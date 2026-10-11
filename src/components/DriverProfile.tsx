@@ -48,6 +48,7 @@ export function DriverProfile({
   body = 'Northway Freight · driver',
   initials = 'AK',
   verified = false,
+  verifiedStyle = 'row',
   country,
 }: {
   /** Figma text property `Title#769:0`. */
@@ -61,6 +62,9 @@ export function DriverProfile({
   initials?: string;
   /** Figma boolean property `Show verification#769:5`. TRUE in the set, FALSE in all nine instances. */
   verified?: boolean;
+  /** `row` = the set's own state (dot + "Verified" on its own row, 100 tall).
+   *  `inline` = compact polish: dot + "Verified" appended to the body line, stays 82 tall. */
+  verifiedStyle?: 'row' | 'inline';
   /** Figma boolean `Show country flag#769:3` + instance swap `Country flag#769:4`. Off in the set. */
   country?: string;
   /** Figma variant property `Density` — the set only ships `Compact`. */
@@ -83,9 +87,18 @@ export function DriverProfile({
           {keyFact}
         </span>
 
-        <span className="text-caption-12 text-[var(--color-text-secondary)]">{body}</span>
+        <span className="text-caption-12 text-[var(--color-text-secondary)]">
+          {body}
+          {verified && verifiedStyle === 'inline' && (
+            <span className="text-[var(--color-status-success-text)]">
+              {' · '}
+              <span aria-hidden className="mr-[4px] inline-block h-[6px] w-[6px] rounded-[var(--radius-pill)] bg-current align-middle" />
+              Verified
+            </span>
+          )}
+        </span>
 
-        {verified && (
+        {verified && verifiedStyle === 'row' && (
           <span className="flex h-[var(--spacing-16)] w-fit items-center gap-[var(--spacing-6)] rounded-[var(--radius-pill)] text-label-12 text-[var(--color-status-success-text)]">
             <span aria-hidden className="h-[var(--spacing-6)] w-[var(--spacing-6)] shrink-0 rounded-[var(--radius-pill)] bg-current" />
             <span>Verified</span>
