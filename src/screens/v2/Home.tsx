@@ -62,7 +62,9 @@ export function Home() {
   const applied = loads?.find((l) => l.id === state.loadId) ?? null;
   const status = state.status;
   const open = loads?.find((l) => l.id === openId) ?? null;
+  const origin = state.route.from.trim() || 'Lille';
   const destination = state.route.to.trim() || 'Brussels';
+  const minPerKm = visible.length > 0 ? Math.min(...visible.map((l) => l.perKm)) : null;
 
   return (
     <V2Frame active="Loads">
@@ -70,21 +72,25 @@ export function Home() {
         <button
           type="button"
           onClick={() => setRouteOpen(true)}
-          aria-label={`Direction: loads towards ${destination}. Activate to change.`}
-          className="flex items-center justify-between rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] text-left shadow-[var(--shadow-card)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+          aria-label={`Direction: ${origin} to ${destination}, ${visible.length} loads. Activate to change.`}
+          className="flex items-center justify-between gap-[8px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] text-left shadow-[var(--shadow-card)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
         >
-          <span className="flex items-center gap-[8px] text-[var(--color-text-primary)]">
-            <Icon name="map-pin" className="text-[var(--color-action-primary)]" />
-            <span className="flex flex-col">
-              <span className="text-caption-12 text-[var(--color-text-secondary)]">Loads towards</span>
-              <span className="text-heading-14">{destination}</span>
+          <span className="flex min-w-0 items-start gap-[8px] text-[var(--color-text-primary)]">
+            <Icon name="map-pin" className="mt-[2px] text-[var(--color-action-primary)]" />
+            <span className="flex min-w-0 flex-col">
+              <span className="flex min-w-0 items-center gap-[8px]">
+                <span className="text-heading-14 truncate">{origin} → {destination}</span>
+                <span className="shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-action-primary)] px-[8px] py-[2px] text-label-12 text-[var(--color-action-text-inverse)]">
+                  {loads ? `${visible.length} trips` : '…'}
+                </span>
+              </span>
+              <span className="text-caption-12 truncate text-[var(--color-text-secondary)]">
+                Loads · Today{minPerKm !== null ? ` · from €${minPerKm.toFixed(2)}/km` : ''}{on.length > 0 ? ` · ${on.length} filter${on.length === 1 ? '' : 's'}` : ''}
+              </span>
             </span>
           </span>
-          <span className="flex items-center gap-[8px]">
-            <span className="text-label-12 text-[var(--color-text-secondary)]">
-              {loads ? `${visible.length} loads` : 'Searching…'}
-            </span>
-            <Icon name="chevron-down" size="sm" className="text-[var(--color-text-secondary)]" />
+          <span className="flex min-h-[44px] shrink-0 items-center">
+            <Icon name="chevron-down" size="sm" className="text-[var(--color-action-primary)]" />
           </span>
         </button>
 
