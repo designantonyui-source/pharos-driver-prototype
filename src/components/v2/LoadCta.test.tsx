@@ -83,6 +83,13 @@ describe('LoadCta', () => {
     expect(getApplicationForLoad('nordcargo')).toMatchObject({ status: ApplicationStatus.SENT });
     expect(getApplicationForLoad('belroute')).toMatchObject({ status: ApplicationStatus.CONFIRMED });
   });
+  it('portals the confirmation inside the phone frame, not document.body', () => {
+    render(<MemoryRouter><div data-load-overlay-root><LoadCta loadId="nordcargo" /></div></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply for €360' }));
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.closest('[data-load-overlay-root]')).not.toBeNull();
+  });
+
   it('notifies the owning screen if another request applied while confirmation was open', async () => {
     vi.useFakeTimers();
     try {

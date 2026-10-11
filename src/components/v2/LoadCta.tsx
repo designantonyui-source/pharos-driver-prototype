@@ -58,7 +58,9 @@ export function LoadCta({ loadId, onNotice }: { loadId: string; onNotice?: (titl
       )}
       {open && load && createPortal(
         <QuickApplyModal loadId={loadId} load={load} onCancel={() => setOpen(false)} onAlreadyApplied={() => { setOpen(false); notifyAlreadyApplied(); }} onSubmitted={() => { setOpen(false); navigate(statusPath); }} />,
-        document.body,
+        // Keep the sheet inside the 402px phone frame (V2Frame = [data-load-overlay-root]);
+        // portalling to document.body escapes the frame and stretches the sheet full-width on desktop.
+        document.querySelector('[data-load-overlay-root]') ?? document.body,
       )}
     </div>
   );
