@@ -1,3 +1,15 @@
+## Account first slice — approved new proposals, not measured ports
+
+| Route | Implementation | Figma mapping/status |
+| --- | --- | --- |
+| `/v2/account` | `src/screens/v2/Account.tsx` | New proposal, redesigned (option A): NavigationBar home + grouped iOS rows + dismissed badge; reuses DriverProfile `769:10428`, no screen node assigned |
+| `/v2/account/profile` | `Account.tsx` (detail) | New proposal, redesigned (option A): back nav + contact card + Edit CTA; no measured screen mapping |
+| `/v2/account/profile/edit` | `Account.tsx` (EditContact) | New prototype-contact-only proposal, redesigned (option A): design-system Inputs + Alerts + skeleton; no auth/OTP |
+| `/v2/account/dismissed` | `src/screens/v2/DismissedLoads.tsx` | New proposal, redesigned (option A): back nav + skeleton/empty/error + Restore/Undo, no measured screen mapping |
+
+Uses existing tokens, V2Frame, Button and Sheet. See PORT-LOG Account first slice for scope and checks. These entries do not assert Figma fidelity of the proposed layouts.
+
+
 # Figma ↔ code map
 
 File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **01 · Driver journey** (`2022:2949`)
@@ -96,4 +108,18 @@ No Figma node yet: these screens lead and go back to Figma afterwards. Source of
 
 ### Stateful load cards
 
-`src/components/v2/LoadCard.tsx` composes LoadCta for both list and map. CARD_STATE_STYLES defines available / pending / booked / rejected / cancelled surfaces, accents and pills; application badges replace route-match badges. Booked cards show a minute-updated countdown from pickupTime and the demo trip identifier. Stable sorting pins booked, then pending, followed by available in existing feed order, then rejected/cancelled. Card taps open trip / tracker / details as appropriate; interactive CTA/modal events do not trigger the card action. Exact requested palette is exported from color-load-state tokens.
+`src/components/v2/LoadCard.tsx` composes LoadCta for both list and map. CARD_STATE_STYLES defines the five
+application states; the pill (`badge`) carries state through the `color-status-*` `-bg`/`-text` pair, and
+`container` is the shared `bg-surface` for all states (the 4px left accent was removed 2026-10-10 at the
+client's request — see PORT-LOG §4.11 deviation note). Booked cards show a minute-updated countdown from pickupTime and the demo trip identifier. Stable sorting pins booked, then pending, followed by available in existing feed order, then rejected/cancelled. Card taps open trip / tracker / details as appropriate; interactive CTA/modal events do not trigger the card action. State is expressed through the `color-status-*` palette only: the pill takes the `-bg`/`-text` pair, so one meaning has one colour. The earlier `color-load-state-*` group was removed — it was a second palette for the same five states, it double-encoded the state (card fill plus pill), it left the pill invisible on its own card (1.05:1) and its accents failed contrast on their own fill (2.07–3.44:1). Every pair now measures >= 5.2:1. The rate renders in `text-metric-28`, matching OfferCard, OfferTerms, LoadSheet and the v1 LoadCard; state pills use lucide glyphs (`clock`, `circle-check`, `circle-x`, `x`) and the carrier rating uses the `star` icon instead of raw Unicode.
+
+
+## Продолжение 2026-10-10: отмена трипа
+
+Подключён CancelTripSheet к `/trip/:id`: причина, подтверждение, loading/error, Keep trip.
+После отмены itinerary остаётся доступным со статусом Cancelled by you; действия Navigation/Documents скрыты.
+Предупреждение явно демонстрационное: политика не утверждена, реальный штраф не применяется.
+Store сохраняет метаданные при set/read; restore удаляет только dismissed-запись; новая заявка очищает dismissed.
+Проверено: vitest 63/63, Playwright Chrome 7/7 (включая отмену и сохранение причины/tripId), pnpm check проходит.
+Геометрия относительно Figma не измерена: это prototype-led дополнение, не подтверждённый 1:1 порт.
+Открыто: утверждение политики, проверка undo на карте и перезагрузки, дополнительные UI-тесты и замеры.

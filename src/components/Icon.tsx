@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  Bell,
   Bookmark,
   Calendar,
   Camera,
@@ -7,19 +8,27 @@ import {
   Check,
   ChevronDown,
   ChevronLeft,
+  ChevronRight,
   CircleCheck,
   CircleHelp,
   CircleX,
   Clock,
+  Eye,
   Image,
   Info,
   LayoutDashboard,
+  Languages,
   LoaderCircle,
   MapPin,
   Package,
+  Phone,
+  Mail,
   Search,
+  Settings,
   Shield,
+  ShieldCheck,
   SlidersHorizontal,
+  Star,
   TriangleAlert,
   Truck,
   UserRound,
@@ -45,6 +54,12 @@ import {
  * `Pharos/Filter chip v2` State=Selected (`2621:1280` "Check path", 14x14) and the chevron of
  * `Pharos/Select` (`344:30` "Chevron down", 16x16) — both are bare lucide glyphs, not registered
  * components on the `03 — Icons` page.
+ * `star` is prototype-led, same status as those two: the v2 load card rendered the carrier rating
+ * with a raw U+2605 glyph, which inherits the body font instead of the 2px-stroke lucide set. It is
+ * a bare `Lucide/Star`, not a registered component on the `03 — Icons` page.
+ * `bell`, `eye`, `languages`, `mail`, `phone`, `settings`, `shield-check`, `chevron-right`
+ * are prototype-led Account additions (same bare-lucide status): menu rows, section icons
+ * and navigation chevrons of the new Account proposal.
  *
  * tokens: size-icon-sm 16 · size-icon-md 20 · size-icon-lg 24
  * colour: never set here — the glyph inherits `currentColor` from its parent
@@ -53,6 +68,7 @@ import {
  */
 export const ICONS = {
   'arrow-right': ArrowRight,
+  bell: Bell,
   bookmark: Bookmark,
   calendar: Calendar,
   camera: Camera,
@@ -60,19 +76,27 @@ export const ICONS = {
   check: Check,
   'chevron-down': ChevronDown,
   'chevron-left': ChevronLeft,
+  'chevron-right': ChevronRight,
   'circle-check': CircleCheck,
   'circle-help': CircleHelp,
   'circle-x': CircleX,
   clock: Clock,
+  eye: Eye,
   image: Image,
   info: Info,
+  languages: Languages,
   'layout-dashboard': LayoutDashboard,
   loader: LoaderCircle,
+  mail: Mail,
   'map-pin': MapPin,
   package: Package,
+  phone: Phone,
   search: Search,
+  settings: Settings,
   shield: Shield,
+  'shield-check': ShieldCheck,
   sliders: SlidersHorizontal,
+  star: Star,
   'triangle-alert': TriangleAlert,
   truck: Truck,
   'user-round': UserRound,

@@ -1,3 +1,37 @@
+## Account redesign (option A) — same scope, proper iOS design
+
+Routes unchanged: `/v2/account`, `/v2/account/profile`, `/v2/account/profile/edit`, `/v2/account/dismissed`.
+These screens are still approved prototype proposals, **not geometry/typography measured ports**. Only DriverProfile (`769:10428`), NavigationBar (`586:33`), Input (`12:166`), Button (`12:38`), Alert (`575:9632`), V2Frame shell and tokens are reused as measured components.
+
+What changed and why (audit of the previous slice):
+
+1. Real nav bars — `NavigationBar type=home` on Account ("Account" + AK avatar), `type=back` on Profile / Edit / Dismissed. Before: raw `h1` + underline text-links, unreachable by thumb and inconsistent with every other v2 screen.
+2. iOS grouped lists — sections with caption labels (Loads / Profile / Preferences) instead of three floating underline links. Rows are 48px tap targets with 32px icon tiles, one-line titles + secondary detail, chevrons, dividers.
+3. Dismissed count badge — the menu row shows the live count from the store ("N hidden from your feed") instead of a dead link with no context.
+4. Profile contact card — phone/email as icon rows (tel/mail glyphs) instead of an unstyled `<dl>`; primary "Edit contact" CTA instead of an underline link.
+5. Design-system inputs — Edit uses measured `Input` (label row, 48px control, hint line, error state) with delayed error display (only after touch/dirty) instead of raw `<input>` + always-on red text.
+6. Alert states — prototype note, save success/failure, load failure and mutation errors all use measured `Alert` tones instead of bare `<p>`.
+7. Skeleton + empty states — loading shows pulsing card placeholders with sr-only labels (same pattern as LoadCardSkeleton); Dismissed empty state is an illustrated card, not "No dismissed loads."
+8. Honest placeholders — Notifications/Language rows navigate to `/v2/account` (stay in place) instead of pretending to be dead links; prototype footer states the build and local-only storage.
+9. Lucide-only icons — 8 bare-lucide names added to the registry (`bell`, `eye`, `languages`, `mail`, `phone`, `settings`, `shield-check`, `chevron-right`), documented as prototype-led in Icon.tsx. No emoji, no raw glyphs.
+10. A11y — sr-only `h1` per screen (tests + screen readers), `role=status/alert` preserved through Alert wrappers, 48px targets, focus rings inherited from Button/NavigationBar.
+
+Coverage: `pnpm test` 83 passed (was 82 — new dismissed-count test); `pnpm check` passes (token audit + tsc + build, existing wildcard CSS warning only); E2E `e2e/account.spec.ts` selectors updated for button/textbox/Alert markup.
+
+---
+
+## Account first slice — new proposal (not a measured Figma port)
+
+Routes: `/v2/account`, `/v2/account/profile`, `/v2/account/profile/edit`, `/v2/account/dismissed`.
+These screens are approved prototype proposals, **not geometry/typography measured ports**. Only the existing DriverProfile (`769:10428`) and Pharos shell/control/token components are reused; that node does not represent the new screens. No Documents, Vehicle or Help dead-end entries were added.
+
+Contact API persists phone/email locally, with existing name/company/driver identity read-only. Blank fields are allowed; phone accepts 7–15 digits with common separators, email requires a basic address shape. No authentication, OTP or verification is implemented or claimed. Storage writes/removal precede memory updates and subscriber notification. Editor covers unchanged, invalid, saving, failure/retry and saved states. Router now uses a hash data router so useBlocker can confirm tab and browser-back navigation; beforeunload protects document exits. Dismissed loads show route/company, loading/empty/retry/error, Restore and Undo through existing guarded APIs.
+
+Coverage: profile API/store tests, Account and DismissedLoads UI tests; Account/Profile/Edit interactive stories and dismissed-load state stories. `pnpm test`: 82 passed. `pnpm check`: token audit, TypeScript and production build passed (existing wildcard CSS warning). `pnpm exec playwright test e2e/account.spec.ts`: passed contact persistence plus tab/browser-back confirmation in Chrome. No Figma measurement claim is made.
+
+---
+
+
 # PORT-LOG — перенос Figma → код
 
 Рабочий журнал переноса дизайн-системы Pharos в этот репозиторий. Ведётся по ходу работ:
@@ -741,6 +775,169 @@ Application progress `734:426`): все 33 коробки совпали точ�
 Токены, добавленные по заявкам: `text.caption-10` (10/12), `size-icon.xl` (32px), `radius.5` (5px),
 `color-select.option-selected-bg`. Ни одного нового цветового токена сверх этого не потребовалось.
 
+### 4.11. Волна 4 — v2-фиксы по результатам `design/UI-REVIEW.md`
+
+Волна не портирует из Figma, а закрывает дефекты прототипа, найденные численным аудитом
+(`design/UI-REVIEW.md`). Прототип здесь ведущий, поэтому критерий — не node-id, а измеренная
+геометрия, контраст по WCAG 2.1 и правило 5 (английский).
+
+**P0-1 · русские строки в v2.** `QuickApplyModal.tsx` был русским целиком (заголовок, три строки
+`dl`, чек-лист, обе кнопки, сообщение об ошибке), `ApplicationTracker.tsx` — на 4 строки
+(REJECTED-сообщение, две кнопки отклонения, текст `alert`). Заменено на английский; i18n-слоя в
+репозитории нет (`grep` по `i18n|react-intl|formatjs|useTranslation` пуст), то есть это был дрейф,
+а не локаль. Кириллица, которая осталась в `src/`, — это **комментарии** о русских строках Figma
+(их правило 8 требует) и `bl/Search.tsx:12`, где `познань` лежит в allowlist ввода польской демо.
+Тесты, утверждавшие русские строки, обновлены в том же коммите: `QuickApplyModal.test.tsx`,
+`LoadCta.test.tsx`, `LoadCard.test.tsx`.
+
+**P0-2 · focus-ring.** `Pharos/Button` State=Focus (2px `color/focus/ring`, offset 4px) был
+доступен только через ручной проп `focus`, поэтому с клавиатуры кольца не было ни на одной CTA.
+Добавлен `FOCUS_VISIBLE` (`focus-visible:outline-2 … outline-offset-4`) в `Button` и `ButtonLink`.
+Это восстановление уже задокументированного состояния Figma, а не новое решение.
+
+**P1-1 · одна палитра вместо двух.** Группа `color-load-state-*` (8 токенов) удалена из
+`design/tokens.json`, `tokens.css` перегенерирован: **192 → 184 переменных**. Состояния карточки
+теперь выражаются только через `color-status-*`: левый акцент 4px берёт `-text`, пилюля — пару
+`-bg`/`-text`. Замерено до и после (Chrome, `getComputedStyle` + WCAG):
+
+| Канал | До | После |
+|---|---|---|
+| Акцент pending на своём фоне | `#f59e0b` на `#fffbeb` = **2.07:1** | `#855300` на `#ffffff` = **6.49:1** |
+| Акцент booked | `#16a34a` на `#f0fdf4` = **3.15:1** | `#216547` на `#ffffff` = **6.96:1** |
+| Акцент rejected | `#ef4444` на `#fef2f2` = **3.44:1** | `#b8332f` на `#ffffff` = **5.91:1** |
+| Акцент cancelled | `#9ca3af` на `#f9fafb` = **2.43:1** | `#526773` на `#ffffff` = **5.92:1** |
+| Пилюля против фона карточки | `#fffbeb` vs `#fff4df` = **1.05:1** (невидима) | 1.09–1.37:1 тонировка на белом |
+| Текст пилюли | не нормировался | **5.20–6.25:1** (AA) |
+
+Ключевая находка, которой не было в ревью: пилюля состояния была практически невидима на
+собственной карточке (1.05:1), потому что фон карточки и фон пилюли брались из двух палитр и
+оказались почти одним цветом. Теперь состояние дублируется тремя каналами: тонировка пилюли,
+AA-текст пилюли и акцент ≥5.9:1.
+
+**Отклонение (по просьбе клиента, 2026-10-10): полоса-акцент слева снята.** `CARD_STATE_STYLES`
+больше не содержит `border-l-4`: `container` одинаков у всех пяти состояний (`bg-surface`), носитель
+состояния — только пилюля (`badge`). Измеренный в таблице выше сигнал P0-3 «граница pending»
+больше не существует в DOM: pending и available теперь геометрически идентичны, различие — лишь в
+пилюле и CTA. Если водитель читает ленту на периферийном зрении, это потеря: возврат полосы —
+одна строка на состояние (`border-l-4 status-dependent left-border utility`), токены на месте,
+тест фиксирует отсутствие (`not.toHaveClass('border-l-4')`). Зафиксировано здесь, чтобы отклонение
+не выглядело как недосмотр при следующем замере.
+
+**P1-2 · иерархия ставки.** В `v2/LoadCard.tsx` ставка была `text-heading-20` (20px), хотя
+`text-metric-28` — устоявшийся размер ставки в `OfferCard.tsx:134`, `OfferTerms.tsx:62` и даже в
+v1 `LoadCard.tsx:216`. Замер после правки: **28px / 700 / Manrope** — совпадает с остальными
+поверхностями. Это восстановление ответа собственной дизайн-системы, а не изобретение.
+
+**P1-3 · глифы вместо реестра.** Бейджи состояний рисовали `⏳ ✓ ✕ ○`, рейтинг — `★` (U+2605),
+который наследует шрифт текста вместо набора lucide с обводкой 2px. Заменено на `clock`,
+`circle-check`, `circle-x`, `x`; в реестр добавлен `star` (§5). Замер: `class="lucide lucide-star"`,
+бокс **12×12**, сырых глифов в карточке **0**. То же в `LoadSheet.tsx:59-65` (блок `Fact icon="shield"`). Попутно закрыт P2-6:
+строка маршрута была 344×20, стала **344×44** (`min-h-[44px]`).
+
+**P1-4 отозван.** Пункт «двойной знак валюты» (`€360 €2.85/km`) в ревью был ошибочным: `€X.XX/km`
+со знаком евро — последовательная конвенция репозитория (`OfferCard`, `OfferTerms`, `OfferPreview`,
+`LoadSheet`, v1 `LoadCard`, сторис, `bl/List.tsx` — все 8+ мест). Без `€` величина `2.85/km`
+становится неоднозначной. Не реализовано.
+
+**Осиротевший `LoadTile.tsx` удалён** вместе с `useCountdown.ts` (его единственным потребителем).
+Слот под него существует — `SmartLoadList.tsx:95-97`, snap-карусель с обёртками `w-[340px]`, — но
+занят `LoadCard`. Монтировать `LoadTile` как есть нельзя: в нём нет модели пяти состояний заявки,
+то есть booked/rejected в карусели стали бы неотличимы от available, а видимость состояния — ядро
+v2 (`sortLoadsByApplication` + `CARD_STATE_STYLES` существуют ради неё). Полноценный монтаж —
+отдельная фича, а не UI-фикс. По DoD репозитория файл был мёртвым: без стори (единственный
+v2-компонент без `.stories.tsx`), без теста, без записи в `figma-map.md`. Восстановим из git.
+
+**Ловушки этого замера** (в §2 не добавляю, чтобы не перенумеровать ловушки 24/27, на которые
+есть перекрёстные ссылки):
+
+- **Роутер хешевый.** `src/main.tsx` использует `HashRouter`, поэтому `http://host:PORT/v2`
+  рендерит **индекс**, а не ленту: роутер читает хэш, а не pathname. Правильный URL —
+  `http://host:PORT/#/v2`, а query живёт внутри хеша (`#/application/nordcargo?scenario=reject`).
+  Симптом обманчив: HTTP 200, страница живая, но `article` нет.
+- **`ApplicationStatus` — UPPERCASE.** Значения enum `'SENT' | 'CONFIRMED' | …`, а не `'sent'`.
+  Посев `localStorage` в нижнем регистре молча даёт `data-state="available"`: `store.read()`
+  валидирует только верхнеуровневый `status` (через `LEGACY_STATUS`), а карта `applications`
+  копируется как есть, и `getLoadCardState` уходит в `default`.
+- **Пилюля с иконкой не находится как «лист».** Внутри `<svg>` + текстовый узел, поэтому проверка
+  `children.length === 0` её отсекает. Искать надо по **собственным** текстовым узлам элемента
+  (`childNodes`, `nodeType === 3`), а не по `textContent`.
+- **Общие dev-серверы врут.** В системе висело четыре `vite` из разных каталогов
+  (`~/.cline/worktrees/…` и `~/Downloads/Harness-Test/…`) на 5173/5174. Замерять надо против
+  сервера, поднятого из своего worktree на выделенном порту (`--strictPort`), иначе часть проверок
+  молча пройдёт по чужому коду.
+- **Порог «отличимости» пилюли надо выбирать по смыслу.** WCAG нормирует контраст текста, а не
+  тонировку чипа: первоначальный порог 1.15:1 на фон пилюли дал четыре ложных падения при живых
+  5.20–6.25:1 на тексте и 5.91–6.96:1 на акценте.
+
+Итог: **57/57** замеров, `pnpm check` зелёный (аудит токенов 1397 literal + 6 dynamic / 184 токена,
+`tsc` чист, сборка 1943 модуля), `pnpm test` — **47/47** (4 файла). Скриншоты: `/tmp/ui-after/`
+
+**Волна 1 (2026-10-10): сторож починен, три скрытых бага вскрыты.** E2E-спек переведён на английский,
+добавлен `beforeEach` со сбросом `localStorage` (`pnpm test:e2e` **3/3**). По пути: `submitApplication`
+принимал повторную заявку после CANCELLED (`api.ts:44-50` — guard теперь смотрит и топ-уровень, и
+карту `applications`, тест `LoadCta.test.tsx` «does not resubmit after cancellation»); REJECTED-ветка
+выделена из дефолтной в `LoadCta.tsx` (`Application rejected` + `View reason`, тест
+`LoadCta.test.tsx:39` уже ждал именно это); мусор в карте `applications` отбрасывается
+(`getApplicationForLoad` валидирует по enum, тест `LoadCard.test.tsx` «drops applications with a
+status outside the enum»). `pnpm test` — **48/48** (4 файла).
+
+**Волна 2 (2026-10-10): доступность и честность.** Пункты 3–8 сводки аудита. `Sheet.tsx` — Escape,
+ловушка Tab, `inert` на фоне, возврат фокуса, `role="dialog" aria-modal` с обязательным `label`
+(новый `Sheet.test.tsx`, 4 теста); дубль `role="dialog"` снят с `QuickApplyModal.tsx`.
+`LoadSheet.tsx` — пилюля состояния в шапке (`role="status"`, те же `CARD_STATE_STYLES`, что у карточки).
+Атрибуция отмены: `Cancelled` → `Cancelled by you` (`LoadCard.tsx:75`, `LoadSheet.tsx:45`,
+`ApplicationBanner.tsx:12`, `ApplicationTracker.tsx:49`); `Cancel application` — за `window.confirm`
+(новый `ApplicationTracker.test.tsx`, 2 теста). `View similar loads` → `Back to loads`
+(вела на `listPath` без фильтрации). Тап-таргеты 44: `Home.tsx:77`, табы `SmartLoadList.tsx:67`,
+`DemoToggle.tsx:17` (P2-6 закрыт полностью). `ApplicationProgress.tsx` — `ol`, `aria-current="step"`,
+видимый «Step N of 4». `pnpm test` — **54/54** (6 файлов), `pnpm test:e2e` — **3/3**, `pnpm check` зелёный.
+
+**Волна 3 (2026-10-10): прочность + карта + чипы.** Пункты 9–11 сводки плюс редизайн Map и крестик
+чипов. Выбранный чип: `x` 16px + `aria-label` «…, selected. Activate to remove» (`Home.tsx:77-88`,
+замер: высота 44, X в DOM; отклонение от Фигмы — там check — зафиксировано: `FilterChipV2` documents
+check/X, инстансы Home используют свой ряд). R1: `getLoads` мемоизирован (`api.ts:17-21`). R2: карточка
+читает `applications[load.id]` (`LoadCard.tsx:74-75`). R4: `PickupCountdown` — `memo` + `role="timer"`,
+«Pickup in N min» под час. P2-4: empty-state с `Clear filters` (`SmartLoadList.tsx:175-180`,
+`Home.tsx:100`, unit + E2E). C4: заголовок модалки «Apply for {from} → {to}». Map: `MapPin` 44px
+(`PINS` фиксирует три демо-якоря — для бэка нужна привязка к координатам), `MapCard` 280px без CTA,
+тап пина скроллит карусель, шит открывается из карусели (E2E «map pins mirror the feed»).
+«Pickup in 0h 0m» убит (`diffMin <= 0 → null`, тест «hides once passed»). `pnpm test` — **57/57**,
+`pnpm test:e2e` — **5/5**, `pnpm check` зелёный.
+
+**Волна 4 (2026-10-10): фильтры и маршрут.** Ряд чипов в `Home.tsx` заменён на `FiltersButton`
+(Figma `2646:1314`, `count` = число активных; оба варианта бейджа из Фигмы — Shown/Hidden).
+Новый `FiltersSheet.tsx` (`FILTERS` + секции Loading day / Minimum rate / Pickup distance,
+черновик, `countFor`, `Show N loads` / `No loads match`, `Clear`; крестик X у выбранной опции).
+Новая `RouteSheet.tsx` (Destination city, живой счётчик, Apply → `store.route`; P2-1 закрыт).
+Шапка — кнопка с `chevron-down` (`Home.tsx:60-79`). `Sheets.test.tsx` (3 теста), `Sheets.stories.tsx`
+(5 стори). E2E: фильтры переписаны, +«direction changes». Самонанесённое: ожидал `Filters 2`
+после одного фильтра (бейдж = число, не индекс) и фильтрацию ленты направлением (демо-фид
+не фильтруется — оба пойманы спеком). `pnpm test` — **59/59** (7 файлов), `pnpm test:e2e` — **6/6**,
+`pnpm check` зелёный.
+
+**Волна 4b (2026-10-10): фильтры в ряд с List/Map.** Отдельный ряд кнопки убран: `FiltersButton`
+стоит слева в одном ряду с сегментом через слот `tabsPrefix` (`SmartLoadList.tsx:27-28,157-159`;
+сегмент `h-44 → h-48`, `Home.tsx:88-94`). Замер живьём: кнопка 95×48, сегмент 268×48, один y (138).
+Шит поверх Map не конфликтует (пины под скримом живы — проверено).
+
+**Волна 5 (2026-10-10): скелетон + статусы начисто.** P2-3 закрыт: новый `LoadCardSkeleton.tsx`
+(ряды Фигмы `2594:22017` — 72×24 + 68×16/42×16 / 149×20 / 129×16 / 158×16 / 217×16, r4,
+`color-offer-bg-skeleton`, `animate-pulse`; `role="status"` + sr-only «Searching for loads…»,
+карточки `aria-hidden`) вместо текстового `<p role="status">`. По правилу 4 ряды не скопированы,
+а собраны из тех же чисел (`SKELETON_BARS` экспортирован из `OfferCard.tsx`, его шапка
+документирует связь). `LoadCardSkeleton.stories.tsx` (Loading), `LoadCardSkeleton.test.tsx`
+(скелетон виден, анонс ровно один). Таблица статусов в `UI-REVIEW.md` переписана: каждый P2 —
+со своей волной. `pnpm test` — **60/60** (8 файлов), `pnpm check` зелёный.
+
+**Волна 4c (2026-10-10): карта во весь экран + прайс-пины.** Таб-панель на map сняла
+`overflow-hidden` (иначе `absolute inset-0` схлопывался в 0px — поймано замером: арт был 402×0,
+пины лежали поверх ленты), обёртка `h-full min-h-[300px]` (`SmartLoadList.tsx`). Пины —
+пилюли `€{rate}` цветом состояния вместо точек `map-pin`; выбранный — кольцо `text-inverse`
+(видно на цветном пине, `focus-ring` тонул). Замер: арт 402×563 (y 186–749, до таб-бара),
+карусель 280px поверх низа, пины 44px.
+(`card-{available,pending,booked,rejected,cancelled}.png`, `quickapply-modal.png`,
+`focus-ring.png`, `v2-list.png`, `v2-map.png`, `tracker-rejected.png`).
+
 ## 5. Иконки
 
 Иконки — не мелочь: на экранах водителя их **19 разных, суммарно 900+ инстансов**, самая частая
@@ -781,6 +978,7 @@ action needs a tooltip or an accessible name. For a driver the interactive area 
 | `Lucide/Icon/Sliders horizontal` | `2644:2` | `SlidersHorizontal` | 21 |
 | `Lucide/Icon/X` | `2648:2` | `X` | 11 |
 | *(вне неймспейса)* `Icon / chevron.left` | — | `ChevronLeft` | навбар Back |
+| *(prototype-led)* рейтинг перевозчика | — | **`Star`** | v2 Load card / Load sheet |
 
 Жирным — те четыре, где имя компонента не совпадает с глифом (ловушка 18). Размеры `11/12/14 px`
 в дизайне тоже встречаются, но токенов под них нет — реестр принимает число, а вопрос вынесен в §7.
@@ -788,6 +986,15 @@ action needs a tooltip or an accessible name. For a driver the interactive area 
 Проверено: лист иконок (`Foundations/Icons → Sheet`) отрисован и сверён с Figma — 24 иконки,
 все 24×24, `stroke-width: 2px`, глифы совпадают. Стори `Sizes` показывает 16/20/24 и 14 без токена,
 `InheritsColour` — что цвет приходит от родителя.
+
+**Дополнение волны 4 (§4.11).** В реестр добавлен `star` (`Lucide/Star`) — теперь **27 имён**.
+Причина: v2-карточка и `LoadSheet` рисовали рейтинг перевозчика сырым `★` (U+2605), который
+наследует шрифт текста и поэтому не совпадает ни по толщине штриха, ни по оптическому размеру с
+набором lucide. Статус тот же, что у `check` и `chevron-down`: голый глиф lucide, а не компонент,
+зарегистрированный на странице `03 — Icons`. Замерено в Chrome: `class="lucide lucide-star"`,
+бокс **12×12**, обводка 2 lucide-единицы, цвет наследуется от `currentColor` родителя; сырых
+`⏳ ✓ ✕ ○ ★` в v2-карточке **0**. Отдельная стори не нужна — `Icon.stories.tsx` строит Controls и
+лист из `Object.keys(ICONS)`, поэтому новое имя появляется в витрине само (строка 23 и 42 файла).
 
 ## 6. Экраны
 
@@ -873,3 +1080,14 @@ _Остальные экраны — в работе._
 - **`storybook-static/` устаревает** после каждой правки — перед публикацией нужен `pnpm build-storybook`.
 - **Встроенный Chromium Playwright не скачан** (загрузка висела). Проверки идут через
   установленный Google Chrome (`channel: 'chrome'`).
+
+
+## Продолжение 2026-10-10: отмена трипа
+
+Подключён CancelTripSheet к `/trip/:id`: причина, подтверждение, loading/error, Keep trip.
+После отмены itinerary остаётся доступным со статусом Cancelled by you; действия Navigation/Documents скрыты.
+Предупреждение явно демонстрационное: политика не утверждена, реальный штраф не применяется.
+Store сохраняет метаданные при set/read; restore удаляет только dismissed-запись; новая заявка очищает dismissed.
+Проверено: vitest 63/63, Playwright Chrome 7/7 (включая отмену и сохранение причины/tripId), pnpm check проходит.
+Геометрия относительно Figma не измерена: это prototype-led дополнение, не подтверждённый 1:1 порт.
+Открыто: утверждение политики, проверка undo на карте и перезагрузки, дополнительные UI-тесты и замеры.
