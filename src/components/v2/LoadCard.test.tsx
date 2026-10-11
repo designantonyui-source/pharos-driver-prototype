@@ -48,27 +48,32 @@ describe('LoadCard states', () => {
     expect(screen.queryByText('On your route')).not.toBeInTheDocument();
   });
 
-  it('badge sits left and dismiss sits right in one header row', () => {
+  it('header shows badge left and decide timer right, no X button', () => {
     store.set({ loadId: load.id, status: ApplicationStatus.CANCELLED });
-    const { container } = render(<MemoryRouter><LoadCard load={load} onOpen={() => undefined} onDismiss={() => undefined} /></MemoryRouter>);
-    const header = container.querySelector('article > div');
-    expect(header).toHaveClass('justify-between');
-    const badge = screen.getByText('Cancelled by you', { exact: true });
-    const dismiss = screen.getByRole('button', { name: /Not interested/ });
-    expect(header!.contains(badge)).toBe(true);
-    expect(header!.contains(dismiss)).toBe(true);
-    expect(badge.compareDocumentPosition(dismiss) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    render(<MemoryRouter><LoadCard load={load} onOpen={() => undefined} onDismiss={() => undefined} /></MemoryRouter>);
+    expect(screen.getByText('Cancelled by you', { exact: true })).toBeVisible();
+    expect(screen.getByText('Decide in 1h 20m')).toBeVisible();
+    expect(screen.queryByRole('button', { name: /Not interested/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hide this load' })).toBeVisible();
+    expect(screen.getByRole('button', { name: `Hide load ${load.id}. You can restore it later.` })).toBeVisible();
   });
 
-  it('route is the second anchor after the rate, facts sit quiet in caption', () => {
+  it('route is the second anchor after the rate, facts split decision and trust', () => {
     const { container } = render(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
     const route = screen.getByRole('button', { name: 'Lille, France to Brussels, Belgium. Open details.' });
     expect(route).toHaveClass('text-heading-20');
-    expect(route).toHaveTextContent('FR → BE');
-    const facts = container.querySelectorAll('article > p.text-body-14, article > p.text-caption-12');
+    expect(route).not.toHaveTextContent('FR → BE');
+    const facts = container.querySelectorAll('article > p.text-body-14, article > p.text-label-14');
     expect(facts.length).toBe(2);
     expect(facts[0]).toHaveClass('text-body-14');
-    expect(facts[1]).toHaveClass('text-caption-12');
+    expect(facts[1]).toHaveClass('text-label-14');
+    expect(screen.getByText('NordCargo')).toHaveClass('font-semibold');
+    expect(screen.getByText(/cross-border/)).toBeVisible();
+  });
+
+  it('domestic route has no cross-border suffix', () => {
+    render(<MemoryRouter><LoadCard load={{ ...V2_LOADS[1], onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
+    expect(screen.queryByText(/cross-border/)).not.toBeInTheDocument();
   });
 
   it('country codes mark EU cities, cross-border pill only for FR/BE crossings', () => {
@@ -88,11 +93,32 @@ describe('LoadCard states', () => {
     expect(screen.getByText('18 km / 25 min to pickup')).not.toHaveClass('font-semibold');
   });
 
-  it('omits the header row when there is no badge and no dismiss', () => {
-    const { container } = render(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Not interested/ })).not.toBeInTheDocument();
-    expect(container.querySelector('article > div.justify-between')).toBeNull();
+  it('swipe-to-hide reveals the Hide action and hides the card', () => {
+    const onDismiss = vi.fn();
+    render(<MemoryRouter><LoadCard load={load} onOpen={() => undefined} onDismiss={onDismiss} /></MemoryRouter>);
+    const card = screen.getByRole('article');
+    fireEvent.touchStart(card, { touches: [{ clientX: 300, clientY: 100 }] });
+    fireEvent.touchMove(card, { touches: [{ clientX: 200, clientY: 100 }] });
+    fireEvent.touchEnd(card);
+    const hide = screen.getByRole('button', { name: `Hide load ${load.id}. You can restore it later.` });
+    expect(hide).toBeVisible();
+    fireEvent.click(hide);
+    expect(onDismiss).toHaveBeenCalledWith(expect.objectContaining({ id: load.id }));
+  });
+
+  it('vertical scroll does not trigger the swipe', () => {
+    render(<MemoryRouter><LoadCard load={load} onOpen={() => undefined} onDismiss={() => undefined} /></MemoryRouter>);
+    const card = screen.getByRole('article');
+    fireEvent.touchStart(card, { touches: [{ clientX: 200, clientY: 100 }] });
+    fireEvent.touchMove(card, { touches: [{ clientX: 195, clientY: 300 }] });
+    fireEvent.touchEnd(card);
+    expect(card).not.toHaveStyle({ transform: 'translateX(-88px)' });
+  });
+
+  it('header keeps the decide timer when there is no badge', () => {
+    render(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
+    expect(screen.queryByRole('status', { name: /On your route/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Decide in 1h 20m')).toBeVisible();
   });
 
   it('updates the booked countdown every minute and clears the timer', () => {

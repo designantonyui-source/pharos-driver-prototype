@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApplicationStatus } from '../../lib/models';
 import { getApplicationForLoad, store, useStore, type LoadApplication } from '../../lib/store';
@@ -9,7 +9,15 @@ import { LoadCta } from './LoadCta';
 /**
  * figma: prototype-led · stateful driver feed card (list and map)
  * props: load, isOnRoute, onOpen · status comes from getApplicationForLoad
- * tokens: color-bg-surface, color-status-*-bg, color-status-*-text, radius-lg, radius-pill, text-metric-28
+ * tokens: color-bg-surface, color-status-*-bg, color-status-*-text, radius-lg, radius-pill, text-metric-28,
+ *   text-heading-20, text-body-14, text-label-12/14, color-text-*, color-offer-*
+ *
+ * Header row: state badge left, live timer right (Decide in X before apply from
+ * decideMin/S8, Pickup in X after confirm) — no X dismiss button; hiding is a
+ * left swipe (iOS mail pattern, 88px Hide) + "Hide this load" text for AT.
+ * Route carries EU country codes (Lille FR → Brussels BE); cross-border is a
+ * quiet trust-line suffix, not a pill. Facts split decision (body-14: day+window+
+ * deadhead, ≥40km warning) vs trust (label-14: Company semibold + rating + Verified + paid).
  *
  * Application state is carried by ONE palette, `color-status-*`: the pill takes the `-bg`/`-text`
  * pair. The former `color-load-state-*` group was a second, off-Figma palette for the same five
@@ -102,6 +110,25 @@ function PickupCountdown({ pickupTime }: { pickupTime: string }) {
   );
 }
 
+/** Decide-by countdown (S8 urgency): minutes left to apply, ticking each minute. */
+function DecideCountdown({ decideMin }: { decideMin: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  void now;
+  const left = decideMin;
+  const urgent = left <= 120;
+  return (
+    <p role="status" className={`flex items-center gap-[4px] text-label-12 ${urgent ? 'font-semibold text-[var(--color-status-warning-text)]' : 'text-[var(--color-text-secondary)]'}`}>
+      <Icon name="clock" size={12} />{left >= 60 ? `Decide in ${Math.floor(left / 60)}h ${left % 60}m` : `Decide in ${left} min`}
+    </p>
+  );
+}
+
+const DecideCountdownMemo = memo(DecideCountdown);
+
 const PickupCountdownMemo = memo(PickupCountdown);
 
 export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice }: { load: V2Load; isOnRoute?: boolean; onOpen: (load: V2Load) => void; onDismiss?: (load: V2Load) => void; onNotice?: (title: string, detail?: string) => void }) {
@@ -124,9 +151,12 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
           : (load.onRoute ?? isOnRoute) ? { icon: null, label: 'On your route' } : null;
 
   const canDismiss = !!onDismiss && (state === 'available' || state === 'cancelled' || state === 'rejected');
-  const showHeader = badge || canDismiss;
-  const border = crossBorder(load.from, load.to);
+  const cross = crossBorder(load.from, load.to);
   const farPickup = load.pickupKm >= 40;
+  // Swipe-to-hide (iOS mail pattern): track horizontal drag, reveal Hide action past 72px.
+  const [swipeX, setSwipeX] = useState(0);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const swiped = swipeX <= -72;
 
   function open() {
     if (state === 'booked' || state === 'rejected' || state === 'pending') {
@@ -136,40 +166,68 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
   }
 
   return (
-    <article aria-label={`Load ${load.id}`} data-state={state}
-      onClick={(event) => { if (!(event.target as HTMLElement).closest('button, a')) open(); }}
-      className={`flex w-full cursor-pointer flex-col gap-[8px] rounded-[var(--radius-lg)] border border-[var(--color-offer-border)] p-[12px] shadow-[var(--shadow-card)] ${styles.container}`}>
-      {showHeader ? (
-      <div className="flex min-h-[44px] items-center justify-between gap-[8px]">
-        {badge ? <span role="status" className={`flex items-center gap-[4px] rounded-[var(--radius-pill)] px-[8px] py-[4px] text-label-12 ${styles.badge}`}>{badge.icon && <Icon name={badge.icon} size={12} />}{badge.label}</span> : <span />}
-        {canDismiss && (
-          <button
-            type="button"
-            onClick={(event) => { event.stopPropagation(); onDismiss!(load); }}
-            aria-label={`Not interested in load ${load.id}. Activate to hide it.`}
-            className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full text-[var(--color-text-secondary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
-          >
-            <Icon name="x" size="sm" />
-          </button>
-        )}
+    <div className="relative overflow-hidden rounded-[var(--radius-lg)]">
+      {canDismiss && (
+        <button
+          type="button"
+          onClick={() => onDismiss!(load)}
+          aria-label={`Hide load ${load.id}. You can restore it later.`}
+          className="absolute inset-y-0 right-0 flex w-[88px] items-center justify-center bg-[var(--color-status-danger-text)] text-label-14 font-semibold text-[var(--color-text-inverse)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+        >
+          Hide
+        </button>
+      )}
+      <article aria-label={`Load ${load.id}`} data-state={state}
+        onClick={(event) => { if (!(event.target as HTMLElement).closest('button, a')) open(); }}
+        onTouchStart={(event) => { const t = event.touches[0]; touchStart.current = { x: t.clientX, y: t.clientY }; }}
+        onTouchMove={(event) => {
+          if (!canDismiss || !touchStart.current) return;
+          const t = event.touches[0];
+          const dx = t.clientX - touchStart.current.x;
+          const dy = t.clientY - touchStart.current.y;
+          if (Math.abs(dy) > Math.abs(dx)) return;
+          setSwipeX(Math.min(0, dx));
+        }}
+        onTouchEnd={() => { touchStart.current = null; setSwipeX(swiped ? -88 : 0); }}
+        style={swipeX !== 0 ? { transform: `translateX(${swipeX}px)` } : undefined}
+        className={`relative flex w-full cursor-pointer flex-col gap-[8px] rounded-[var(--radius-lg)] border border-[var(--color-offer-border)] bg-[var(--color-bg-surface)] p-[12px] shadow-[var(--shadow-card)] transition-transform ${styles.container}`}>
+      {badge ? (
+      <div className="flex min-h-[24px] items-center justify-between gap-[8px]">
+        <span role="status" className={`flex items-center gap-[4px] rounded-[var(--radius-pill)] px-[8px] py-[4px] text-label-12 ${styles.badge}`}>{badge.icon && <Icon name={badge.icon} size={12} />}{badge.label}</span>
+        {(state === 'available' || state === 'cancelled' || state === 'rejected') && <DecideCountdownMemo decideMin={load.decideMin} />}
+        {state === 'booked' && <PickupCountdownMemo pickupTime={pickupTime} />}
       </div>
-      ) : null}
+      ) : (
+      <div className="flex min-h-[24px] items-center justify-end gap-[8px]">
+        {(state === 'available' || state === 'cancelled' || state === 'rejected') && <DecideCountdownMemo decideMin={load.decideMin} />}
+        {state === 'booked' && <PickupCountdownMemo pickupTime={pickupTime} />}
+      </div>
+      )}
       <p className="flex items-baseline gap-[8px]">
         <span className="text-metric-28 text-[var(--color-offer-text-price)]">€{load.rate}</span>
         <span className="text-label-14 text-[var(--color-text-secondary)]">€{load.perKm.toFixed(2)}/km</span>
       </p>
       <button type="button" onClick={open} aria-label={routeAriaLabel(load.from, load.to)} className="flex min-h-[44px] items-center gap-[8px] text-left text-heading-20 text-[var(--color-text-primary)]">
         <span className="truncate">{load.from} <span className="text-caption-12 font-normal text-[var(--color-text-tertiary)]">{countryForCity(load.from)}</span></span><Icon name="arrow-right" size="md" /><span className="truncate">{load.to} <span className="text-caption-12 font-normal text-[var(--color-text-tertiary)]">{countryForCity(load.to)}</span></span>
-        {border && <span className="shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-status-info-bg)] px-[8px] py-[4px] text-label-12 text-[var(--color-status-info-text)]">{border}</span>}
       </button>
-      {state === 'booked' && <PickupCountdownMemo pickupTime={pickupTime} />}
       <p className="text-body-14 text-[var(--color-text-primary)]">
-        {load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window} · <span className={farPickup ? 'font-semibold text-[var(--color-status-warning-text)]' : undefined}>{load.pickupKm} km / {load.pickupMin} min to pickup</span>
+        {load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window} · <span className={farPickup ? 'font-semibold text-[var(--color-status-warning-text)]' : undefined}>{load.pickupKm} km / {load.pickupMin} min to pickup</span> · {load.km} km loaded
       </p>
-      <p className="text-caption-12 text-[var(--color-text-secondary)]">
-        {load.km} km loaded · {load.company} · <span className="inline-flex items-center gap-[2px]"><Icon name="star" size={12} />{load.rating.toFixed(1)}</span> · {load.paidIn}
+      <p className="text-label-14 text-[var(--color-text-primary)]">
+        <span className="font-semibold">{load.company}</span>
+        <span className="font-normal text-[var(--color-text-secondary)]"> · <span className="inline-flex items-center gap-[2px]"><Icon name="star" size={12} />{load.rating.toFixed(1)}</span> Verified · {load.paidIn}{cross ? ' · cross-border' : ''}</span>
       </p>
       <LoadCta loadId={load.id} onNotice={onNotice} />
-    </article>
+      {canDismiss && (
+        <button
+          type="button"
+          onClick={(event) => { event.stopPropagation(); onDismiss!(load); }}
+          className="self-end px-[8px] text-label-12 text-[var(--color-text-tertiary)] underline focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+        >
+          Hide this load
+        </button>
+      )}
+      </article>
+    </div>
   );
 }
