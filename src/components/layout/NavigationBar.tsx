@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Icon } from '../Icon';
 
 /**
@@ -11,7 +12,24 @@ import { Icon } from '../Icon';
  *              trailing slot 44 tall at the right (Figma shows a pill 68x44 r999, fill color/bg/disabled)
  *
  * tokens: color-bg-canvas, color-text-primary, color-avatar-bg, color-avatar-text, color-bg-disabled, radius-pill
+ *
+ * Back behaviour convention (all v2 screens): history back when the stack allows it,
+ * otherwise a sensible fallback route. Use `V2BackBar` below instead of wiring
+ * `navigate(-1)` by hand — it keeps every back button identical.
  */
+export function useV2Back(fallback: string): () => void {
+  const navigate = useNavigate();
+  return () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate(fallback);
+  };
+}
+
+/** Measured back bar: history back with fallback, one place for the whole v2 journey. */
+export function V2BackBar({ title, fallback, trailing }: { title: string; fallback: string; trailing?: ReactNode }) {
+  const onBack = useV2Back(fallback);
+  return <NavigationBar type="back" title={title} onBack={onBack} trailing={trailing} />;
+}
 export function NavigationBar({
   type = 'home',
   title,

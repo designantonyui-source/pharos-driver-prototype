@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/Icon';
+import { V2BackBar, useV2Back } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
-import { getLoads } from '../../lib/api';
+import { CancelTripSheet } from '../../components/v2/CancelTripSheet';
+import { cancelTrip, getLoads } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
-import { useStore } from '../../lib/store';
+import { useStore, type LoadApplication } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
 
 /**
@@ -15,6 +17,26 @@ import type { V2Load } from '../../lib/v2/loads';
  *         color-action-primary, color-status-success-bg, color-status-success-text, radius-lg, shadow-card
  */
 export function TripDetailsView({ load }: { load: V2Load }) {
+  const navigate = useNavigate();
+  const { state } = useStore();
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const closeCancel = useCallback(() => { if (!cancelling) setCancelOpen(false); }, [cancelling]);
+  async function confirmCancel(reason: NonNullable<LoadApplication['cancelReason']>) {
+    if (cancelling) return;
+    setCancelling(true);
+    setError(null);
+    try {
+      await cancelTrip(load.id, reason);
+      setCancelOpen(false);
+    } catch {
+      setError('Could not cancel this trip. Please try again.');
+    } finally {
+      setCancelling(false);
+    }
+  }
+  const cancelled = state.applications[load.id]?.cancelledAfterConfirm === true;
   const stops = [
     { label: 'Pickup', city: load.from, day: load.day, window: load.window },
     { label: 'Delivery', city: load.to, day: load.deliveryDay, window: load.deliveryWindow },
@@ -22,17 +44,15 @@ export function TripDetailsView({ load }: { load: V2Load }) {
 
   return (
     <V2Frame active="Trips">
-      <div className="absolute inset-x-0 top-[70px] bottom-[117px] flex flex-col px-[16px]">
-        <header className="flex shrink-0 items-center gap-[12px] py-[8px]">
-          <Link to={`/application/${load.id}`} aria-label="Back to application" className="flex h-[40px] w-[40px] items-center justify-center rounded-full text-[var(--color-text-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]">
-            <Icon name="chevron-left" />
-          </Link>
-          <h1 className="text-heading-20 text-[var(--color-text-primary)]">Trip details</h1>
-        </header>
+      <div className="absolute inset-x-0 top-0 z-20">
+        <V2BackBar title="Trip details" fallback={`/application/${load.id}`} />
+      </div>
+      <div className="absolute inset-x-0 top-[var(--nav-bar-back-h)] bottom-[117px] flex flex-col px-[16px]">
+        <h1 className="sr-only">Trip details</h1>
 
         <main className="flex min-h-0 flex-1 flex-col gap-[12px] overflow-y-auto pb-[12px]">
           <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-[var(--shadow-card)]" aria-label="Trip summary">
-            <span className="inline-flex rounded-[var(--radius-pill)] bg-[var(--color-status-success-bg)] px-[8px] py-[4px] text-label-12 text-[var(--color-status-success-text)]">Confirmed</span>
+            <span className="inline-flex rounded-[var(--radius-pill)] bg-[var(--color-status-success-bg)] px-[8px] py-[4px] text-label-12 text-[var(--color-status-success-text)]">{cancelled ? 'Cancelled by you' : 'Confirmed'}</span>
             <p className="mt-[12px] text-heading-32 text-[var(--color-text-primary)]">€{load.rate}</p>
             <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">{load.km} km loaded · {load.paidIn}</p>
           </section>
@@ -61,10 +81,13 @@ export function TripDetailsView({ load }: { load: V2Load }) {
         </main>
 
         <div className="flex shrink-0 flex-col gap-[8px] py-[8px]">
-          <Button label="Navigation" icon={<Icon name="map-pin" />} onClick={() => window.alert('Navigation is not connected in this demo.')} />
-          <Button label="Documents" appearance="secondary" onClick={() => window.alert('Trip documents are not connected in this demo.')} />
+          {!cancelled && <Button label="Navigation" icon={<Icon name="map-pin" />} onClick={() => window.alert('Navigation is not connected in this demo.')} />}
+          {!cancelled && <Button label="Documents" appearance="secondary" onClick={() => window.alert('Trip documents are not connected in this demo.')} />}
+          {!cancelled && <Button label="Cancel trip" appearance="secondary" onClick={() => setCancelOpen(true)} />}
+          {cancelled && <Button label="Back to loads" onClick={() => navigate('/v2')} />}
         </div>
       </div>
+      <CancelTripSheet open={cancelOpen} load={load} penalty="warning" cancelling={cancelling} error={error} onConfirm={confirmCancel} onClose={closeCancel} />
     </V2Frame>
   );
 }
@@ -81,16 +104,20 @@ export function TripDetails() {
   }, []);
 
   const load = loads?.find((item) => item.id === id);
-  if (load && state.loadId === id && state.status === ApplicationStatus.CONFIRMED) {
+  if (load && (state.applications[id]?.status === ApplicationStatus.CONFIRMED || state.applications[id]?.cancelledAfterConfirm)) {
     return <TripDetailsView load={load} />;
   }
 
+  const emptyBack = useV2Back('/v2');
   return (
     <V2Frame active="Trips">
-      <main className="absolute inset-x-0 top-[96px] px-[16px]">
-        <h1 className="text-heading-20 text-[var(--color-text-primary)]">Trip details</h1>
+      <div className="absolute inset-x-0 top-0 z-20">
+        <V2BackBar title="Trip details" fallback="/v2" />
+      </div>
+      <main className="absolute inset-x-0 top-[var(--nav-bar-back-h)] px-[16px]">
+        <h1 className="sr-only">Trip details</h1>
         <p role="status" className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] text-body-14 text-[var(--color-text-secondary)]">{loads === null ? 'Loading trip…' : 'No confirmed trip is available for this load.'}</p>
-        <Link to="/v2" className="mt-[16px] inline-flex text-label-14 text-[var(--color-action-primary)] underline">Back to loads</Link>
+        <div className="mt-[16px]"><Button label="Back to loads" appearance="secondary" onClick={emptyBack} /></div>
       </main>
     </V2Frame>
   );

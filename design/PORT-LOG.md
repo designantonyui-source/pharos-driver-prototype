@@ -1,3 +1,20 @@
+## Unified back navigation — V2BackBar (all v2 screens)
+
+Problem: three different back patterns coexisted — (1) Account/Balance/Dismissed used measured `NavigationBar type=back` with a fixed-route `navigate(backTo)`; (2) ApplicationTracker/TripDetails used a hand-rolled header (40px circle button, not the measured 44px bar) plus underline text-links `Back to loads`; (3) Home/Soon had no header at all. Behaviour also differed: fixed-route jumps lose the user's real history (deep link -> back -> wrong place).
+
+Fix: `V2BackBar` in `src/components/layout/NavigationBar.tsx` (+ `useV2Back` hook) — the measured Type=Back bar (44x44, chevron-left 20/2px, Heading/20 title), with history-back-first behaviour and a per-screen fallback route. Convention documented in the NavigationBar contract header (AGENTS.md #2).
+
+Applied:
+- `ApplicationTracker` (main + loading/empty states): custom header -> V2BackBar `fallback=listPath`; underline `Back to loads` link -> secondary `Button`.
+- `TripDetails` (main + empty state): custom header -> V2BackBar `fallback=/application/:id`; underline link -> secondary `Button` with `useV2Back('/v2')`.
+- `AccountFrame`, `BalanceFrame`, `DismissedLoadsView`: fixed `navigate(backTo)` -> V2BackBar history-back + same fallback (deep-link safe).
+- E2E `application-flow.spec.ts`: tracker assertions no longer depend on the visible h1 (now sr-only under the nav bar); back affordance is `button Back`, not `link Back to loads`.
+- Storybook: `V2Back` story under App shell/Navigation bar; Icon gallery picks up wallet/landmark/history automatically from the registry.
+
+No new tokens. `pnpm test` 91 passed; `pnpm check` passes (token audit + tsc + build, existing wildcard CSS warning only).
+
+---
+
 ## Balance first slice — new proposal (not a measured Figma port)
 
 Routes: `/v2/account/balance`, `/v2/account/balance/method`, `/v2/account/balance/cashout`, `/v2/account/balance/history`.

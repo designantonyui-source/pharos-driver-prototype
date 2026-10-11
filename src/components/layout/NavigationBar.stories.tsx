@@ -1,5 +1,6 @@
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite';
-import { NavigationBar } from './NavigationBar';
+import { MemoryRouter } from 'react-router-dom';
+import { NavigationBar, V2BackBar } from './NavigationBar';
 
 /** Type=Home 586:25 (76 tall) · Type=Back 586:32 (60 tall). Figma hides the avatar in Home. */
 const meta = {
@@ -33,4 +34,8 @@ export const BackWithTrailing: Story = {
       </span>
     ),
   },
+};
+
+export const V2Back: Story = {
+  render: () => <MemoryRouter><V2BackBar title="Application status" fallback="/v2" /></MemoryRouter>,
 };

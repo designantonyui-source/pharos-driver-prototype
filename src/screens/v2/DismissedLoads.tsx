@@ -7,11 +7,11 @@
  *   nav-bar-h, tab-bar-h, home-indicator-h, size-icon-xl, size-control-mobile
  */
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import { Alert } from '../../components/Alert';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/Icon';
-import { NavigationBar } from '../../components/layout/NavigationBar';
+import { V2BackBar } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { dismissLoad, getLoads, restoreLoad } from '../../lib/api';
 import { store, useStore } from '../../lib/store';
@@ -30,10 +30,9 @@ type ViewProps = {
 };
 
 export function DismissedLoadsView({ loads, loading, fetchError, mutationError, busy, restored, onRetry, onRestore, onUndo }: ViewProps) {
-  const navigate = useNavigate();
   return <V2Frame active="Account">
     <div className="absolute inset-x-0 top-0 z-20">
-      <NavigationBar type="back" title="Dismissed loads" onBack={() => navigate('/v2/account')} />
+      <V2BackBar title="Dismissed loads" fallback="/v2/account" />
     </div>
     <main className="absolute inset-x-0 top-[var(--nav-bar-h)] bottom-[calc(var(--tab-bar-h)+var(--home-indicator-h))] overflow-y-auto px-[var(--spacing-16)] pb-[var(--spacing-24)] pt-[var(--spacing-8)] text-[var(--color-text-primary)]">
       <p className="px-[var(--spacing-12)] text-body-14 text-[var(--color-text-secondary)]">Hidden loads stay here. Restore one to see it in your feed again — hiding is free and never affects your score.</p>

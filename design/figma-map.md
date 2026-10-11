@@ -27,6 +27,7 @@ File: `sve9YrMmfz91XQX5IpZjGO` · page **30 — iOS App / Driver** · section **
 | `589:267` | iOS / pending / Application status | `/application/:id` | replaced by ApplicationTracker |
 | `735:1152` | iOS / pending-customer / Application status | `/application/:id` (`CUSTOMER_REVIEW`) | replaced by ApplicationTracker |
 | `589:334` | iOS / order / Trip TR-4821 | `/trip/:id` | prototype-led TripDetails (not a measured Figma port) |
+| `586:32` | Pharos/App/Navigation bar Type=Back | `V2BackBar` in `src/components/layout/NavigationBar.tsx` — used by all v2 back screens (tracker, trip, profile, edit, dismissed, balance, method, cashout, history) | done |
 | `2772:12931` | iOS / first-search-v2.1 / Loads | `/search` | done |
 | `2768:6789` | iOS / searching-v2 / Loads | `/search/loading` | todo |
 
