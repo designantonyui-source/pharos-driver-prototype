@@ -17,7 +17,12 @@
 - Хендофф прошлых работ: `AGENT-HANDOFF.md`
 - README: `README.md`
 - Карта Figma ↔ код: `design/figma-map.md`
-- Журнал переноса/замеров: `design/PORT-LOG.md`
+- Рабочие файлы потоков (`design/flows/*.md` — читать 1 за раз, не все):
+  - `balance.md` — Balance + методы + cash out + history
+  - `invoices.md` — инвойсы (list → details → PDF)
+  - `schedules.md` — auto-withdraw + adjustments + statement
+  - `account-ux.md` — Toast + verification + back nav
+- Архив журнала переноса (заморожен, только история): `design/PORT-LOG-archive.md`
 - UI-разбор: `design/UI-REVIEW.md`
 - Токены: `design/tokens.json` → `src/styles/tokens.css`
 
@@ -69,7 +74,7 @@
 5. Компоненты переиспользовать, не копипастить.
 6. Метрики оболочки фиксированы 402×874, использовать `layout/*` и `V2Frame`.
 7. Порт считается готовым только после замеров Playwright `channel: 'chrome'`.
-8. Каждый порт документируется в `design/PORT-LOG.md` в том же коммите.
+8. Каждый порт документируется в своём `design/flows/*.md` (шапка «Текущее состояние» + append в «Историю») в том же коммите.
 9. Новые Account layouts сейчас — это новые предложения, а не измеренные Figma-порты.
 
 ## 7. Команды
@@ -108,5 +113,5 @@ git status --short --branch
 pnpm test
 pnpm check
 sed -n '1,120p' AGENT-HANDOFF.md
-sed -n '1,120p' design/PORT-LOG.md
+sed -n '1,30p' design/flows/balance.md
 ```
