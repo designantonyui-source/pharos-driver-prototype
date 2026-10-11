@@ -12,9 +12,8 @@ import { LoadCta } from './LoadCta';
  * tokens: color-bg-surface, color-status-*-bg, color-status-*-text, radius-lg, radius-pill, text-metric-28,
  *   text-heading-20, text-body-14, text-label-12/14, color-text-*, color-offer-*
  *
- * Header row: state badge left, live timer right (Decide in X before apply from
- * decideMin/S8, Pickup in X after confirm) — no X dismiss button; hiding is a
- * left swipe (iOS mail pattern, 88px Hide) + "Hide this load" text for AT.
+ * Header row: state badge left, booked countdown right (Pickup in X after confirm) — no
+ * decide timer; hiding is a left swipe (iOS mail pattern, 88px Hide), no text button.
  * Route carries EU country codes (Lille FR → Brussels BE); cross-border is a
  * quiet trust-line suffix, not a pill. Facts split decision (body-14: day+window+
  * deadhead, ≥40km warning) vs trust (label-14: Company semibold + rating + Verified + paid).
@@ -110,25 +109,6 @@ function PickupCountdown({ pickupTime }: { pickupTime: string }) {
   );
 }
 
-/** Decide-by countdown (S8 urgency): minutes left to apply, ticking each minute. */
-function DecideCountdown({ decideMin }: { decideMin: number }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
-  void now;
-  const left = decideMin;
-  const urgent = left <= 120;
-  return (
-    <p role="status" className={`flex items-center gap-[4px] text-label-12 ${urgent ? 'font-semibold text-[var(--color-status-warning-text)]' : 'text-[var(--color-text-secondary)]'}`}>
-      <Icon name="clock" size={12} />{left >= 60 ? `Decide in ${Math.floor(left / 60)}h ${left % 60}m` : `Decide in ${left} min`}
-    </p>
-  );
-}
-
-const DecideCountdownMemo = memo(DecideCountdown);
-
 const PickupCountdownMemo = memo(PickupCountdown);
 
 export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice }: { load: V2Load; isOnRoute?: boolean; onOpen: (load: V2Load) => void; onDismiss?: (load: V2Load) => void; onNotice?: (title: string, detail?: string) => void }) {
@@ -191,18 +171,14 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
         onTouchEnd={() => { touchStart.current = null; setSwipeX(swiped ? -88 : 0); }}
         style={swipeX !== 0 ? { transform: `translateX(${swipeX}px)` } : undefined}
         className={`relative flex w-full cursor-pointer flex-col gap-[8px] rounded-[var(--radius-lg)] border border-[var(--color-offer-border)] bg-[var(--color-bg-surface)] p-[12px] shadow-[var(--shadow-card)] transition-transform ${styles.container}`}>
-      {badge ? (
-      <div className="flex min-h-[24px] items-center justify-between gap-[8px]">
-        <span role="status" className={`flex items-center gap-[4px] rounded-[var(--radius-pill)] px-[8px] py-[4px] text-label-12 ${styles.badge}`}>{badge.icon && <Icon name={badge.icon} size={12} />}{badge.label}</span>
-        {(state === 'available' || state === 'cancelled' || state === 'rejected') && <DecideCountdownMemo decideMin={load.decideMin} />}
+      {badge || state === 'booked' ? (
+      <div className={`flex min-h-[24px] items-center gap-[8px] ${badge ? 'justify-between' : 'justify-end'}`}>
+        {badge ? (
+          <span role="status" className={`flex items-center gap-[4px] rounded-[var(--radius-pill)] px-[8px] py-[4px] text-label-12 ${styles.badge}`}>{badge.icon && <Icon name={badge.icon} size={12} />}{badge.label}</span>
+        ) : <span />}
         {state === 'booked' && <PickupCountdownMemo pickupTime={pickupTime} />}
       </div>
-      ) : (
-      <div className="flex min-h-[24px] items-center justify-end gap-[8px]">
-        {(state === 'available' || state === 'cancelled' || state === 'rejected') && <DecideCountdownMemo decideMin={load.decideMin} />}
-        {state === 'booked' && <PickupCountdownMemo pickupTime={pickupTime} />}
-      </div>
-      )}
+      ) : null}
       <p className="flex items-baseline gap-[8px]">
         <span className="text-metric-28 text-[var(--color-offer-text-price)]">€{load.rate}</span>
         <span className="text-label-14 text-[var(--color-text-secondary)]">€{load.perKm.toFixed(2)}/km</span>
@@ -227,15 +203,6 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
         <span aria-hidden="true" className="shrink-0 font-normal text-[var(--color-text-secondary)]"> · <span className="inline-flex items-center gap-[2px]"><Icon name="star" size={12} />{load.rating.toFixed(1)}</span> Verified · {load.paidIn}</span>
       </p>
       <LoadCta loadId={load.id} onNotice={onNotice} />
-      {canDismiss && (
-        <button
-          type="button"
-          onClick={(event) => { event.stopPropagation(); onDismiss!(load); }}
-          className="self-end px-[8px] text-label-12 text-[var(--color-text-tertiary)] underline focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
-        >
-          Hide this load
-        </button>
-      )}
       </article>
     </div>
   );

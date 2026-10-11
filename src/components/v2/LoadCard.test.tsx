@@ -48,13 +48,13 @@ describe('LoadCard states', () => {
     expect(screen.queryByText('On your route')).not.toBeInTheDocument();
   });
 
-  it('header shows badge left and decide timer right, no X button', () => {
+  it('header shows badge left, no decide timer, no X button — hide is swipe only', () => {
     store.set({ loadId: load.id, status: ApplicationStatus.CANCELLED });
     render(<MemoryRouter><LoadCard load={load} onOpen={() => undefined} onDismiss={() => undefined} /></MemoryRouter>);
     expect(screen.getByText('Cancelled by you', { exact: true })).toBeVisible();
-    expect(screen.getByText('Decide in 1h 20m')).toBeVisible();
+    expect(screen.queryByText(/Decide in/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Not interested/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Hide this load' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Hide this load' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: `Hide load ${load.id}. You can restore it later.` })).toBeVisible();
   });
 
@@ -120,10 +120,10 @@ describe('LoadCard states', () => {
     expect(card).not.toHaveStyle({ transform: 'translateX(-88px)' });
   });
 
-  it('header keeps the decide timer when there is no badge', () => {
+  it('header renders nothing when there is no badge and no booked countdown', () => {
     render(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
     expect(screen.queryByRole('status', { name: /On your route/ })).not.toBeInTheDocument();
-    expect(screen.getByText('Decide in 1h 20m')).toBeVisible();
+    expect(screen.queryByText(/Decide in/)).not.toBeInTheDocument();
   });
 
   it('updates the booked countdown every minute and clears the timer', () => {
