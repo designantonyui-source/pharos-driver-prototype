@@ -19,6 +19,7 @@ import { Button } from '../../components/Button';
 import { Icon, type IconName } from '../../components/Icon';
 import { Input } from '../../components/Input';
 import { V2BackBar } from '../../components/layout/NavigationBar';
+import { Toast, useToast } from '../../components/v2/Toast';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { Sheet } from '../../components/v2/Sheet';
 import {
@@ -35,7 +36,7 @@ export function formatEuro(amount: number): string {
   return `EUR ${amount.toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function BalanceFrame({ title, backTo, children }: { title: string; backTo?: string; children: ReactNode }) {
+function BalanceFrame({ title, backTo, toast, children }: { title: string; backTo?: string; toast?: ReactNode; children: ReactNode }) {
   return <V2Frame active="Account">
     <div className="absolute inset-x-0 top-0 z-20">
       {backTo
@@ -46,6 +47,7 @@ function BalanceFrame({ title, backTo, children }: { title: string; backTo?: str
       <h1 className="sr-only">{title}</h1>
       {children}
     </main>
+    {toast}
   </V2Frame>;
 }
 
@@ -138,7 +140,7 @@ export function Balance() {
   const [summary, setSummary] = useState<BalanceSummary | null>(null);
   const [methods, setMethods] = useState<PayoutMethod[] | null>(null);
   const [recent, setRecent] = useState<LedgerEntry[] | null>(null);
-  const [autoRan, setAutoRan] = useState<string | null>(null);
+  const { toast, show, dismiss } = useToast();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const navigate = useNavigate();
@@ -148,7 +150,7 @@ export function Balance() {
     // Prototype scheduler tick: evaluates the auto-withdraw rule on open
     // (production: server cron). Refreshes the balance when a run fires.
     evaluateSchedule()
-      .then(run => { if (live && run) setAutoRan(`Auto-withdraw ${formatEuro(run.amount)} to ${run.methodLabel} is on its way.`); })
+      .then(run => { if (live && run) show({ tone: 'success', title: 'Scheduled withdrawal ran', detail: `Auto-withdraw ${formatEuro(run.amount)} to ${run.methodLabel} is on its way.` }); })
       .catch(() => {})
       .finally(() => {
         if (!live) return;
@@ -168,8 +170,7 @@ export function Balance() {
   }
   const def = methods.find(m => m.isDefault) ?? methods[0];
   const hasMethod = !!def;
-  return <BalanceFrame title="Balance">
-    {autoRan && <div className="mt-[var(--spacing-8)]" role="status"><Alert type="success" title="Scheduled withdrawal ran">{autoRan}</Alert></div>}
+  return <BalanceFrame title="Balance" toast={<Toast toast={toast} onClose={dismiss} />}>
     <div className="mt-[var(--spacing-8)] rounded-[var(--radius-md)] bg-[var(--color-nav-bg)] p-[var(--spacing-16)] text-[var(--color-nav-text)]">
       <div className="flex items-center gap-[var(--spacing-8)] text-caption-12 uppercase tracking-wide opacity-80">
         <Icon name="wallet" size="sm" />
@@ -215,7 +216,8 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
   const [cardLabel, setCardLabel] = useState('');
   const [cardTouched, setCardTouched] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<'error' | 'success' | null>(null);
+  const [saveError, setSaveError] = useState(false);
+  const { toast, show, dismiss } = useToast();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   async function reload() {
@@ -228,7 +230,7 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
     return () => { live = false; };
   }, [attempt]);
   if (error || !methods) {
-    return <BalanceFrame title="Payout methods" backTo="/v2/account/balance"><StatusBlock error={error} retry={() => setAttempt(v => v + 1)} label="payout methods" /></BalanceFrame>;
+    return <BalanceFrame title="Payout methods" backTo="/v2/account/balance" toast={<Toast toast={toast} onClose={dismiss} />}><StatusBlock error={error} retry={() => setAttempt(v => v + 1)} label="payout methods" /></BalanceFrame>;
   }
   const ibanCompact = iban.replace(/[\s-]/g, '');
   const ibanValid = validateIban(iban);
@@ -236,16 +238,16 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
   async function saveIban() {
     if (saving || !ibanValid || !ibanCompact) return;
     setSaving(true);
-    setMessage(null);
+    setSaveError(false);
     try {
       await addIbanMethod({ iban: ibanCompact, label: ibanLabel });
       await reload();
       setIban('');
       setIbanLabel('');
       setIbanTouched(false);
-      setMessage('success');
+      show({ tone: 'success', title: 'Bank account saved', detail: 'Cash out will offer it right away.' });
     } catch {
-      setMessage('error');
+      setSaveError(true);
     } finally {
       setSaving(false);
     }
@@ -259,7 +261,7 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
   async function saveCard() {
     if (saving || !cardReady) return;
     setSaving(true);
-    setMessage(null);
+    setSaveError(false);
     try {
       // PAN is tokenised and dropped here — only the token result (last4/brand) leaves this handler.
       const { token, last4, brand: tokBrand } = tokeniseCard(cardNumber);
@@ -271,9 +273,9 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
       setCardHolder('');
       setCardLabel('');
       setCardTouched(false);
-      setMessage('success');
+      show({ tone: 'success', title: 'Card saved', detail: 'Instant cash out is now available.' });
     } catch {
-      setMessage('error');
+      setSaveError(true);
     } finally {
       setSaving(false);
     }
@@ -301,23 +303,22 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
         {(['iban', 'card'] as const).map(t => <button key={t} type="button" aria-pressed={tab === t} onClick={() => setTab(t)} className={`h-[var(--size-control-mobile)] flex-1 rounded-[var(--radius-sm)] border text-label-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${tab === t ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]' : 'border-[var(--color-action-border)] text-[var(--color-action-text)]'}`}>{t === 'iban' ? `Bank (SEPA, free)` : `Card (instant, ${formatEuro(PAYOUT_POLICY.cardFee)})`}</button>)}
       </div>
       {tab === 'iban' ? <form onSubmit={e => { e.preventDefault(); void saveIban(); }} noValidate className="flex flex-col gap-[var(--spacing-16)] p-[var(--spacing-12)]">
-        <Input label="IBAN" value={iban} placeholder="DE89 3704 0044 0532 0130 00" state={ibanShowError ? 'error' : iban ? 'filled' : 'empty'} icon={false} hint={ibanShowError ? 'Check the IBAN - wrong check digits.' : 'We validate the check digits before saving.'} onChange={v => { setIban(v.toUpperCase()); setIbanTouched(true); setMessage(null); }} />
-        <Input label="Account nickname (optional)" value={ibanLabel} placeholder="My business account" state="empty" icon={false} hint={null} onChange={v => { setIbanLabel(v); setMessage(null); }} />
+        <Input label="IBAN" value={iban} placeholder="DE89 3704 0044 0532 0130 00" state={ibanShowError ? 'error' : iban ? 'filled' : 'empty'} icon={false} hint={ibanShowError ? 'Check the IBAN - wrong check digits.' : 'We validate the check digits before saving.'} onChange={v => { setIban(v.toUpperCase()); setIbanTouched(true); setSaveError(false); }} />
+        <Input label="Account nickname (optional)" value={ibanLabel} placeholder="My business account" state="empty" icon={false} hint={null} onChange={v => { setIbanLabel(v); setSaveError(false); }} />
         <Button label={saving ? 'Saving...' : 'Add bank account'} disabled={!ibanValid || !ibanCompact || saving} loading={saving} onClick={() => void saveIban()} />
       </form> : <form onSubmit={e => { e.preventDefault(); void saveCard(); }} noValidate className="flex flex-col gap-[var(--spacing-16)] p-[var(--spacing-12)]">
         <div className="rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] p-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Card is tokenised in the form — the number never leaves this screen. Instant payout, {formatEuro(PAYOUT_POLICY.cardFee)} fee, {PAYOUT_POLICY.cardEta}.</div>
-        <Input label="Card number" value={cardNumber} placeholder="4242 4242 4242 4242" state={cardShowNumberError ? 'error' : cardNumber ? 'filled' : 'empty'} icon={false} hint={cardShowNumberError ? 'Check the card number.' : brand ? `${brand} - detected automatically.` : 'Visa, Mastercard, Amex.'} onChange={v => { setCardNumber(formatCardNumber(v)); setCardTouched(true); setMessage(null); }} />
+        <Input label="Card number" value={cardNumber} placeholder="4242 4242 4242 4242" state={cardShowNumberError ? 'error' : cardNumber ? 'filled' : 'empty'} icon={false} hint={cardShowNumberError ? 'Check the card number.' : brand ? `${brand} - detected automatically.` : 'Visa, Mastercard, Amex.'} onChange={v => { setCardNumber(formatCardNumber(v)); setCardTouched(true); setSaveError(false); }} />
         <div className="flex gap-[var(--spacing-8)]">
-          <div className="flex-1"><Input label="Expiry" value={cardExpiry} placeholder="MM/YY" state={cardTouched && cardExpiry && !cardValidExpiry ? 'error' : cardExpiry ? 'filled' : 'empty'} icon={false} hint={cardTouched && cardExpiry && !cardValidExpiry ? 'Use a future date.' : null} onChange={v => { setCardExpiry(formatCardExpiry(v)); setCardTouched(true); setMessage(null); }} /></div>
-          <div className="flex-1"><Input label={brand === 'Amex' ? 'CID (4 digits)' : 'CVC'} value={cardCvc} placeholder={brand === 'Amex' ? '1234' : '123'} state={cardTouched && cardCvc && !cardValidCvc ? 'error' : cardCvc ? 'filled' : 'empty'} icon={false} hint={null} onChange={v => { setCardCvc(v.replace(/\D/g, '').slice(0, 4)); setCardTouched(true); setMessage(null); }} /></div>
+          <div className="flex-1"><Input label="Expiry" value={cardExpiry} placeholder="MM/YY" state={cardTouched && cardExpiry && !cardValidExpiry ? 'error' : cardExpiry ? 'filled' : 'empty'} icon={false} hint={cardTouched && cardExpiry && !cardValidExpiry ? 'Use a future date.' : null} onChange={v => { setCardExpiry(formatCardExpiry(v)); setCardTouched(true); setSaveError(false); }} /></div>
+          <div className="flex-1"><Input label={brand === 'Amex' ? 'CID (4 digits)' : 'CVC'} value={cardCvc} placeholder={brand === 'Amex' ? '1234' : '123'} state={cardTouched && cardCvc && !cardValidCvc ? 'error' : cardCvc ? 'filled' : 'empty'} icon={false} hint={null} onChange={v => { setCardCvc(v.replace(/\D/g, '').slice(0, 4)); setCardTouched(true); setSaveError(false); }} /></div>
         </div>
-        <Input label="Cardholder name" value={cardHolder} placeholder="Alexey K." state={cardHolder ? 'filled' : 'empty'} icon={false} hint={null} onChange={v => { setCardHolder(v); setMessage(null); }} />
-        <Input label="Card nickname (optional)" value={cardLabel} placeholder="Fuel card" state="empty" icon={false} hint={null} onChange={v => { setCardLabel(v); setMessage(null); }} />
+        <Input label="Cardholder name" value={cardHolder} placeholder="Alexey K." state={cardHolder ? 'filled' : 'empty'} icon={false} hint={null} onChange={v => { setCardHolder(v); setSaveError(false); }} />
+        <Input label="Card nickname (optional)" value={cardLabel} placeholder="Fuel card" state="empty" icon={false} hint={null} onChange={v => { setCardLabel(v); setSaveError(false); }} />
         <Button label={saving ? 'Saving...' : 'Add card'} disabled={!cardReady || saving} loading={saving} onClick={() => void saveCard()} />
       </form>}
     </Section>
-    {message === 'error' && <div className="mt-[var(--spacing-16)]" role="alert"><Alert type="error" title="Could not save the method">Check your connection and try again.</Alert></div>}
-    {message === 'success' && <div className="mt-[var(--spacing-16)]" role="status"><Alert type="success" title="Method saved">Cash out will offer it right away.</Alert></div>}
+    {saveError && <div className="mt-[var(--spacing-16)]" role="alert"><Alert type="error" title="Could not save the method">Check your connection and try again.</Alert></div>}
   </BalanceFrame>;
 }
 
@@ -328,9 +329,9 @@ export function CashOut() {
   const [amount, setAmount] = useState('');
   const [touched, setTouched] = useState(false);
   const [sending, setSending] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [done, setDone] = useState<{ amount: number; eta: string } | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
+  const { toast, show, dismiss } = useToast();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const navigate = useNavigate();
@@ -380,7 +381,7 @@ export function CashOut() {
     try {
       const result = await requestWithdrawal(parsed, method.id);
       setConfirmOpen(false);
-      setDone({ amount: Math.round(parsed * 100) / 100, eta: result.eta });
+      show({ tone: 'success', title: `${formatEuro(Math.round(parsed * 100) / 100)} is on its way`, detail: `Arrives ${result.eta}.` });
       setSummary(await getBalance());
       setAmount('');
       setTouched(false);
@@ -392,8 +393,7 @@ export function CashOut() {
     }
   }
   function quick(v: number) { setAmount(String(v)); setTouched(true); setFailure(null); }
-  return <BalanceFrame title="Cash out" backTo="/v2/account/balance">
-    {done && <div className="mt-[var(--spacing-16)]" role="status"><Alert type="success" title={`${formatEuro(done.amount)} is on its way`}>Arrives {done.eta}.<span className="mt-[var(--spacing-8)] block"><Button label="See activity" appearance="secondary" onClick={() => navigate('/v2/account/balance/history')} /></span></Alert></div>}
+  return <BalanceFrame title="Cash out" backTo="/v2/account/balance" toast={<Toast toast={toast} onClose={dismiss} />}>
     <Section label="Destination">
       {methods.map((m, i) => <label key={m.id} className={`flex min-h-[var(--size-control-mobile)] cursor-pointer items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${i === methods.length - 1 ? '' : 'border-b border-[var(--color-border-default)]'}`}>
         <input type="radio" name="payout-method" checked={m.id === method.id} onChange={() => setMethodId(m.id)} className="h-[20px] w-[20px] accent-[var(--color-action-primary)]" aria-label={m.label || methodLabel(m)} />

@@ -44,7 +44,7 @@ it('adds an IBAN method with check-digit validation', async () => {
   fireEvent.change(iban, { target: { value: 'de89 3704 0044 0532 0130 00' } });
   fireEvent.change(screen.getByLabelText(/nickname/, { exact: false }), { target: { value: 'Business' } });
   fireEvent.click(screen.getByRole('button', { name: 'Add bank account' }));
-  await screen.findByRole('status');
+  await screen.findByText(/1 saved/);
   const methods = await api.getPayoutMethods();
   expect(methods.length).toBe(1);
   expect(methods[0].kind).toBe('iban');
@@ -63,7 +63,7 @@ it('adds a card without persisting the PAN', async () => {
   fireEvent.change(screen.getByLabelText(/CVC/, { exact: false }), { target: { value: '123' } });
   fireEvent.change(screen.getByLabelText(/Cardholder name/, { exact: false }), { target: { value: 'Alexey K.' } });
   fireEvent.click(screen.getByRole('button', { name: 'Add card' }));
-  await screen.findByRole('status');
+  await screen.findByText(/1 saved/);
   const methods = await api.getPayoutMethods();
   expect(methods.length).toBe(1);
   expect(methods[0].kind).toBe('card');
@@ -97,7 +97,7 @@ it('blocks cash out without method and completes SEPA withdrawal', async () => {
   await screen.findByLabelText(/IBAN/, { exact: false });
   fireEvent.change(screen.getByLabelText(/IBAN/, { exact: false }), { target: { value: VALID_IBAN } });
   fireEvent.click(screen.getByRole('button', { name: 'Add bank account' }));
-  await screen.findByRole('status');
+  await screen.findByText(/1 saved/);
   await router.navigate('/v2/account/balance/cashout');
   const amount = await screen.findByLabelText(/Amount/, { exact: false });
   fireEvent.change(amount, { target: { value: '5' } });

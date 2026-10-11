@@ -42,7 +42,7 @@ it('disables unchanged and invalid values, saves once and clears dirty state', a
   fireEvent.change(screen.getByLabelText('Email', { exact: false }), { target: { value: 'driver@example.com' } });
   expect(unload()).toBe(true);
   fireEvent.click(screen.getByRole('button', { name: 'Save contact' }));
-  await screen.findByText('Contact details saved');
+  await screen.findByRole('status');
   expect(save).toHaveBeenCalledTimes(1);
   expect(unload()).toBe(false);
 });
@@ -77,7 +77,7 @@ it('guards saving navigation and duplicate submissions; failure remains retryabl
   await act(async () => reject(new Error('offline')));
   await screen.findByRole('alert'); expect(unload()).toBe(true);
   fireEvent.click(screen.getByRole('button', { name: 'Save contact' }));
-  await screen.findByText('Contact details saved'); expect(unload()).toBe(false);
+  await screen.findByRole('status'); expect(unload()).toBe(false);
 });
 
 it('continues guarding a blocked navigation until a pending save succeeds', async () => {
@@ -92,7 +92,7 @@ it('continues guarding a blocked navigation until a pending save succeeds', asyn
   await act(async () => finish({ ...initial, phone: '123456789' }));
   expect(unload()).toBe(false);
   fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
-  await screen.findByText('Contact details saved');
+  await screen.findByRole('status');
   fireEvent.click(screen.getByRole('link', { name: 'Loads' }));
   await screen.findByText('Loads page');
 });

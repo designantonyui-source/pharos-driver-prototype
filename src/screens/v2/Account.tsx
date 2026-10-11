@@ -16,6 +16,7 @@ import { Button } from '../../components/Button';
 import { Icon, type IconName } from '../../components/Icon';
 import { Input } from '../../components/Input';
 import { NavigationBar, V2BackBar } from '../../components/layout/NavigationBar';
+import { Toast, useToast } from '../../components/v2/Toast';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { Sheet } from '../../components/v2/Sheet';
 import { getDriverProfile, updateDriverProfile, validateEmail, validatePhone, type ContactProfile } from '../../lib/api';
@@ -24,7 +25,7 @@ type ProfileData = Awaited<ReturnType<typeof getDriverProfile>>;
 function Chevron() {
   return <Icon name="chevron-right" size="sm" className="shrink-0 text-[var(--color-text-tertiary)]" />;
 }
-function AccountFrame({ title, backTo, children }: { title: string; backTo?: string; children: ReactNode }) {
+function AccountFrame({ title, backTo, toast, children }: { title: string; backTo?: string; toast?: ReactNode; children: ReactNode }) {
   return <V2Frame active="Account">
     <div className="absolute inset-x-0 top-0 z-20">
       {backTo
@@ -35,6 +36,7 @@ function AccountFrame({ title, backTo, children }: { title: string; backTo?: str
       <h1 className="sr-only">{title}</h1>
       {children}
     </main>
+    {toast}
   </V2Frame>;
 }
 function AccountSection({ label, children }: { label: string; children: ReactNode }) {
@@ -105,11 +107,7 @@ export function Account({ detail = false }: { detail?: boolean }) {
   }
   return <AccountFrame title="Account">
     {profile ? <>
-      <Link to="/v2/account/profile" aria-label="Open profile" className="mt-[var(--spacing-8)] block rounded-[var(--radius-md)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] focus-visible:outline-offset-4"><DriverProfile {...profile} verified={false} /></Link>
-      <div className="mt-[var(--spacing-12)] flex items-center gap-[var(--spacing-8)] rounded-[var(--radius-md)] bg-[var(--color-status-success-bg)] px-[var(--spacing-12)] py-[var(--spacing-8)] text-[var(--color-status-success-text)]">
-        <Icon name="shield-check" size="sm" />
-        <p className="text-caption-12">Verified driver · identity checked by Pharos</p>
-      </div>
+      <Link to="/v2/account/profile" aria-label="Open profile" className="mt-[var(--spacing-8)] block rounded-[var(--radius-md)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] focus-visible:outline-offset-4"><DriverProfile {...profile} verified /></Link>
       <AccountSection label="Loads">
         <MenuRow to="/v2/account/dismissed" icon="eye" title="Dismissed loads" detail={dismissedCount > 0 ? `${dismissedCount} hidden from your feed` : 'Loads you hid from your feed'} badge={dismissedCount} />
         <MenuRow to="/v2" icon="search" title="Find loads" detail="Back to the loads feed" last />
@@ -140,7 +138,8 @@ export function ContactEditor({ initial }: { initial: ProfileData }) {
   const [touchedPhone, setTouchedPhone] = useState(false);
   const [touchedEmail, setTouchedEmail] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<'error' | 'success' | null>(null);
+  const [saveError, setSaveError] = useState(false);
+  const { toast, show, dismiss } = useToast();
   const pending = useRef(false);
   const live = useRef(true);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
@@ -156,15 +155,16 @@ export function ContactEditor({ initial }: { initial: ProfileData }) {
   }, [dirty, saving]);
   async function save() {
     if (pending.current || !dirty || !validPhone || !validEmail) return;
-    pending.current = true; setSaving(true); setMessage(null);
+    pending.current = true; setSaving(true); setSaveError(false);
     try {
       const result = await updateDriverProfile(contact);
       if (live.current) {
         const value = { phone: result.phone, email: result.email };
-        setContact(value); setSaved(value); setMessage('success');
+        setContact(value); setSaved(value);
+        show({ tone: 'success', title: 'Contact details saved', detail: 'Stored on this device only.' });
       }
     } catch {
-      if (live.current) setMessage('error');
+      if (live.current) setSaveError(true);
     } finally {
       pending.current = false;
       if (live.current) setSaving(false);
@@ -172,17 +172,16 @@ export function ContactEditor({ initial }: { initial: ProfileData }) {
   }
   const phoneState = !validPhone && (touchedPhone || contact.phone !== saved.phone) ? 'error' as const : contact.phone ? 'filled' as const : 'empty' as const;
   const emailState = !validEmail && (touchedEmail || contact.email !== saved.email) ? 'error' as const : contact.email ? 'filled' as const : 'empty' as const;
-  return <AccountFrame title="Edit contact" backTo="/v2/account/profile">
+  return <AccountFrame title="Edit contact" backTo="/v2/account/profile" toast={<Toast toast={toast} onClose={dismiss} />}>
     <div className="mt-[var(--spacing-8)]"><DriverProfile {...initial} verified={false} /></div>
     <div className="mt-[var(--spacing-16)]"><Alert type="info" title="Prototype profile">Contact details are stored on this device only — not authenticated or verified. Driver identity is read-only.</Alert></div>
     <form onSubmit={event => { event.preventDefault(); void save(); }} noValidate className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-16)]">
-      <Input label="Phone" value={contact.phone} placeholder="+33 6 12 34 56 78" state={phoneState} icon={false} hint={phoneState === 'error' ? 'Enter a valid phone — 7–15 digits.' : 'Used for trip updates on this device.'} onChange={value => { setContact({ ...contact, phone: value }); setTouchedPhone(true); setMessage(null); }} />
-      <Input label="Email" value={contact.email} placeholder="driver@example.com" state={emailState} icon={false} hint={emailState === 'error' ? 'Enter a valid email address.' : 'Used for receipts on this device.'} onChange={value => { setContact({ ...contact, email: value }); setTouchedEmail(true); setMessage(null); }} />
+      <Input label="Phone" value={contact.phone} placeholder="+33 6 12 34 56 78" state={phoneState} icon={false} hint={phoneState === 'error' ? 'Enter a valid phone — 7–15 digits.' : 'Used for trip updates on this device.'} onChange={value => { setContact({ ...contact, phone: value }); setTouchedPhone(true); setSaveError(false); }} />
+      <Input label="Email" value={contact.email} placeholder="driver@example.com" state={emailState} icon={false} hint={emailState === 'error' ? 'Enter a valid email address.' : 'Used for receipts on this device.'} onChange={value => { setContact({ ...contact, email: value }); setTouchedEmail(true); setSaveError(false); }} />
       <Button label={saving ? 'Saving…' : 'Save contact'} disabled={!dirty || !validPhone || !validEmail || saving} loading={saving} onClick={() => void save()} />
       <p className="text-center text-caption-12 text-[var(--color-text-secondary)]">{dirty ? 'Unsaved changes — they stay on this device.' : 'No unsaved changes.'}</p>
     </form>
-    {message === 'error' && <div className="mt-[var(--spacing-16)]" role="alert"><Alert type="error" title="Could not save contact details">Check your connection and try again.</Alert></div>}
-    {message === 'success' && <div className="mt-[var(--spacing-16)]" role="status"><Alert type="success" title="Contact details saved">They are stored on this device only.</Alert></div>}
+    {saveError && <div className="mt-[var(--spacing-16)]" role="alert"><Alert type="error" title="Could not save contact details">Check your connection and try again.</Alert></div>}
     <Sheet open={blocker.state === 'blocked'} label="Discard contact changes?" onClose={() => { if (blocker.state === 'blocked') blocker.reset(); }}>
       <h2 className="text-heading-20 text-[var(--color-text-primary)]">Discard contact changes?</h2>
       <p className="mt-[var(--spacing-8)] text-body-14 text-[var(--color-text-secondary)]">{saving ? 'Contact details are still saving. Keep editing until saving finishes.' : 'Your unsaved contact changes will be lost.'}</p>

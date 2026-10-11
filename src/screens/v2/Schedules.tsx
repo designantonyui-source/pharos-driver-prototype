@@ -16,6 +16,7 @@ import { Button } from '../../components/Button';
 import { Icon } from '../../components/Icon';
 import { Input } from '../../components/Input';
 import { V2BackBar } from '../../components/layout/NavigationBar';
+import { Toast, useToast } from '../../components/v2/Toast';
 import { V2Frame } from '../../components/v2/V2Frame';
 import {
   PAYOUT_POLICY, evaluateSchedule, getBalance, getLedger, getPayoutMethods,
@@ -24,7 +25,7 @@ import {
 } from '../../lib/api';
 import { formatEuro } from './Balance';
 
-function SchedulesFrame({ title, children }: { title: string; children: ReactNode }) {
+function SchedulesFrame({ title, toast, children }: { title: string; toast?: ReactNode; children: ReactNode }) {
   return <V2Frame active="Account">
     <div className="absolute inset-x-0 top-0 z-20">
       <V2BackBar title={title} fallback="/v2/account/balance" />
@@ -33,6 +34,7 @@ function SchedulesFrame({ title, children }: { title: string; children: ReactNod
       <h1 className="sr-only">{title}</h1>
       {children}
     </main>
+    {toast}
   </V2Frame>;
 }
 
@@ -60,7 +62,8 @@ export function Schedules() {
   const [runs, setRuns] = useState<ScheduledRun[] | null>(null);
   const [threshold, setThreshold] = useState('500');
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<'error' | 'success' | null>(null);
+  const [saveError, setSaveError] = useState(false);
+  const { toast, show, dismiss } = useToast();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   async function reload() {
@@ -78,7 +81,7 @@ export function Schedules() {
     return () => { live = false; };
   }, [attempt]);
   if (error || !schedule || !methods || !balance || !runs) {
-    return <SchedulesFrame title="Auto-withdraw"><StatusBlock error={error} retry={() => setAttempt(v => v + 1)} label="auto-withdraw" /></SchedulesFrame>;
+    return <SchedulesFrame title="Auto-withdraw" toast={<Toast toast={toast} onClose={dismiss} />}><StatusBlock error={error} retry={() => setAttempt(v => v + 1)} label="auto-withdraw" /></SchedulesFrame>;
   }
   const methodFor = (id: string | null) => methods.find(m => m.id === id) ?? methods.find(m => m.isDefault) ?? methods[0] ?? null;
   function scheduleMethodId(): string | null {
@@ -87,7 +90,7 @@ export function Schedules() {
   }
   async function pick(mode: PayoutSchedule['mode']) {
     setSaving(true);
-    setMessage(null);
+    setSaveError(false);
     try {
       const current = methodFor(scheduleMethodId());
       const next: PayoutSchedule = mode === 'off'
@@ -96,22 +99,22 @@ export function Schedules() {
           ? { mode: 'threshold', threshold: Math.max(Number(threshold) || 500, PAYOUT_POLICY.minWithdrawal), methodId: current?.id ?? null }
           : { mode: 'weekly', weekday: 'friday', methodId: current?.id ?? null };
       setSchedule(await updateSchedule(next));
-      setMessage('success');
+      show({ tone: 'success', title: 'Rule saved', detail: 'It applies from the next Balance open.' });
     } catch {
-      setMessage('error');
+      setSaveError(true);
     } finally {
       setSaving(false);
     }
   }
   async function saveThreshold() {
     setSaving(true);
-    setMessage(null);
+    setSaveError(false);
     try {
       const current = methodFor(scheduleMethodId());
       setSchedule(await updateSchedule({ mode: 'threshold', threshold: Math.max(Number(threshold) || 500, PAYOUT_POLICY.minWithdrawal), methodId: current?.id ?? null }));
-      setMessage('success');
+      show({ tone: 'success', title: 'Rule saved', detail: 'It applies from the next Balance open.' });
     } catch {
-      setMessage('error');
+      setSaveError(true);
     } finally {
       setSaving(false);
     }
@@ -141,7 +144,7 @@ export function Schedules() {
     { mode: 'threshold', title: `Auto at ${formatEuro(Number(threshold) || 500)}`, detail: 'Withdraw everything when balance reaches it' },
     { mode: 'weekly', title: 'Every Friday', detail: 'Withdraw everything available' },
   ];
-  return <SchedulesFrame title="Auto-withdraw">
+  return <SchedulesFrame title="Auto-withdraw" toast={<Toast toast={toast} onClose={dismiss} />}>
     <div className="mt-[var(--spacing-16)]"><Alert type="info" title="Prototype scheduler">Evaluated when you open Balance. Production runs on a server cron — the rule shape is identical.</Alert></div>
     <Section label="Rule">
       {modes.map((m, i) => <label key={m.mode} className={`flex min-h-[var(--size-control-mobile)] cursor-pointer items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${i === modes.length - 1 ? '' : 'border-b border-[var(--color-border-default)]'}`}>
@@ -181,8 +184,7 @@ export function Schedules() {
         <p className="text-caption-12 text-[var(--color-text-secondary)]">Every ledger line with running detail — trips, withdrawals, adjustments.</p>
       </div>
     </Section>
-    {message === 'error' && <div className="mt-[var(--spacing-16)]" role="alert"><Alert type="error" title="Could not save the rule">Check your connection and try again.</Alert></div>}
-    {message === 'success' && <div className="mt-[var(--spacing-16)]" role="status"><Alert type="success" title="Rule saved">It applies from the next Balance open.</Alert></div>}
+    {saveError && <div className="mt-[var(--spacing-16)]" role="alert"><Alert type="error" title="Could not save the rule">Check your connection and try again.</Alert></div>}
   </SchedulesFrame>;
 }
 

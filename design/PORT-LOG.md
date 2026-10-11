@@ -15,6 +15,27 @@ No new tokens. `pnpm test` 91 passed; `pnpm check` passes (token audit + tsc + b
 
 ---
 
+## Polish — verified identity in card + single Toast pattern
+
+Two readability fixes from screenshot review (2026-10-11):
+
+1. **Verified driver banner removed.** The green `Verified driver · identity checked
+   by Pharos` strip under the Account card was a foreign banner. Replaced with the
+   measured Figma state: `DriverProfile verified` (`Show verification#769:5` — dot +
+   `Verified` inside the card, 82 -> 100 tall). No new UI, just the set's own variant.
+2. **One notification pattern.** Success/info confirmations (contact saved, method
+   saved, cash-out sent, auto-run fired, rule saved) were inline `Alert` blocks inside
+   the scroll — glued above the tab bar. Now: a single `Toast` component
+   (`src/components/v2/Toast.tsx` + `useToast`): pinned above the tab bar
+   (bottom 129px, z-50), auto-dismiss 4s, manual close, `role=status`.
+   Error Alerts stay inline (they carry Retry/actions); Sheet confirmations stay modal.
+   Convention documented in the Toast contract header. Stories: Success + Interactive.
+
+Coverage: `pnpm test` 104 passed; `pnpm check` passes. Unit assertions moved from
+inline text to `role=status` (toast) / store state where the toast auto-dismisses.
+
+---
+
 ## Wave 3 — payout discipline (schedules, adjustments, statement)
 
 New proposal, not a measured Figma port. Only NavigationBar (586:33), Button (12:38),
