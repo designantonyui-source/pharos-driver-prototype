@@ -68,7 +68,7 @@ describe('LoadCard states', () => {
     expect(screen.getByText(`Pickup · ${load.pickupKm} km away`)).toBeVisible();
     expect(screen.getByText(`Drop-off · ${load.km} km`)).toBeVisible();
     expect(screen.getByText(`€${load.rate}`)).toBeVisible();
-    expect(screen.getByText(load.window)).toBeVisible();
+    expect(screen.getByText(`Today ${load.window}`)).toBeVisible();
     expect(screen.getByText('Today 14:00–15:00, 111 km loaded, 18 km 25 minutes to pickup')).toBeInTheDocument();
     const trust = container.querySelector('article > p.text-label-14');
     expect(trust).toBeVisible();

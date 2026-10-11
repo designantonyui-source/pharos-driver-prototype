@@ -207,19 +207,15 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
             </span>
           </span>
         </span>
-        <span className="shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-status-success-bg)] px-[10px] py-[4px] text-label-14 text-[var(--color-status-success-text)]" aria-hidden="true">
-          €{load.perKm.toFixed(2)}/km
+        <span className="inline-flex shrink-0 items-center gap-[4px] rounded-[var(--radius-pill)] bg-[var(--color-status-info-bg)] px-[10px] py-[6px] text-label-14 text-[var(--color-status-info-text)]">
+          <Icon name="clock" size={14} />{load.day === 'today' ? 'Today' : 'Tomorrow'} {load.window}
         </span>
       </button>
-      <p className="flex flex-wrap items-end justify-between gap-[8px]">
-        <span className="flex min-w-0 flex-col">
-          <span className="text-metric-28 text-[var(--color-text-primary)]">€{load.rate}</span>
-          <span className="text-caption-12 truncate text-[var(--color-text-secondary)]">{load.vehicle.split('·')[0].trim()} · {(load.km * 0.06).toFixed(1)} t</span>
-        </span>
-        <span className="inline-flex shrink-0 items-center gap-[4px] rounded-[var(--radius-pill)] bg-[var(--color-status-info-bg)] px-[10px] py-[6px] text-label-14 text-[var(--color-status-info-text)]">
-          <Icon name="clock" size={14} />{load.window}
-        </span>
+      <p className="flex flex-wrap items-baseline gap-[8px]">
+        <span className="text-metric-28 text-[var(--color-text-primary)]">€{load.rate}</span>
+        <span className="text-label-14 text-[var(--color-text-secondary)]">€{load.perKm.toFixed(2)}/km</span>
       </p>
+      <p className="text-caption-12 truncate text-[var(--color-text-secondary)]">{load.vehicle.split('·')[0].trim()} · {(load.km * 0.06).toFixed(1)} t</p>
       <p className="sr-only">{load.day === 'today' ? 'Today' : 'Tomorrow'} {load.window}, {load.km} km loaded, {load.pickupKm} km {load.pickupMin} minutes to pickup</p>
       <p className="flex items-center gap-[4px] overflow-hidden whitespace-nowrap text-label-14 text-[var(--color-text-primary)]" aria-label={`${load.company}, rating ${load.rating.toFixed(1)}, verified, ${load.paidIn}${cross ? ', cross-border' : ''}`}>
         <span className="shrink-0 font-semibold">{load.company}</span>
