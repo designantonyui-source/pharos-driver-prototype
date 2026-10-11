@@ -82,7 +82,7 @@ pnpm storybook    # витрина компонентов на http://localhost:
 | `src/lib/store.ts` | состояние заявки, persist в localStorage |
 | `design/tokens.json` | токены (экспорт из Figma) → `src/styles/tokens.css` через `pnpm tokens` |
 | `design/figma-map.md` | таблица «node-id в Figma ↔ файл/компонент в коде» |
-| `design/flows/*.md` | рабочие файлы потоков (balance/invoices/schedules/account-ux): состояние + история |
+| `design/flows/*.md` | рабочие файлы потоков (balance/invoices/schedules/trips/account-ux): состояние + история |
 | `design/PORT-LOG-archive.md` | архив журнала переноса (заморожен): метод сверки, ловушки Figma-файла, замеры |
 | `tools/audit-tokens.mjs` | гвард: каждый `var()` обязан существовать; входит в `pnpm check` |
 

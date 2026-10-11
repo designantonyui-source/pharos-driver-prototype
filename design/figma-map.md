@@ -108,7 +108,7 @@ No Figma node yet: these screens lead and go back to Figma afterwards. Source of
 | `/v2` | Loads — unified List/Map home: filters, route-match markers, quick apply, live banner | V2Frame, SmartLoadList, QuickApplyModal, LoadSheet, ApplicationBanner, Sheet, DemoToggle | prototype |
 | `/application/:id` | Unified application tracker (replaces Pending screens); `?scenario=approve` (default) / `?scenario=reject`; rejection reason, similar loads and appeal mock | ApplicationTracker | prototype |
 | `/trip/:id` | Confirmed trip — pickup/delivery windows, price, customer rating, navigation/documents demos | TripDetails | prototype |
-| `/v2/trips` | Trips (Applications + My day merged) | placeholder `screens/v2/Soon.tsx` | todo |
+| `/v2/trips` | Trips (Applications + My day merged) | `screens/v2/Trips.tsx` — active hero + in-review + past, StatusBlock/empty states | prototype |
 | `/v2/account` | Account | placeholder `screens/v2/Soon.tsx` | todo |
 
 ### Shared load application action

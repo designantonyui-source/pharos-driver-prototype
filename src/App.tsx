@@ -10,7 +10,7 @@ import { DismissedLoads } from './screens/v2/DismissedLoads';
 import { Balance, BalanceHistory, CashOut, PayoutMethodScreen } from './screens/v2/Balance';
 import { InvoiceDetails, InvoiceList } from './screens/v2/Invoices';
 import { Schedules } from './screens/v2/Schedules';
-import { V2Soon } from './screens/v2/Soon';
+import { Trips } from './screens/v2/Trips';
 import { BlHome } from './screens/bl/Home';
 import { BlStart } from './screens/bl/Start';
 import { BlSearch } from './screens/bl/Search';
@@ -39,7 +39,7 @@ export default function App() {
       />
       <Route path="/application/:id" element={<ApplicationTracker />} />
       <Route path="/trip/:id" element={<TripDetails />} />
-      <Route path="/v2/trips" element={<V2Soon active="Trips" title="Trips" />} />
+      <Route path="/v2/trips" element={<Trips />} />
       <Route path="/v2/account" element={<Account />} />
       <Route path="/v2/account/profile" element={<Account detail />} />
       <Route path="/v2/account/profile/edit" element={<EditContact />} />

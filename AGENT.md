@@ -21,6 +21,7 @@
   - `balance.md` — Balance + методы + cash out + history
   - `invoices.md` — инвойсы (list → details → PDF)
   - `schedules.md` — auto-withdraw + adjustments + statement
+  - `trips.md` — trips hub + tracker + trip
   - `account-ux.md` — Toast + verification + back nav
 - Архив журнала переноса (заморожен, только история): `design/PORT-LOG-archive.md`
 - UI-разбор: `design/UI-REVIEW.md`
@@ -53,7 +54,7 @@
 - `/v2/account/balance/invoices` — Invoices (Awaiting hero, rows, CSV)
 - `/v2/account/balance/invoices/:id` — Invoice details (parties, VAT, PDF, Open trip)
 - `/v2/account/balance/schedules` — Auto-withdraw (rule, destination, runs, statement)
-- `/v2/trips` — заглушка
+- `/v2/trips` — Trips hub (active + in review + past)
 - `/search`, `/bl/*` — старый/BL контур
 
 ## 5. Состояние и API
