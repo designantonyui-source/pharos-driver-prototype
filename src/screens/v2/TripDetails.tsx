@@ -103,12 +103,11 @@ export function TripDetails() {
     return () => { active = false; };
   }, []);
 
+  const emptyBack = useV2Back('/v2');
   const load = loads?.find((item) => item.id === id);
   if (load && (state.applications[id]?.status === ApplicationStatus.CONFIRMED || state.applications[id]?.cancelledAfterConfirm)) {
     return <TripDetailsView load={load} />;
   }
-
-  const emptyBack = useV2Back('/v2');
   return (
     <V2Frame active="Trips">
       <div className="absolute inset-x-0 top-0 z-20">
