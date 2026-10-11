@@ -183,11 +183,15 @@ describe('pinned sorting', () => {
     expect(loads[0].id).toBe('available-b');
   });
 
-  it('empty list offers to clear the filters', () => {
+  it('empty list offers to clear the filters or change direction', () => {
     const onClearFilters = vi.fn();
-    render(<MemoryRouter><SmartLoadList loads={[]} currentRoute={{ from: '', to: '' }} onOpen={() => undefined} onClearFilters={onClearFilters} /></MemoryRouter>);
+    const onOpenRoute = vi.fn();
+    render(<MemoryRouter><SmartLoadList loads={[]} currentRoute={{ from: '', to: '' }} onOpen={() => undefined} onClearFilters={onClearFilters} onOpenRoute={onOpenRoute} /></MemoryRouter>);
+    expect(screen.getByText('No loads match — try widening the search.')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(onClearFilters).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Change direction' }));
+    expect(onOpenRoute).toHaveBeenCalledTimes(1);
   });
 
   it('list and map use the same pinned order and react to status changes', () => {

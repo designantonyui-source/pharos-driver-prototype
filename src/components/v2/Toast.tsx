@@ -36,7 +36,7 @@ export function Toast({ toast, onClose }: { toast: ToastData; onClose: () => voi
     <div className="pointer-events-none absolute inset-x-[16px] top-[calc(var(--nav-bar-h)+8px)] z-50 flex justify-center" role="presentation">
       <div
         role="status"
-        className="toast-slide-in pointer-events-auto flex w-full items-center gap-[12px] rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-[12px] shadow-[var(--shadow-card)]"
+        className="toast-slide-in pointer-events-auto flex w-full items-center gap-[12px] rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-[12px] shadow-card"
       >
         <span className={`flex h-[20px] w-[20px] shrink-0 items-center justify-center ${tone}`} aria-hidden>
           <Icon name={toast.tone === 'success' ? 'circle-check' : 'info'} size="md" />

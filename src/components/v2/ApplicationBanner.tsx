@@ -33,7 +33,7 @@ export function ApplicationBanner({
     <button
       type="button"
       onClick={onOpen}
-      className={`flex w-full flex-col gap-[8px] rounded-[var(--radius-lg)] p-[12px] text-left shadow-[var(--shadow-card)] ${
+      className={`flex w-full flex-col gap-[8px] rounded-[var(--radius-lg)] p-[12px] text-left shadow-card ${
         done
           ? 'bg-[var(--color-status-success-bg)] text-[var(--color-status-success-text)]'
           : ended

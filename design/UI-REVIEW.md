@@ -10,7 +10,7 @@ Chrome (`channel: 'chrome'`), `getComputedStyle` / `getBoundingClientRect` на 
 
 ---
 
-## Статус реализации (обновлено 2026-10-10, волна 5)
+## Статус реализации (обновлено 2026-10-11, feed polish)
 
 Закрыто и перезамерено (Chrome, `getComputedStyle` + WCAG 2.1) — детали и числа в `PORT-LOG.md` §4.11:
 
@@ -24,10 +24,10 @@ Chrome (`channel: 'chrome'`), `getComputedStyle` / `getBoundingClientRect` на 
 | P1-3 глифы | **готово** | `clock`/`circle-check`/`circle-x`/`x` + `star` в реестре (27 имён); сырых глифов в карточке **0**; `lucide lucide-star` **12×12** |
 | **P1-4 двойная валюта** | **ОТОЗВАНО** | пункт был ошибочным — см. раздел P1-4 ниже |
 | P1-2/`LoadTile` | **готово** | удалён как мёртвый код вместе с `useCountdown.ts` — обоснование в `PORT-LOG.md` §4.11 |
-| P2-1 направление | **готово (волна 4)** | `RouteSheet`: смена направления без ухода с `/v2`, коммит в `store.route`; P2-1 закрыт |
+| P2-1 направление | **готово (волна 4), чипы — тогглы 2026-10-11** | `RouteSheet`: смена направления без ухода с `/v2`, коммит в `store.route`; чипы зеркалят фокус (`From/To`), выбранный `aria-pressed` + залитая пилюля как в `FiltersSheet`; P2-1 закрыт |
 | P2-2 карта | **готово (волны 3–4c)** | пины → прайс-пилюли `€{rate}` цветом состояния; карта 402×563 edge-to-edge, карусель bottom-sheet поверх |
 | P2-3 скелетон | **готово (волна 5)** | `LoadCardSkeleton`: ряды Фигмы `2594:22017` (72×24 + 68×16/42×16 / 149×20 / 129×16 / 158×16 / 217×16), `animate-pulse`, `role="status"` + sr-only «Searching for loads…» |
-| P2-4 empty | **готово (волна 3)** | empty-state с `Clear filters` (кнопка только когда есть что сбрасывать); unit + E2E |
+| P2-4 empty | **готово (волна 3), расширено 2026-10-11** | empty-state с `Clear filters` (кнопка только когда есть что сбрасывать) + `Change direction` (`onOpenRoute`); текст называет выход: `No loads match — try widening the search.`; unit + E2E |
 | P2-5 модалка | **готово (волна 2)** | `Sheet`: Escape + ловушка Tab + `inert` + возврат фокуса, `role="dialog" aria-modal` + `label` |
 | P2-6 тап-таргеты | **готово (волны 2–4b)** | маршрут 344×44, фильтры h-44, табы min-h-36, Demo min-44, пины 44, Filters 95×48 = сегмент 268×48 |
 | P2-7 вложенная интерактивность | **частично** | `LoadCta` стопает пропагацию (покрыто тестом «CTA opens confirmation without also opening details»); шит/карусель открывают детали одной кнопкой без вложенных CTA — аудит остальных вложенностей не проводился |

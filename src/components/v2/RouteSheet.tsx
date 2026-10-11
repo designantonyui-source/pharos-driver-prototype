@@ -1,8 +1,10 @@
 /**
  * v2 · RouteSheet — change the feed direction without leaving `/v2` (closes P2-1:
  * direction used to live only on `/search`). Two fields, live count, Apply commits.
+ * City chips mirror the focused field (From/To label) and mark the active city
+ * selected, like the FiltersSheet pills — one-tap without typing.
  * props: open, value, countFor, onApply, onClose, cities
- * tokens: color-bg-surface, color-bg-subtle, color-text-primary, color-text-secondary,
+ * tokens: color-bg-surface, color-text-primary, color-text-secondary,
  *         color-action-primary, color-action-text-inverse, color-border-default, radius-md, radius-pill
  */
 import { useEffect, useState } from 'react';
@@ -73,19 +75,29 @@ export function RouteSheet({
       </p>
       {cities.length > 0 && (
         <div className="mt-[12px]">
-          <p className="text-label-14 text-[var(--color-text-secondary)]">Try</p>
-          <div className="mt-[8px] flex flex-wrap gap-[8px]" role="group" aria-label="Available cities">
-            {cities.map((city) => (
-              <button
-                key={city}
-                type="button"
-                onClick={() => tapCity(city)}
-                aria-label={`Use ${city} as ${focused === 'from' ? 'origin' : 'destination'}`}
-                className="min-h-[44px] rounded-[var(--radius-pill)] bg-[var(--color-bg-subtle)] px-[14px] text-label-14 text-[var(--color-action-text)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
-              >
-                {city}
-              </button>
-            ))}
+          <p id="route-cities-label" className="text-label-14 text-[var(--color-text-secondary)]">
+            {focused === 'from' ? 'From' : 'To'} — {focused === 'from' ? fromDraft || 'pick an origin' : toDraft || 'pick a destination'}
+          </p>
+          <div className="mt-[8px] flex flex-wrap gap-[8px]" role="group" aria-labelledby="route-cities-label">
+            {cities.map((city) => {
+              const selected = (focused === 'from' ? fromDraft : toDraft).trim().toLocaleLowerCase() === city.trim().toLocaleLowerCase();
+              return (
+                <button
+                  key={city}
+                  type="button"
+                  onClick={() => tapCity(city)}
+                  aria-pressed={selected}
+                  aria-label={selected ? `${city}, selected as ${focused === 'from' ? 'origin' : 'destination'}. Activate to keep it.` : `Use ${city} as ${focused === 'from' ? 'origin' : 'destination'}`}
+                  className={`min-h-[44px] rounded-[var(--radius-pill)] border px-[14px] text-label-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
+                    selected
+                      ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]'
+                      : 'border-[var(--color-border-default)] bg-[var(--color-bg-surface)] text-[var(--color-action-text)]'
+                  }`}
+                >
+                  {city}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

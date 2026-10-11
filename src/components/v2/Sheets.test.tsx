@@ -63,9 +63,24 @@ describe('RouteSheet draft semantics', () => {
     fireEvent.focus(screen.getByLabelText('Origin city'));
     fireEvent.click(screen.getByRole('button', { name: 'Use Paris as origin' }));
     expect(screen.getByLabelText('Origin city')).toHaveValue('Paris');
+    // The tapped city reads selected, like the FiltersSheet pills.
+    expect(screen.getByRole('button', { name: 'Paris, selected as origin. Activate to keep it.' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.focus(screen.getByLabelText('Destination city'));
     fireEvent.click(screen.getByRole('button', { name: 'Use Brussels as destination' }));
+    expect(screen.getByRole('button', { name: 'Brussels, selected as destination. Activate to keep it.' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Show 1 load' }));
     expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
+  });
+
+  it('labels the chips with the focused field', () => {
+    render(
+      <MemoryRouter>
+        <RouteSheet open value={{ from: 'Lille', to: '' }} countFor={() => 1} onApply={() => undefined} onClose={() => undefined} cities={['Lille']} />
+      </MemoryRouter>,
+    );
+    // Focus lands on destination on open; the chip group names it.
+    expect(screen.getByRole('group', { name: 'To — pick a destination' })).toBeVisible();
+    fireEvent.focus(screen.getByLabelText('Origin city'));
+    expect(screen.getByRole('group', { name: 'From — Lille' })).toBeVisible();
   });
 });

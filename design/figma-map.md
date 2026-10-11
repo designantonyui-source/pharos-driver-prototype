@@ -105,7 +105,7 @@ No Figma node yet: these screens lead and go back to Figma afterwards. Source of
 
 | Route | Screen | Components (new, `src/components/v2/`) | Status |
 |---|---|---|---|
-| `/v2` | Loads — unified List/Map home: filters, route-match markers, quick apply, live banner | V2Frame, SmartLoadList, QuickApplyModal, LoadSheet, ApplicationBanner, Sheet, DemoToggle | prototype |
+| `/v2` | Loads — unified List/Map home: filters, route-match markers, quick apply, live banner; direction header states the feed (`Direction: {label}, {N} loads`), empty state recovers via Clear filters + Change direction | V2Frame, SmartLoadList, QuickApplyModal, LoadSheet, ApplicationBanner, Sheet, DemoToggle, RouteSheet | prototype |
 | `/application/:id` | Unified application tracker (replaces Pending screens); `?scenario=approve` (default) / `?scenario=reject`; rejection reason, similar loads and appeal mock; cancel via `CancelApplicationSheet` + info `Toast` for demo stubs | ApplicationTracker, CancelApplicationSheet, Toast | prototype |
 | `/trip/:id` | Confirmed trip — pickup/delivery windows, price, customer rating, navigation/documents demos via info `Toast`; cancel via `CancelTripSheet` | TripDetails, CancelTripSheet, Toast | prototype |
 | `/v2/trips` | Trips (Applications + My day merged) | `screens/v2/Trips.tsx` — active hero + in-review + past, StatusBlock/empty states | prototype |
@@ -114,6 +114,25 @@ No Figma node yet: these screens lead and go back to Figma afterwards. Source of
 ### Shared load application action
 
 `src/components/v2/LoadCta.tsx` is the sole entry CTA in SmartLoadList (list and map cards) and LoadSheet. It reads per-load applications from `store.getApplicationForLoad(loadId)`, opens QuickApplyModal, and routes to the matching tracker/trip. Pending states cannot resubmit; rejection opens the reason; cancellation permits reapplying. The API rejects duplicate pending/confirmed applications with `ALREADY_APPLIED`, including concurrent requests. Legacy single-application storage is migrated to the per-load map. No timeout/similar-load block exists in the current source tree; any future such surface should compose LoadCta.
+
+### Loads feed polish (2026-10-11, measured in Chrome on the preview build)
+
+- `shadow-card` is the only shadow utility on the feed: the bare `shadow-[var(--shadow-card)]`
+  form never resolved in Tailwind v4 (measured `box-shadow: none`), so card, header, skeleton,
+  banner, toast, pins and the empty state all render the `0 6px 20px rgba(23,42,53,.055)` token —
+  verified `rgba(23, 42, 53, 0.055) 0px 6px 20px 0px` on the live card. `pnpm check` is green,
+  the one remaining build warning (`border-l-[var(--color-status-*-text)]`) is the known
+  non-blocking one from AGENT.md.
+- `RouteSheet` city chips are real toggles now: the group label mirrors the focused field
+  (`From — {origin}` / `To — {destination}`), the tapped city reads `aria-pressed` selected
+  with the same filled-primary face as the `FiltersSheet` pills. Unit: chips fill the focused
+  field + selected state + label follows focus.
+- The vehicle line renders the feed value verbatim (`Box · 8 t · 10 pallets`) — the old
+  `km × 0.06` tonnage disagreed with the fixture on 3 of 6 loads (e.g. `7.5 t` vs `6.7 t`).
+- The direction header counts loads, not trips (`2 loads`, plural-aware in label and badge).
+- The empty state names the recovery (`No loads match — try widening the search.`) and offers
+  both `Clear filters` and `Change direction` (new `onOpenRoute`, wired in `Home.tsx`);
+  Map pins gained anchors for the three new Paris/Amsterdam feed loads.
 
 ### Stateful load cards
 

@@ -31,6 +31,8 @@ type SmartLoadListProps = {
   onOpen: (load: V2Load) => void;
   /** Empty-state recovery: the list owns the message, the screen owns the filters. */
   onClearFilters?: () => void;
+  /** Empty-state recovery for the route: opens the direction sheet. */
+  onOpenRoute?: () => void;
   /** Left slot of the List/Map row — Home renders the Filters button here. */
   tabsPrefix?: React.ReactNode;
   /** Decline (dismiss) affordance on available cards — free, reversible, no score impact. */
@@ -58,6 +60,9 @@ const PINS: Record<string, { x: number; y: number }> = {
   nordcargo: { x: 0.62, y: 0.42 },
   'calais-lille': { x: 0.3, y: 0.62 },
   belroute: { x: 0.78, y: 0.24 },
+  'paris-brussels': { x: 0.5, y: 0.52 },
+  'brussels-amsterdam': { x: 0.68, y: 0.3 },
+  'lille-paris': { x: 0.45, y: 0.58 },
 };
 
 const PIN_TONE: Record<string, string> = {
@@ -87,7 +92,7 @@ function MapPin({ load, selected, onSelect }: { load: V2Load; selected: boolean;
       onClick={(event) => { event.stopPropagation(); onSelect(); }}
       aria-label={`${load.from} to ${load.to}, €${load.rate}${cardState === 'available' ? '' : `, ${cardState}`}`}
       aria-pressed={selected}
-      className={`absolute flex h-[44px] min-w-[44px] -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-[4px] rounded-[var(--radius-pill)] px-[10px] text-label-14 text-[var(--color-text-inverse)] shadow-[var(--shadow-card)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${selected ? 'outline-2 outline-[var(--color-text-inverse)] outline-offset-2' : ''} ${PIN_TONE[cardState]}`}
+      className={`absolute flex h-[44px] min-w-[44px] -translate-x-1/2 -translate-y-1/2 items-center justify-center gap-[4px] rounded-[var(--radius-pill)] px-[10px] text-label-14 text-[var(--color-text-inverse)] shadow-card focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${selected ? 'outline-2 outline-[var(--color-text-inverse)] outline-offset-2' : ''} ${PIN_TONE[cardState]}`}
       style={{ left: `${anchor.x * 100}%`, top: `${anchor.y * 100}%` }}
     >
       <span aria-hidden>€{load.rate}</span>
@@ -109,6 +114,7 @@ export function SmartLoadList({
   currentRoute,
   onOpen,
   onClearFilters,
+  onOpenRoute,
   tabsPrefix,
   onDismiss,
   dismissedIds = [],
@@ -151,7 +157,7 @@ export function SmartLoadList({
           type="button"
           onClick={() => onOpen(load)}
           aria-label={`${load.from} to ${load.to}, €${load.rate}. Open details.`}
-          className="flex w-full flex-col gap-[6px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] text-left shadow-[var(--shadow-card)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+          className="flex w-full flex-col gap-[6px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] text-left shadow-card focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
         >
           <span className="flex items-center justify-between gap-[8px]">
             <span className="text-heading-20 text-[var(--color-offer-text-price)]">€{load.rate}</span>
@@ -202,14 +208,19 @@ export function SmartLoadList({
         {loading ? (
           <LoadCardSkeleton count={3} />
         ) : loads.length === 0 ? (
-          <div className="flex flex-col gap-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px]">
-            <p className="text-body-14 text-[var(--color-text-secondary)]">No loads match these filters.</p>
-            {onClearFilters && <Button label="Clear filters" appearance="secondary" onClick={onClearFilters} />}
+          <div className="flex flex-col gap-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card">
+            <p className="text-body-14 text-[var(--color-text-secondary)]">
+              No loads match{onClearFilters || onOpenRoute ? ' — try widening the search.' : '.'}
+            </p>
+            <div className="flex flex-col gap-[8px]">
+              {onClearFilters && <Button label="Clear filters" appearance="secondary" onClick={onClearFilters} />}
+              {onOpenRoute && <Button label="Change direction" appearance="secondary" onClick={onOpenRoute} />}
+            </div>
           </div>
         ) : view === 'list' ? (
           <>
             {dismissedIds.length > 0 && onRestore && (
-              <div className="mb-[8px] flex shrink-0 items-center justify-between gap-[8px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] px-[12px] py-[8px] shadow-[var(--shadow-card)]">
+              <div className="mb-[8px] flex shrink-0 items-center justify-between gap-[8px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] px-[12px] py-[8px] shadow-card">
                 <p className="text-body-14 text-[var(--color-text-secondary)]">
                   {dismissedIds.length === 1 ? '1 load hidden' : `${dismissedIds.length} loads hidden`}
                 </p>
@@ -242,7 +253,7 @@ export function SmartLoadList({
                 />
               ))}
             </div>
-            <span className="absolute left-[28px] top-[12px] rounded-[var(--radius-pill)] bg-[var(--color-bg-surface)] px-[10px] py-[6px] text-label-12 text-[var(--color-text-primary)] shadow-[var(--shadow-card)]">
+            <span className="absolute left-[28px] top-[12px] rounded-[var(--radius-pill)] bg-[var(--color-bg-surface)] px-[10px] py-[6px] text-label-12 text-[var(--color-text-primary)] shadow-card">
               {sortedLoads.length} {sortedLoads.length === 1 ? 'load' : 'loads'} towards {currentRoute.to}
             </span>
             <div className="absolute inset-x-0 bottom-0 flex snap-x snap-mandatory gap-[8px] overflow-x-auto px-[16px] pb-[12px] pt-[24px]" aria-label="Loads on map">

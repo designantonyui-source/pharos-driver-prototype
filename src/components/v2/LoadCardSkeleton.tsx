@@ -10,7 +10,7 @@ export function LoadCardSkeleton({ count = 3 }: { count?: number }) {
         <div
           key={i}
           aria-hidden
-          className="flex w-full shrink-0 flex-col gap-[8px] rounded-[var(--radius-lg)] border border-[var(--color-offer-border)] bg-[var(--color-bg-surface)] p-[12px] shadow-[var(--shadow-card)]"
+          className="flex w-full shrink-0 flex-col gap-[8px] rounded-[var(--radius-lg)] border border-[var(--color-offer-border)] bg-[var(--color-bg-surface)] p-[12px] shadow-card"
         >
           <div className="flex h-[36px] items-center gap-[8px]">
             <Bar w={72} h={24} top />

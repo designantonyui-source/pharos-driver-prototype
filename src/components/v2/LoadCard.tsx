@@ -182,7 +182,7 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
         }}
         onTouchEnd={() => { touchStart.current = null; setSwipeX(swiped ? -88 : 0); }}
         style={swipeX !== 0 ? { transform: `translateX(${swipeX}px)` } : undefined}
-        className={`relative flex w-full cursor-pointer flex-col gap-[8px] rounded-[var(--radius-lg)] border border-[var(--color-offer-border)] bg-[var(--color-bg-surface)] p-[12px] shadow-[var(--shadow-card)] transition-transform ${styles.container}`}>
+        className={`relative flex w-full cursor-pointer flex-col gap-[8px] rounded-[var(--radius-lg)] border border-[var(--color-offer-border)] bg-[var(--color-bg-surface)] p-[12px] shadow-card transition-transform ${styles.container}`}>
       {badge || state === 'booked' ? (
       <div className={`flex min-h-[24px] items-center gap-[8px] ${badge ? 'justify-between' : 'justify-end'}`}>
         {badge ? (
@@ -217,7 +217,7 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
         <span className="text-metric-28 text-[var(--color-text-primary)]">€{load.rate}</span>
         <span className="text-label-14 text-[var(--color-text-secondary)]">€{load.perKm.toFixed(2)}/km</span>
       </p>
-      <p className="text-caption-12 truncate text-[var(--color-text-secondary)]">{load.vehicle.split('·')[0].trim()} · {(load.km * 0.06).toFixed(1)} t</p>
+      <p className="truncate text-caption-12 text-[var(--color-text-secondary)]">{load.vehicle}</p>
       <p className="sr-only">{load.day === 'today' ? 'Today' : 'Tomorrow'} {load.window}, {load.km} km loaded, {load.pickupKm} km {load.pickupMin} minutes to pickup</p>
       <p className="flex items-center gap-[4px] overflow-hidden whitespace-nowrap text-label-14 text-[var(--color-text-primary)]" aria-label={`${load.company}, rating ${load.rating.toFixed(1)}, verified, ${load.paidIn}${cross ? ', cross-border' : ''}`}>
         <span className="shrink-0 font-semibold">{load.company}</span>

@@ -22,6 +22,9 @@ import { SmartLoadList } from '../../components/v2/SmartLoadList';
  *
  * No form first: the feed is already there; direction + three quick filters narrow it. Applying is one tap and the
  * driver stays on the current view with a live banner. Status moves with the Demo panel (→ dispatcher approved, → confirmed).
+ *
+ * The direction header states the feed (`Direction: {label}, {N} loads`); the empty state
+ * offers both Clear filters and Change direction, so a dead-end route recovers in one tap.
  */
 const FILTER_TESTS: Record<string, (l: V2Load) => boolean> = {
   today: (l) => l.day === 'today',
@@ -79,8 +82,8 @@ export function Home() {
         <button
           type="button"
           onClick={() => setRouteOpen(true)}
-          aria-label={`Direction: ${routeLabel}, ${visible.length} loads. Activate to change.`}
-          className="flex items-center justify-between gap-[8px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] text-left shadow-[var(--shadow-card)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+          aria-label={`Direction: ${routeLabel}, ${visible.length} ${visible.length === 1 ? 'load' : 'loads'}. Activate to change.`}
+          className="flex items-center justify-between gap-[8px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] text-left shadow-card focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
         >
           <span className="flex min-w-0 items-start gap-[8px] text-[var(--color-text-primary)]">
             <Icon name="map-pin" className="mt-[2px] text-[var(--color-action-primary)]" />
@@ -88,7 +91,7 @@ export function Home() {
               <span className="flex min-w-0 items-center gap-[8px]">
                 <span className="text-heading-14 truncate">{routeLabel}</span>
                 <span className="shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-action-primary)] px-[8px] py-[2px] text-label-12 text-[var(--color-action-text-inverse)]">
-                  {loads ? `${visible.length} trips` : '…'}
+                  {loads ? `${visible.length} ${visible.length === 1 ? 'load' : 'loads'}` : '…'}
                 </span>
               </span>
               <span className="text-caption-12 truncate text-[var(--color-text-secondary)]">
@@ -109,6 +112,7 @@ export function Home() {
           currentRoute={{ from: state.route.from, to: destination }}
           onOpen={(load) => setOpenId(load.id)}
           onClearFilters={on.length > 0 ? () => setOn([]) : undefined}
+          onOpenRoute={() => setRouteOpen(true)}
           onDismiss={(load) => { void dismissLoad(load.id); }}
           dismissedIds={dismissedIds}
           onRestore={(loadId) => { void restoreLoad(loadId); }}
