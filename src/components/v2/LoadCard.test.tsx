@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApplicationStatus } from '../../lib/models';
 import { store, type LoadApplication } from '../../lib/store';
 import { V2_LOADS } from '../../lib/v2/loads';
-import { CARD_STATE_STYLES, LoadCard, sortLoadsByApplication } from './LoadCard';
+import { CARD_STATE_STYLES, LoadCard, cityLabel, crossBorder, routeAriaLabel, sortLoadsByApplication } from './LoadCard';
 import { SmartLoadList } from './SmartLoadList';
 
 beforeEach(() => store.reset());
@@ -62,10 +62,30 @@ describe('LoadCard states', () => {
 
   it('route is the second anchor after the rate, facts sit quiet in caption', () => {
     const { container } = render(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
-    const route = screen.getByRole('button', { name: 'Lille to Brussels. Open details.' });
+    const route = screen.getByRole('button', { name: 'Lille, France to Brussels, Belgium. Open details.' });
     expect(route).toHaveClass('text-heading-20');
-    const facts = container.querySelectorAll('article > p.text-caption-12');
+    expect(route).toHaveTextContent('FR → BE');
+    const facts = container.querySelectorAll('article > p.text-body-14, article > p.text-caption-12');
     expect(facts.length).toBe(2);
+    expect(facts[0]).toHaveClass('text-body-14');
+    expect(facts[1]).toHaveClass('text-caption-12');
+  });
+
+  it('country codes mark EU cities, cross-border pill only for FR/BE crossings', () => {
+    expect(cityLabel('Lille')).toBe('Lille FR');
+    expect(cityLabel('Antwerp')).toBe('Antwerp BE');
+    expect(cityLabel('Unknown')).toBe('Unknown');
+    expect(crossBorder('Lille', 'Brussels')).toBe('FR → BE');
+    expect(crossBorder('Calais', 'Lille')).toBeNull();
+    expect(crossBorder('Ghent', 'Antwerp')).toBeNull();
+    expect(routeAriaLabel('Lille', 'Brussels')).toBe('Lille, France to Brussels, Belgium. Open details.');
+  });
+
+  it('far pickup reads semibold warning, near pickup stays plain', () => {
+    const { rerender } = render(<MemoryRouter><LoadCard load={{ ...V2_LOADS[1], onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
+    expect(screen.getByText('42 km / 45 min to pickup')).toHaveClass('font-semibold');
+    rerender(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
+    expect(screen.getByText('18 km / 25 min to pickup')).not.toHaveClass('font-semibold');
   });
 
   it('omits the header row when there is no badge and no dismiss', () => {

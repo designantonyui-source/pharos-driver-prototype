@@ -29,6 +29,41 @@ export const CARD_STATE_STYLES = {
 } as const;
 export type LoadCardState = keyof typeof CARD_STATE_STYLES;
 
+/** EU country codes for the demo feed (freight style: Lille FR → Brussels BE). */
+const CITY_COUNTRY: Record<string, string> = {
+  Lille: 'FR',
+  Calais: 'FR',
+  Brussels: 'BE',
+  Ghent: 'BE',
+  Antwerp: 'BE',
+};
+
+const COUNTRY_NAME: Record<string, string> = { FR: 'France', BE: 'Belgium' };
+
+export function countryForCity(city: string): string | null {
+  return CITY_COUNTRY[city] ?? null;
+}
+
+/** Cross-border signal (FR → BE) — shown only when the countries differ. */
+export function crossBorder(from: string, to: string): string | null {
+  const a = countryForCity(from);
+  const b = countryForCity(to);
+  return a && b && a !== b ? `${a} → ${b}` : null;
+}
+
+export function cityLabel(city: string): string {
+  const code = countryForCity(city);
+  return code ? `${city} ${code}` : city;
+}
+
+export function routeAriaLabel(from: string, to: string): string {
+  const a = countryForCity(from);
+  const b = countryForCity(to);
+  const left = a && COUNTRY_NAME[a] ? `${from}, ${COUNTRY_NAME[a]}` : from;
+  const right = b && COUNTRY_NAME[b] ? `${to}, ${COUNTRY_NAME[b]}` : to;
+  return `${left} to ${right}. Open details.`;
+}
+
 /** The state pill: one lucide glyph plus a label. `icon: null` keeps the route-match badge text-only. */
 type Badge = { icon: IconName | null; label: string };
 
@@ -90,6 +125,8 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
 
   const canDismiss = !!onDismiss && (state === 'available' || state === 'cancelled' || state === 'rejected');
   const showHeader = badge || canDismiss;
+  const border = crossBorder(load.from, load.to);
+  const farPickup = load.pickupKm >= 40;
 
   function open() {
     if (state === 'booked' || state === 'rejected' || state === 'pending') {
@@ -121,17 +158,16 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
         <span className="text-metric-28 text-[var(--color-offer-text-price)]">€{load.rate}</span>
         <span className="text-label-14 text-[var(--color-text-secondary)]">€{load.perKm.toFixed(2)}/km</span>
       </p>
-      <button type="button" onClick={open} aria-label={`${load.from} to ${load.to}. Open details.`} className="flex min-h-[44px] items-center gap-[8px] text-left text-heading-20 text-[var(--color-text-primary)]">
-        <span className="truncate">{load.from}</span><Icon name="arrow-right" size="md" /><span className="truncate">{load.to}</span>
+      <button type="button" onClick={open} aria-label={routeAriaLabel(load.from, load.to)} className="flex min-h-[44px] items-center gap-[8px] text-left text-heading-20 text-[var(--color-text-primary)]">
+        <span className="truncate">{load.from} <span className="text-caption-12 font-normal text-[var(--color-text-tertiary)]">{countryForCity(load.from)}</span></span><Icon name="arrow-right" size="md" /><span className="truncate">{load.to} <span className="text-caption-12 font-normal text-[var(--color-text-tertiary)]">{countryForCity(load.to)}</span></span>
+        {border && <span className="shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-status-info-bg)] px-[8px] py-[4px] text-label-12 text-[var(--color-status-info-text)]">{border}</span>}
       </button>
       {state === 'booked' && <PickupCountdownMemo pickupTime={pickupTime} />}
-      <p className="text-caption-12 text-[var(--color-text-secondary)]">
-        {load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window} · {load.pickupKm} km to pickup · {load.pickupMin} min · {load.km} km loaded
+      <p className="text-body-14 text-[var(--color-text-primary)]">
+        {load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window} · <span className={farPickup ? 'font-semibold text-[var(--color-status-warning-text)]' : undefined}>{load.pickupKm} km / {load.pickupMin} min to pickup</span>
       </p>
-      <p className="flex flex-wrap items-center gap-x-[6px] text-caption-12 text-[var(--color-text-secondary)]">
-        <span>{load.company} ·</span>
-        <span className="flex items-center gap-[2px]"><Icon name="star" size={12} />{load.rating.toFixed(1)} ·</span>
-        <span>{load.paidIn}</span>
+      <p className="text-caption-12 text-[var(--color-text-secondary)]">
+        {load.km} km loaded · {load.company} · <span className="inline-flex items-center gap-[2px]"><Icon name="star" size={12} />{load.rating.toFixed(1)}</span> · {load.paidIn}
       </p>
       <LoadCta loadId={load.id} onNotice={onNotice} />
     </article>
