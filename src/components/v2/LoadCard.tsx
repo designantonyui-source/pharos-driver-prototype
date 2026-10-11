@@ -121,16 +121,14 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
         <span className="text-metric-28 text-[var(--color-offer-text-price)]">€{load.rate}</span>
         <span className="text-label-14 text-[var(--color-text-secondary)]">€{load.perKm.toFixed(2)}/km</span>
       </p>
-      <button type="button" onClick={open} className="flex min-h-[44px] items-center gap-[6px] text-left text-heading-14 text-[var(--color-text-primary)]">
-        <span className="truncate">{load.from}</span><Icon name="arrow-right" size="sm" /><span className="truncate">{load.to}</span>
+      <button type="button" onClick={open} aria-label={`${load.from} to ${load.to}. Open details.`} className="flex min-h-[44px] items-center gap-[8px] text-left text-heading-20 text-[var(--color-text-primary)]">
+        <span className="truncate">{load.from}</span><Icon name="arrow-right" size="md" /><span className="truncate">{load.to}</span>
       </button>
       {state === 'booked' && <PickupCountdownMemo pickupTime={pickupTime} />}
-      <div className="flex flex-wrap items-center gap-x-[12px] gap-y-[4px] text-body-14 text-[var(--color-text-secondary)]">
-        <span>{load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window}</span>
-        <span className="flex items-center gap-[4px]"><Icon name="map-pin" size="sm" />{load.pickupKm} km to pickup · {load.pickupMin} min</span>
-        <span>{load.km} km loaded</span>
-      </div>
-      <p className="flex flex-wrap items-center gap-x-[6px] text-body-14 text-[var(--color-text-secondary)]">
+      <p className="text-caption-12 text-[var(--color-text-secondary)]">
+        {load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window} · {load.pickupKm} km to pickup · {load.pickupMin} min · {load.km} km loaded
+      </p>
+      <p className="flex flex-wrap items-center gap-x-[6px] text-caption-12 text-[var(--color-text-secondary)]">
         <span>{load.company} ·</span>
         <span className="flex items-center gap-[2px]"><Icon name="star" size={12} />{load.rating.toFixed(1)} ·</span>
         <span>{load.paidIn}</span>

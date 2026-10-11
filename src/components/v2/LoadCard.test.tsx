@@ -60,6 +60,14 @@ describe('LoadCard states', () => {
     expect(badge.compareDocumentPosition(dismiss) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  it('route is the second anchor after the rate, facts sit quiet in caption', () => {
+    const { container } = render(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
+    const route = screen.getByRole('button', { name: 'Lille to Brussels. Open details.' });
+    expect(route).toHaveClass('text-heading-20');
+    const facts = container.querySelectorAll('article > p.text-caption-12');
+    expect(facts.length).toBe(2);
+  });
+
   it('omits the header row when there is no badge and no dismiss', () => {
     const { container } = render(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
