@@ -60,13 +60,29 @@ export type OfferCardProps = {
   state?: 'default' | 'disabled' | 'loading' | 'pending';
 };
 
-/** skeleton bar — the widths are the Figma bar sizes, they are not spacing values */
+/**
+ * figma: 2594:22017 · Pharos/App/Offer State=Loading — the 336x160 skeleton
+ *        (rows 36 · 28 · 24 · 20 · 20, gap 8, bars r4 color/offer/bg-skeleton).
+ * props: none · tokens: color-offer-bg-skeleton, radius-xs
+ *
+ * Shared by OfferCard State=Loading and the v2 feed skeleton (LoadCardSkeleton):
+ * the widths are the Figma bar sizes, they are not spacing values.
+ */
 const Bar = ({ w, h, top = false }: { w: number; h: number; top?: boolean }) => (
   <span
     className={`shrink-0 rounded-[var(--radius-xs)] bg-[var(--color-offer-bg-skeleton)]${top ? ' self-start' : ''}`}
     style={{ width: w, height: h }}
   />
 );
+
+/** The Figma skeleton row, exported for the v2 feed (AGENTS.md rule 4: never copy-pasted). */
+export const SKELETON_BARS: { w: number; h: number; top?: boolean }[][] = [
+  [{ w: 72, h: 24, top: true }, { w: 68, h: 16 }, { w: 42, h: 16 }],
+  [{ w: 149, h: 20 }],
+  [{ w: 129, h: 16 }],
+  [{ w: 158, h: 16 }],
+  [{ w: 217, h: 16 }],
+];
 
 export function OfferCard({
   rate = '€360',
@@ -95,7 +111,7 @@ export function OfferCard({
   if (state === 'loading') {
     return (
       <div className={`${base} w-[var(--card-w)]`}>
-        {/* 336x160 skeleton, same 8px rhythm as the content rows */}
+        {/* 336x160 skeleton, same 8px rhythm as the content rows (SKELETON_BARS) */}
         <div className="flex h-[36px] items-center gap-[var(--spacing-8)]">
           <Bar w={72} h={24} top />
           <Bar w={68} h={16} />

@@ -35,9 +35,9 @@ describe('QuickApplyModal', () => {
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText(`${load.from} → ${load.to}`)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Отправить заявку' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Send application' })).toBeEnabled();
 
-    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
+    await user.click(screen.getByRole('button', { name: 'Send application' }));
 
     expect(submitApplication).toHaveBeenCalledWith(load.id);
     expect(onSubmitted).toHaveBeenCalledOnce();
@@ -53,7 +53,7 @@ describe('QuickApplyModal', () => {
       />,
     );
 
-    const submitButton = screen.getByRole('button', { name: 'Отправить заявку' });
+    const submitButton = screen.getByRole('button', { name: 'Send application' });
     expect(screen.getByRole('status')).toHaveTextContent('Loading load details');
     expect(submitButton).toBeDisabled();
 
@@ -74,7 +74,7 @@ describe('QuickApplyModal', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Отмена' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onCancel).toHaveBeenCalledOnce();
   });
 });

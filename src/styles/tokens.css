@@ -119,14 +119,6 @@
   --size-icon-xl: 32px;
   --color-chat-bubble-outgoing-bg: #def5f0;
   --color-select-option-selected-bg: #ebf3f7;
-  --color-load-state-pending-bg: #fffbeb;
-  --color-load-state-pending-accent: #f59e0b;
-  --color-load-state-booked-bg: #f0fdf4;
-  --color-load-state-booked-accent: #16a34a;
-  --color-load-state-rejected-bg: #fef2f2;
-  --color-load-state-rejected-accent: #ef4444;
-  --color-load-state-cancelled-bg: #f9fafb;
-  --color-load-state-cancelled-accent: #9ca3af;
 
   /* typography (Pharos text styles) */
   --text-heading-32: 32px;

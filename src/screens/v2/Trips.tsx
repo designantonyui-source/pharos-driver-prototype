@@ -150,9 +150,9 @@ export function Trips() {
     </TripsFrame>;
   }
   return <TripsFrame toast={<Toast toast={toast} onClose={dismiss} />}>
-    {active.length > 0 && <div className="mt-[var(--spacing-8)] rounded-[var(--radius-md)] bg-[var(--color-nav-bg)] p-[var(--spacing-16)] text-[var(--color-nav-text)]">
-      <p className="text-caption-12 uppercase tracking-wide opacity-80">Active trip{active.length > 1 ? 's' : ''}</p>
-      {active.map(({ load }) => <div key={load.id} className="mt-[var(--spacing-8)]">
+    {active.length > 0 && <div className="mt-[var(--spacing-8)] flex flex-col gap-[var(--spacing-12)]">
+      <p className="px-[var(--spacing-12)] text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">Active trip{active.length > 1 ? 's' : ''}</p>
+      {active.map(({ load }) => <div key={load.id} className="rounded-[var(--radius-md)] bg-[var(--color-nav-bg)] p-[var(--spacing-16)] text-[var(--color-nav-text)]">
         <p className="text-metric-28 text-[var(--color-text-inverse)]">EUR {load.rate.toFixed(2)}</p>
         <p className="mt-[var(--spacing-4)] text-body-14 opacity-90">{load.from} to {load.to} · {tripWindow(load)}</p>
         <p className="mt-[var(--spacing-4)] text-caption-12 opacity-80">Pickup at {pickupTimestamp(load.day, load.window)}</p>

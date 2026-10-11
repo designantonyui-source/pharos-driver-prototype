@@ -9,7 +9,7 @@ export const STATUS_COPY: Record<ApplicationStatus, { title: string; step: numbe
   [ApplicationStatus.CUSTOMER_REVIEW]: { title: 'Dispatcher approved · awaiting customer', step: 3 },
   [ApplicationStatus.CONFIRMED]: { title: 'Confirmed · Trip TR-4821', step: 4 },
   [ApplicationStatus.REJECTED]: { title: 'Application declined', step: 4 },
-  [ApplicationStatus.CANCELLED]: { title: 'Application cancelled', step: 4 },
+  [ApplicationStatus.CANCELLED]: { title: 'Cancelled by you', step: 4 },
 };
 
 /**

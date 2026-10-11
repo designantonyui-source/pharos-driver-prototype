@@ -73,14 +73,24 @@ export function ApplicationProgress({
   /** Figma layer `Application stages` — the same string in all five variants. */
   label?: string;
 }) {
+  const rows = STAGES[stage];
+  const currentIndex = rows.findIndex(([state]) => state === 'current');
+  const doneCount = rows.filter(([state]) => state === 'done').length;
+  // Screen readers get "Step 2 of 4" — the visual rows already carry Done/Current/Next.
+  const position = currentIndex >= 0 ? currentIndex + 1 : doneCount;
   return (
     <div className="flex w-[var(--card-w)] flex-col gap-[var(--spacing-12)] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[var(--spacing-16)]">
-      <span className="w-fit text-label-12 text-[var(--color-text-secondary)]">{label}</span>
-      <div className="flex w-full flex-col gap-[var(--spacing-8)]">
-        {STAGES[stage].map(([state, title], i) => (
-          <ProgressStep key={title} state={state} number={i + 1} label={title} />
+      <span className="w-fit text-label-12 text-[var(--color-text-secondary)]">{label} · Step {position} of {rows.length}</span>
+      <ol
+        className="flex w-full list-none flex-col gap-[var(--spacing-8)] p-0"
+        aria-label={`${label}: step ${position} of ${rows.length}`}
+      >
+        {rows.map(([state, title], i) => (
+          <li key={title} aria-current={state === 'current' ? 'step' : undefined}>
+            <ProgressStep state={state} number={i + 1} label={title} />
+          </li>
         ))}
-      </div>
+      </ol>
     </div>
   );
 }

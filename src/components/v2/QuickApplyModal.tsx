@@ -38,35 +38,37 @@ export function QuickApplyModal({ loadId, load, onCancel, onSubmitted, onAlready
       }
       setError(error instanceof Error && error.message === 'ALREADY_APPLIED'
         ? 'You already applied for this load'
-        : 'Не удалось отправить заявку. Попробуйте ещё раз.');
+        : 'Could not send your application. Please try again.');
     } finally {
       setSubmitting(false);
     }
   }
 
   const checks = [
-    { label: 'Автомобиль подходит', passed: true },
-    { label: 'Время свободно', passed: true },
+    { label: 'Vehicle matches the load', passed: true },
+    { label: 'Your schedule is free', passed: true },
   ];
 
   return (
-    <Sheet open onClose={submitting ? () => undefined : onCancel}>
-      <div role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <h2 id={titleId} className="text-heading-20 text-[var(--color-text-primary)]">Быстрая заявка</h2>
+    <Sheet open onClose={submitting ? () => undefined : onCancel} label="Quick apply">
+      <div role="presentation">
+        <h2 id={titleId} className="text-heading-20 text-[var(--color-text-primary)]">
+          Apply for {load ? `${load.from} → ${load.to}` : 'this load'}
+        </h2>
 
         {load ? <dl className="mt-[16px] flex flex-col gap-[8px] rounded-[var(--radius-md)] bg-[var(--color-bg-subtle)] p-[12px]">
           <div className="flex items-start justify-between gap-[12px]">
-            <dt className="text-body-14 text-[var(--color-text-secondary)]">Маршрут</dt>
+            <dt className="text-body-14 text-[var(--color-text-secondary)]">Route</dt>
             <dd className="text-right text-label-14 text-[var(--color-text-primary)]">{load.from} → {load.to}</dd>
           </div>
           <div className="flex items-center justify-between gap-[12px]">
-            <dt className="text-body-14 text-[var(--color-text-secondary)]">Цена</dt>
-            <dd className="text-label-14 text-[var(--color-text-primary)]">€{load.rate} · €{load.perKm.toFixed(2)}/км</dd>
+            <dt className="text-body-14 text-[var(--color-text-secondary)]">Rate</dt>
+            <dd className="text-label-14 text-[var(--color-text-primary)]">€{load.rate} · €{load.perKm.toFixed(2)}/km</dd>
           </div>
           <div className="flex items-center justify-between gap-[12px]">
-            <dt className="text-body-14 text-[var(--color-text-secondary)]">Время загрузки</dt>
+            <dt className="text-body-14 text-[var(--color-text-secondary)]">Pickup time</dt>
             <dd className="text-label-14 text-[var(--color-text-primary)]">
-              {load.day === 'today' ? 'Сегодня' : 'Завтра'} · {load.window}
+              {load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window}
             </dd>
           </div>
         </dl> : (
@@ -75,7 +77,7 @@ export function QuickApplyModal({ loadId, load, onCancel, onSubmitted, onAlready
           </p>
         )}
 
-        {load && <ul className="mt-[16px] flex flex-col gap-[8px]" aria-label="Проверки заявки">
+        {load && <ul className="mt-[16px] flex flex-col gap-[8px]" aria-label="Application checks">
           {checks.map(({ label, passed }) => (
             <li key={label} className="flex items-center gap-[8px] text-body-14 text-[var(--color-text-primary)]">
               <span className={`flex h-[24px] w-[24px] items-center justify-center rounded-full ${passed ? 'bg-[var(--color-status-success-bg)] text-[var(--color-status-success-text)]' : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-secondary)]'}`}>
@@ -93,8 +95,8 @@ export function QuickApplyModal({ loadId, load, onCancel, onSubmitted, onAlready
         )}
 
         <div className="mt-[20px] flex flex-col gap-[8px]">
-          <Button label="Отправить заявку" loading={submitting} disabled={submitting || !load} onClick={sendApplication} />
-          <Button label="Отмена" appearance="secondary" disabled={submitting} onClick={onCancel} />
+          <Button label="Send application" loading={submitting} disabled={submitting || !load} onClick={sendApplication} />
+          <Button label="Cancel" appearance="secondary" disabled={submitting} onClick={onCancel} />
         </div>
       </div>
     </Sheet>

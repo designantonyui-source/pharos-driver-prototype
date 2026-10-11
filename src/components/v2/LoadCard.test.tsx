@@ -13,12 +13,12 @@ const load = { ...V2_LOADS[0], onRoute: true, pickupTime: '2026-10-10T14:00:00Z'
 
 const cases = [
   [null, 'available', 'On your route', 'Apply for €360', false],
-  [ApplicationStatus.SENT, 'pending', '⏳ In review', 'Application sent', true],
-  [ApplicationStatus.DISPATCHER_REVIEW, 'pending', '⏳ In review', 'Application sent', true],
-  [ApplicationStatus.CUSTOMER_REVIEW, 'pending', '⏳ In review', 'Application sent', true],
-  [ApplicationStatus.CONFIRMED, 'booked', '✓ Booked · TR-nordcargo', 'View trip', false],
-  [ApplicationStatus.REJECTED, 'rejected', '✕ Rejected', 'Application rejected', true],
-  [ApplicationStatus.CANCELLED, 'cancelled', '○ Cancelled', 'Apply again', false],
+  [ApplicationStatus.SENT, 'pending', 'In review', 'Application sent', true],
+  [ApplicationStatus.DISPATCHER_REVIEW, 'pending', 'In review', 'Application sent', true],
+  [ApplicationStatus.CUSTOMER_REVIEW, 'pending', 'In review', 'Application sent', true],
+  [ApplicationStatus.CONFIRMED, 'booked', 'Booked · TR-nordcargo', 'View trip', false],
+  [ApplicationStatus.REJECTED, 'rejected', 'Rejected', 'Application rejected', true],
+  [ApplicationStatus.CANCELLED, 'cancelled', 'Cancelled by you', 'Apply again', false],
 ] as const;
 
 describe('LoadCard states', () => {
@@ -27,12 +27,20 @@ describe('LoadCard states', () => {
     render(<MemoryRouter><LoadCard load={load} onOpen={() => undefined} /></MemoryRouter>);
     const card = screen.getByRole('article');
     for (const name of CARD_STATE_STYLES[state].container.split(' ')) expect(card).toHaveClass(name);
+    expect(card).not.toHaveClass('border-l-4');
     expect(card).toHaveAttribute('data-state', state);
-    expect(screen.getByText(badge, { exact: true })).toBeVisible();
+    const pill = screen.getByText(badge, { exact: true });
+    expect(pill).toBeVisible();
+    for (const name of CARD_STATE_STYLES[state].badge.split(' ')) expect(pill).toHaveClass(name);
     const button = screen.getByRole('button', { name: cta });
     if (disabled) expect(button).toBeDisabled(); else expect(button).toBeEnabled();
     if (status) expect(screen.queryByText('On your route')).not.toBeInTheDocument();
-    else expect(card).not.toHaveClass('border-l-4');
+  });
+
+  it('drops applications with a status outside the enum instead of rendering them as available', () => {
+    store.set({ loadId: load.id, status: 'sent' as unknown as ApplicationStatus });
+    render(<MemoryRouter><LoadCard load={load} onOpen={() => undefined} /></MemoryRouter>);
+    expect(screen.getByRole('article')).toHaveAttribute('data-state', 'available');
   });
 
   it('available off-route load has no badge', () => {
@@ -52,6 +60,16 @@ describe('LoadCard states', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('hides the booked countdown once the pickup window passed', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-10T14:00:00Z'));
+    store.set({ loadId: load.id, status: ApplicationStatus.CONFIRMED });
+    const { unmount } = render(<MemoryRouter><LoadCard load={load} onOpen={() => undefined} /></MemoryRouter>);
+    expect(screen.queryByText(/Pickup in/)).not.toBeInTheDocument();
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it.each([[ApplicationStatus.CONFIRMED, '/trip/nordcargo'], [ApplicationStatus.REJECTED, '/application/nordcargo']] as const)('tapping %s opens %s', (status, destination) => {
     store.set({ loadId: load.id, status });
     render(<MemoryRouter><Routes><Route path="/" element={<LoadCard load={load} onOpen={() => undefined} />} /><Route path={destination} element={<h1>Destination</h1>} /></Routes></MemoryRouter>);
@@ -66,8 +84,8 @@ describe('LoadCard states', () => {
     expect(onOpen).toHaveBeenCalledWith(load);
     onOpen.mockClear();
     fireEvent.click(screen.getByRole('button', { name: 'Apply for €360' }));
-    expect(screen.getByRole('heading', { name: 'Быстрая заявка' })).toBeVisible();
-    fireEvent.click(screen.getByText('Автомобиль подходит'));
+    expect(screen.getByRole('heading', { name: 'Apply for Lille → Brussels' })).toBeVisible();
+    fireEvent.click(screen.getByText('Vehicle matches the load'));
     expect(onOpen).not.toHaveBeenCalled();
   });
 });
@@ -80,6 +98,13 @@ describe('pinned sorting', () => {
     ] as const).map(([loadId, status]) => [loadId, { loadId, status, submittedAt: null }]));
     expect(sortLoadsByApplication(loads, applications).map((item) => item.id)).toEqual(['booked', 'pending', 'available-b', 'available-a', 'cancelled', 'rejected']);
     expect(loads[0].id).toBe('available-b');
+  });
+
+  it('empty list offers to clear the filters', () => {
+    const onClearFilters = vi.fn();
+    render(<MemoryRouter><SmartLoadList loads={[]} currentRoute={{ from: '', to: '' }} onOpen={() => undefined} onClearFilters={onClearFilters} /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(onClearFilters).toHaveBeenCalledTimes(1);
   });
 
   it('list and map use the same pinned order and react to status changes', () => {

@@ -1,4 +1,6 @@
 import type { V2Load } from '../../lib/v2/loads';
+import { getApplicationForLoad } from '../../lib/store';
+import { CARD_STATE_STYLES, getLoadCardState } from './LoadCard';
 import { LoadCta } from './LoadCta';
 import { Icon, type IconName } from '../Icon';
 import { Sheet } from './Sheet';
@@ -22,18 +24,33 @@ function Fact({ icon, children }: { icon: IconName; children: React.ReactNode })
   );
 }
 
+/** The state pill: one lucide glyph plus a label. `icon: null` keeps the route-match badge text-only. */
+type Badge = { icon: IconName | null; label: string };
+
 export function LoadSheet({
   load,
   open,
   onClose,
+  onNotice,
 }: {
   load: V2Load;
   open: boolean;
   onClose: () => void;
+  onNotice?: (title: string, detail?: string) => void;
 }) {
+  const application = getApplicationForLoad(load.id);
+  const state = getLoadCardState(application);
+  const styles = CARD_STATE_STYLES[state];
+  const badge: Badge | null = state === 'pending' ? { icon: 'clock', label: 'In review' }
+    : state === 'booked' ? { icon: 'circle-check', label: `Booked · ${application?.tripId ?? `TR-${load.id}`}` }
+      : state === 'rejected' ? { icon: 'circle-x', label: 'Rejected' }
+        : state === 'cancelled' ? { icon: 'x', label: 'Cancelled by you' }
+          : (load.onRoute) ? { icon: null, label: 'On your route' } : null;
+
   return (
-    <Sheet open={open} onClose={onClose}>
-      <div className="flex items-baseline gap-[8px]">
+    <Sheet open={open} onClose={onClose} label={`Load ${load.from} to ${load.to}, €${load.rate}`}>
+      {badge && <p className={`inline-flex items-center gap-[4px] self-start rounded-[var(--radius-pill)] px-[8px] py-[4px] text-label-12 ${styles.badge}`}><span className="flex items-center gap-[4px]" role="status">{badge.icon && <Icon name={badge.icon} size={12} />}{badge.label}</span></p>}
+      <div className="mt-[12px] flex items-baseline gap-[8px]">
         <span className="text-heading-32 text-[var(--color-offer-text-price)]">€{load.rate}</span>
         <span className="text-body-16 text-[var(--color-text-secondary)]">
           €{load.perKm.toFixed(2)}/km · {load.km} km loaded
@@ -57,7 +74,11 @@ export function LoadSheet({
         </Fact>
         <Fact icon="package">{load.vehicle}</Fact>
         <Fact icon="shield">
-          {load.company} · {load.rating} ★ · Verified · {load.paidIn}
+          <span className="flex flex-wrap items-center gap-x-[6px]">
+            <span>{load.company} ·</span>
+            <span className="flex items-center gap-[2px]"><Icon name="star" size={12} />{load.rating} ·</span>
+            <span>Verified · {load.paidIn}</span>
+          </span>
         </Fact>
       </ul>
 
@@ -70,7 +91,7 @@ export function LoadSheet({
       </div>
 
       <div className="mt-[16px]">
-        <LoadCta loadId={load.id} />
+        <LoadCta loadId={load.id} onNotice={onNotice} />
       </div>
     </Sheet>
   );

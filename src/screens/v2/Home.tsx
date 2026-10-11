@@ -6,6 +6,7 @@ import type { V2Load } from '../../lib/v2/loads';
 import { Icon } from '../../components/Icon';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { LoadSheet } from '../../components/v2/LoadSheet';
+import { Toast, useToast } from '../../components/v2/Toast';
 import { ApplicationBanner } from '../../components/v2/ApplicationBanner';
 import { FiltersButton } from '../../components/FiltersButton';
 import { FILTERS, FiltersSheet } from '../../components/v2/FiltersSheet';
@@ -39,6 +40,7 @@ export function Home() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [routeOpen, setRouteOpen] = useState(false);
+  const { toast, show, dismiss } = useToast();
 
   useEffect(() => {
     getLoads().then(setLoads);
@@ -97,6 +99,7 @@ export function Home() {
           onDismiss={(load) => { void dismissLoad(load.id); }}
           dismissedIds={dismissedIds}
           onRestore={(loadId) => { void restoreLoad(loadId); }}
+          onNotice={(title, detail) => show({ tone: 'info', title, detail })}
           tabsPrefix={
             <FiltersButton
               count={on.length > 0 ? on.length : undefined}
@@ -129,9 +132,10 @@ export function Home() {
           load={open}
           open
           onClose={() => setOpenId(null)}
-
+          onNotice={(title, detail) => show({ tone: 'info', title, detail })}
         />
       )}
+      <Toast toast={toast} onClose={dismiss} />
     </V2Frame>
   );
 }

@@ -387,11 +387,8 @@ export async function submitApplication(loadId: string) {
   await wait(600);
   // Recheck after latency so simultaneous requests cannot create duplicates.
   const existing = store.getApplicationForLoad(loadId);
-  // Prototype restriction: rebooking a cancelled confirmed trip is blocked; expiry policy is not approved.
-  if (existing?.cancelledAfterConfirm) {
-    throw new AlreadyAppliedError();
-  }
-  if (existing && !existing.dismissed && [ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REVIEW, ApplicationStatus.CUSTOMER_REVIEW, ApplicationStatus.CONFIRMED].includes(existing.status)) {
+  // Re-apply after a cancelled trip starts fresh: the flag belongs to the old attempt.
+  if (existing && !existing.dismissed && [ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REVIEW, ApplicationStatus.CUSTOMER_REVIEW, ApplicationStatus.CONFIRMED].includes(existing.status) && !existing.cancelledAfterConfirm) {
     throw new AlreadyAppliedError();
   }
   const submittedAt = new Date().toISOString();
@@ -407,7 +404,7 @@ export async function dismissLoad(loadId: string) {
   if (existing && !existing.dismissed && existing.status !== ApplicationStatus.CANCELLED && existing.status !== ApplicationStatus.REJECTED) {
     throw new Error("An applied load cannot be dismissed");
   }
-  if (existing?.cancelledAfterConfirm) throw new Error("A cancelled trip cannot be dismissed");
+  // A cancelled trip can leave the feed too - the record stays in the Trips hub past section.
   store.set({
     applications: {
       [loadId]: { loadId, status: ApplicationStatus.CANCELLED, submittedAt: null, dismissed: true },

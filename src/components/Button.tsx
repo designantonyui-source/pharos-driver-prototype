@@ -53,6 +53,14 @@ function FocusRing({ inset }: { inset: string }) {
   );
 }
 
+/**
+ * Real keyboard focus. Figma's `Pharos/Button` State=Focus (2px `color/focus/ring` at a 4px offset)
+ * was only reachable through the manual `focus` prop, so a keyboard user got no ring at all on any
+ * CTA in the app — the browser default was the only thing left. This wires the documented state to
+ * `:focus-visible`; the prop stays for Storybook, where the two never coincide.
+ */
+const FOCUS_VISIBLE = 'focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] focus-visible:outline-offset-4';
+
 export function Button({
   label,
   appearance = 'primary',
@@ -96,7 +104,7 @@ export function Button({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`relative flex ${HEIGHT[size]} items-center justify-center gap-[8px] rounded-[var(--radius-sm)] px-[16px] text-label-14 ${tone} ${border} ${full ? 'w-full' : ''}`}
+      className={`relative flex ${HEIGHT[size]} items-center justify-center gap-[8px] rounded-[var(--radius-sm)] px-[16px] text-label-14 ${tone} ${border} ${FOCUS_VISIBLE} ${full ? 'w-full' : ''}`}
     >
       {loading && <Spinner />}
       {label}
@@ -146,7 +154,7 @@ export function ButtonLink({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`relative flex ${HEIGHT[size]} items-center gap-[8px] rounded-[var(--radius-sm)] px-[16px] text-label-14 ${full ? 'w-full justify-center' : 'justify-start'} ${tone}${underline ? ' underline' : ''}`}
+      className={`relative flex ${HEIGHT[size]} items-center gap-[8px] rounded-[var(--radius-sm)] px-[16px] text-label-14 ${FOCUS_VISIBLE} ${full ? 'w-full justify-center' : 'justify-start'} ${tone}${underline ? ' underline' : ''}`}
     >
       {loading && <Spinner />}
       {label}

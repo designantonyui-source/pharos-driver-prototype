@@ -1,9 +1,57 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { advanceStatus, cancelApplication, submitApplication } from './api';
+import { advanceStatus, cancelApplication, cancelTrip, dismissLoad, restoreLoad, submitApplication } from './api';
 import { ApplicationStatus } from './models';
 import { store } from './store';
 
 describe('application lifecycle', () => {
+  it('preserves cancellation metadata through updates and persistence', async () => {
+    store.reset();
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    const cancellation = cancelTrip('nordcargo', 'breakdown');
+    await vi.advanceTimersByTimeAsync(300);
+    await cancellation;
+    store.set({ route: { from: 'A', to: 'B' } });
+    const expected = { cancelReason: 'breakdown', cancelledAfterConfirm: true, tripId: 'TR-nordcargo' };
+    expect(store.getApplicationForLoad('nordcargo')).toMatchObject(expected);
+    expect(JSON.parse(localStorage.getItem('pharos-driver-prototype')!).applications.nordcargo).toMatchObject(expected);
+  });
+
+  it('restores a dismissed load without removing another application', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.SENT });
+    await dismissLoad('belroute');
+    await restoreLoad('belroute');
+    expect(store.getApplicationForLoad('belroute')).toBeNull();
+    expect(store.getApplicationForLoad('nordcargo')?.status).toBe(ApplicationStatus.SENT);
+  });
+
+  it('allows re-applying after a cancelled confirmed trip starts fresh', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    const cancellation = cancelTrip('nordcargo', 'delay');
+    await vi.advanceTimersByTimeAsync(300);
+    await cancellation;
+    const reapply = submitApplication('nordcargo');
+    await vi.advanceTimersByTimeAsync(600);
+    await reapply;
+    expect(store.getApplicationForLoad('nordcargo')?.status).toBe(ApplicationStatus.SENT);
+    expect(store.getApplicationForLoad('nordcargo')?.cancelledAfterConfirm).toBeUndefined();
+  });
+
+  it('dismisses a cancelled trip from the feed', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    const cancellation = cancelTrip('nordcargo', 'delay');
+    await vi.advanceTimersByTimeAsync(300);
+    await cancellation;
+    await dismissLoad('nordcargo');
+    expect(store.getApplicationForLoad('nordcargo')?.dismissed).toBe(true);
+  });
+
+  it('does not erase a confirmed trip when restoring or dismissing it', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    await expect(dismissLoad('nordcargo')).rejects.toThrow('cannot be dismissed');
+    await restoreLoad('nordcargo');
+    expect(store.getApplicationForLoad('nordcargo')?.status).toBe(ApplicationStatus.CONFIRMED);
+  });
+
   beforeEach(() => {
     store.reset();
     vi.useFakeTimers();

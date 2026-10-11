@@ -18,7 +18,7 @@ describe('LoadCta', () => {
   it('without an application shows the price and opens confirmation', () => {
     renderCta();
     fireEvent.click(screen.getByRole('button', { name: 'Apply for €360' }));
-    expect(screen.getByRole('heading', { name: 'Быстрая заявка' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Apply for Lille → Brussels' })).toBeVisible();
   });
 
   it.each([ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REVIEW, ApplicationStatus.CUSTOMER_REVIEW])('disables applying and links to status in %s', (status) => {
@@ -47,7 +47,7 @@ describe('LoadCta', () => {
     store.set({ loadId: 'nordcargo', status: ApplicationStatus.CANCELLED });
     renderCta();
     fireEvent.click(screen.getByRole('button', { name: 'Apply again' }));
-    expect(screen.getByRole('heading', { name: 'Быстрая заявка' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Apply for Lille → Brussels' })).toBeVisible();
   });
 
   it('updates when global application state changes', () => {
@@ -83,18 +83,17 @@ describe('LoadCta', () => {
     expect(getApplicationForLoad('nordcargo')).toMatchObject({ status: ApplicationStatus.SENT });
     expect(getApplicationForLoad('belroute')).toMatchObject({ status: ApplicationStatus.CONFIRMED });
   });
-  it('shows the duplicate toast if another request applied while confirmation was open', async () => {
+  it('notifies the owning screen if another request applied while confirmation was open', async () => {
     vi.useFakeTimers();
     try {
-      renderCta();
+      const onNotice = vi.fn();
+      render(<MemoryRouter><LoadCta loadId="nordcargo" onNotice={onNotice} /></MemoryRouter>);
       fireEvent.click(screen.getByRole('button', { name: 'Apply for €360' }));
       act(() => store.set({ loadId: 'nordcargo', status: ApplicationStatus.SENT }));
-      fireEvent.click(screen.getByRole('button', { name: 'Отправить заявку' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Send application' }));
       await act(async () => { await vi.advanceTimersByTimeAsync(600); });
-      expect(screen.getByRole('status')).toHaveTextContent('You already applied for this load');
-      expect(screen.queryByRole('heading', { name: 'Быстрая заявка' })).not.toBeInTheDocument();
-      await act(async () => { await vi.advanceTimersByTimeAsync(4000); });
-      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(onNotice).toHaveBeenCalledWith('Already applied', 'This application is still in review.');
+      expect(screen.queryByRole('heading', { name: 'Apply for Lille → Brussels' })).not.toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }
