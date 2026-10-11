@@ -8,6 +8,7 @@ import { DemoToggle } from './components/v2/DemoToggle';
 import { Account, EditContact } from './screens/v2/Account';
 import { DismissedLoads } from './screens/v2/DismissedLoads';
 import { Balance, BalanceHistory, CashOut, PayoutMethodScreen } from './screens/v2/Balance';
+import { InvoiceDetails, InvoiceList } from './screens/v2/Invoices';
 import { V2Soon } from './screens/v2/Soon';
 import { BlHome } from './screens/bl/Home';
 import { BlStart } from './screens/bl/Start';
@@ -46,6 +47,8 @@ export default function App() {
       <Route path="/v2/account/balance/method" element={<PayoutMethodScreen />} />
       <Route path="/v2/account/balance/cashout" element={<CashOut />} />
       <Route path="/v2/account/balance/history" element={<BalanceHistory />} />
+      <Route path="/v2/account/balance/invoices" element={<InvoiceList />} />
+      <Route path="/v2/account/balance/invoices/:id" element={<InvoiceDetails />} />
       <Route path="/bl" element={<BlHome />} />
       <Route path="/bl/start" element={<BlStart />} />
       <Route path="/bl/search" element={<BlSearch />} />

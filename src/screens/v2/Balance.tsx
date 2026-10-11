@@ -29,6 +29,7 @@ import {
   validateCardNumber, validateIban,
   type BalanceSummary, type LedgerEntry, type PayoutMethod,
 } from '../../lib/api';
+import { getInvoices } from '../../lib/invoices';
 
 export function formatEuro(amount: number): string {
   return `EUR ${amount.toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -86,20 +87,24 @@ function methodDetail(method: PayoutMethod): string {
   return `${base}${verifying}${def}`;
 }
 
-export function LedgerLine({ entry, last = false }: { entry: LedgerEntry; last?: boolean }) {
+export function LedgerLine({ entry, last = false, invoiceId }: { entry: LedgerEntry; last?: boolean; invoiceId?: string | null }) {
   const border = last ? '' : 'border-b border-[var(--color-border-default)]';
   if (entry.kind === 'trip') {
-    return <div className={`flex min-h-[var(--size-control-mobile)] items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${border}`}>
+    const inner = <>
       <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="truck" size="md" /></span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-body-14 text-[var(--color-text-primary)]">{entry.from} - {entry.to}</span>
-        <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{entry.company} - {entry.day}{entry.status === 'pending' ? ' - pending payout' : ''}</span>
+        <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{entry.company} - {entry.day}{entry.status === 'pending' ? ' - pending payout' : ''}{invoiceId ? ' - invoice' : ''}</span>
       </span>
       <span className="flex shrink-0 flex-col items-end">
         <span className="text-body-14 text-[var(--color-text-primary)]">+{formatEuro(entry.amount)}</span>
         <span className={`text-caption-12 ${entry.status === 'available' ? 'text-[var(--color-status-success-text)]' : 'text-[var(--color-text-secondary)]'}`}>{entry.status === 'available' ? 'Paid' : 'Pending'}</span>
       </span>
-    </div>;
+    </>;
+    const cls = `flex min-h-[var(--size-control-mobile)] w-full items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] text-left ${border}`;
+    return invoiceId
+      ? <Link to={`/v2/account/balance/invoices/${invoiceId}`} className={`${cls} focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] focus-visible:-outline-offset-2`}>{inner}<Icon name="chevron-right" size="sm" className="shrink-0 text-[var(--color-text-tertiary)]" /></Link>
+      : <div className={cls}>{inner}</div>;
   }
   const railNote = entry.rail === 'instant-card' ? 'instant' : PAYOUT_POLICY.eta;
   return <div className={`flex min-h-[var(--size-control-mobile)] items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${border}`}>
@@ -164,6 +169,9 @@ export function Balance() {
       {recent.length === 0 ? <p className="px-[var(--spacing-12)] py-[var(--spacing-16)] text-body-14 text-[var(--color-text-secondary)]">No activity yet - completed trips will show here.</p>
         : <>{recent.map(entry => <LedgerLine key={entry.id} entry={entry} />)}
           <RowLink to="/v2/account/balance/history" icon="history" title="See all activity" detail="Trips and withdrawals" last /></>}
+    </Section>
+    <Section label="Documents">
+      <RowLink to="/v2/account/balance/invoices" icon="history" title="Invoices" detail="Per-trip paperwork with VAT, PDF export" last />
     </Section>
     <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Prototype only - no real money moves. Provider: {payoutProvider.name}.</p>
   </BalanceFrame>;
@@ -398,12 +406,21 @@ export function CashOut() {
 
 export function BalanceHistory() {
   const [ledger, setLedger] = useState<LedgerEntry[] | null>(null);
+  const [invoiceByLoad, setInvoiceByLoad] = useState<Record<string, string>>({});
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let live = true;
     setError(false);
-    getLedger().then(v => { if (live) setLedger([...v].reverse()); }).catch(() => { if (live) setError(true); });
+    Promise.all([getLedger(), getInvoices()])
+      .then(([entries, invoices]) => {
+        if (!live) return;
+        setLedger([...entries].reverse());
+        const map: Record<string, string> = {};
+        for (const inv of invoices) map[inv.loadId] = inv.id;
+        setInvoiceByLoad(map);
+      })
+      .catch(() => { if (live) setError(true); });
     return () => { live = false; };
   }, [attempt]);
   if (error || !ledger) {
@@ -415,7 +432,7 @@ export function BalanceHistory() {
       <p className="text-heading-14 text-[var(--color-text-primary)]">No activity yet</p>
       <p className="text-body-14 text-[var(--color-text-secondary)]">Completed trips and withdrawals will show here.</p>
     </div> : <Section label={`${ledger.length} entries`}>
-      {ledger.map((entry, i) => <LedgerLine key={entry.id} entry={entry} last={i === ledger.length - 1} />)}
+      {ledger.map((entry, i) => <LedgerLine key={entry.id} entry={entry} last={i === ledger.length - 1} invoiceId={entry.kind === 'trip' ? invoiceByLoad[entry.loadId] ?? null : null} />)}
     </Section>}
     <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Prototype ledger - stored on this device only.</p>
   </BalanceFrame>;

@@ -15,6 +15,38 @@ No new tokens. `pnpm test` 91 passed; `pnpm check` passes (token audit + tsc + b
 
 ---
 
+## Wave 2 — invoices (list, details, PDF, CSV)
+
+New proposal, not a measured Figma port. Only NavigationBar (586:33), Button (12:38),
+Alert (575:9632), V2Frame shell and tokens are reused as measured components.
+Mobbin reference (2026-10-11): Jobber, Fresha, PayPal, Faire, Starlink, Deel contractor
+invoice — common skeleton list (number/date/amount/status) -> details (parties, lines,
+VAT, totals) -> Download. Closest model: Deel/Remote generate the invoice per payout.
+
+What changed and why:
+
+1. **Invoice ledger** (`src/lib/invoices.ts`): `Invoice` type (seller/buyer blocks,
+   lines, VAT rate + amount + reverse-charge note), seed = one invoice per mock trip
+   (INV-2026-0042 pending EUR 360, -0038 paid EUR 210, -0031 paid EUR 290),
+   `getInvoices/getInvoice/getInvoiceForLoad`, `invoicesToCsv` for the accountant.
+2. **PDF without dependencies** (`src/lib/invoicePdf.ts`): self-contained A4 print
+   document (own ink-on-paper stylesheet, no app tokens) opened in a print window;
+   the driver picks Save-as-PDF. Selectable text, exact VAT math, no jsPDF.
+3. **List** (`InvoiceList`): awaiting-payment hero card, rows with number/company/
+   lane/date + amount + Paid/Pending/Overdue chip, Export-CSV button, empty state.
+4. **Details** (`InvoiceDetails`): parties (Northway Freight SPRL FR VAT /
+   customer BV + VAT), lines, Net/VAT 0%/Total, reverse-charge Alert (Art. 196),
+   Download PDF + Open trip actions, not-found Alert state.
+5. **Two-way links**: Balance Documents section -> invoices; History trip rows ->
+   their invoice (chevron + `invoice` note); invoice -> trip via Open trip.
+6. Prototype VAT default: intra-EU B2B 0% reverse charge — explicitly NOT an
+   approved tax scheme (PAYMENTS-VISION.md §7).
+
+Coverage: `pnpm test` 99 passed (was 95: +4 Invoices); `pnpm check` passes;
+E2E covers list -> details -> PDF popup -> history link in Chrome.
+
+---
+
 ## Wave 1 — payout methods v2 (PSP adapter + card + multi-methods)
 
 New proposal, not a measured Figma port. Only NavigationBar (586:33), Button (12:38),

@@ -36,3 +36,18 @@ test('balance: card method with instant fee quote', async ({ page }) => {
   await page.getByRole('textbox', { name: /Amount/ }).fill('50');
   await expect(page.getByText(/Fee EUR 1\.50/)).toBeVisible();
 });
+
+test('balance: invoices list, details, PDF and history link', async ({ page }) => {
+  await page.goto('/#/v2/account/balance/invoices');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expect(page.getByText('INV-2026-0042 - NordCargo')).toBeVisible();
+  await page.getByRole('link', { name: /INV-2026-0042/ }).click();
+  await expect(page.getByText('Reverse charge')).toBeVisible();
+  await page.getByRole('button', { name: 'Download PDF' }).click();
+  const popup = await page.waitForEvent('popup').catch(() => null);
+  if (popup) await popup.close();
+  await page.goto('/#/v2/account/balance/history');
+  await page.getByRole('link', { name: /Lille - Brussels.*invoice/ }).click();
+  await expect(page.getByText('INV-2026-0042', { exact: false }).first()).toBeVisible();
+});

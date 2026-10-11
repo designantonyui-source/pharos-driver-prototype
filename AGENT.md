@@ -23,7 +23,7 @@
 
 ## 3. Ключевые пути
 - Роуты: `src/App.tsx`, `src/main.tsx`
-- Баланс: `src/screens/v2/Balance.tsx` (Balance, PayoutMethodScreen, CashOut, BalanceHistory), `src/screens/v2/Balance.test.tsx`, `e2e/balance.spec.ts`
+- Баланс: `src/screens/v2/Balance.tsx` (Balance, PayoutMethodScreen, CashOut, BalanceHistory, InvoiceList, InvoiceDetails), `src/screens/v2/Balance.test.tsx`, `e2e/balance.spec.ts`
 - Экраны v2: `src/screens/v2/Home.tsx`, `ApplicationTracker.tsx`, `TripDetails.tsx`, `Account.tsx`, `DismissedLoads.tsx`, `Soon.tsx`
 - Компоненты v2: `src/components/v2/`
 - Общие компоненты: `src/components/Button.tsx`, `Input.tsx`, `Icon.tsx`, `DriverProfile.tsx`
@@ -45,6 +45,8 @@
 - `/v2/account/balance/method` — Bank account (SEPA IBAN)
 - `/v2/account/balance/cashout` — Cash out (amount + confirm Sheet)
 - `/v2/account/balance/history` — Activity (ledger)
+- `/v2/account/balance/invoices` — Invoices (Awaiting hero, rows, CSV)
+- `/v2/account/balance/invoices/:id` — Invoice details (parties, VAT, PDF, Open trip)
 - `/v2/trips` — заглушка
 - `/search`, `/bl/*` — старый/BL контур
 
