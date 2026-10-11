@@ -1,3 +1,25 @@
+## Balance first slice — new proposal (not a measured Figma port)
+
+Routes: `/v2/account/balance`, `/v2/account/balance/method`, `/v2/account/balance/cashout`, `/v2/account/balance/history`.
+These screens are approved prototype proposals, **not geometry/typography measured ports**. Only NavigationBar (`586:33`), Button (`12:38`), Input (`12:166`), Alert (`575:9632`), DriverProfile identity (`769:10428`), V2Frame shell and tokens are reused as measured components.
+
+Mobbin reference (2026-10-11): ~30 wallet screens + 4 payout flows scanned — DoorDash Dasher (Payout methods + Payout history flows), Grab Driver, Uber Eats, BlaBlaCar (Add payout methods, 7 steps), Upwork, Deel (EU contractor IBAN), Turo, Upside (Cashing out to bank account, 7 steps), Vinted. Common skeleton everywhere: Available / Pending -> Cash out CTA -> method (bank/IBAN) -> amount -> review/confirm -> success -> history. Instant card payout exists in US apps only; EU flow is SEPA/IBAN with 1-2 day ETA — that is what we prototype.
+
+Design decisions (Pharos specifics):
+
+1. Available vs Pending split — mirrors customer net-7/14 terms already in the loads (`paidIn: Paid in 7/14 days`): settled trips (NordCargo EUR 360, BelRoute EUR 210) are Available; the newest trip (Cote Fret EUR 290) is Pending with `pending — released when the customer pays`. Dismiss/hide never touches the ledger (separate store slice, covered by test).
+2. SEPA-only payout — one method row: IBAN + optional nickname. Full mod-97 checksum validation, grouped display, masked row (`DE89 .... 3000`). No card, no instant pay — out of scope and stated in the UI.
+3. Prototype policy banner — min EUR 10, 1-2 business days, no fee, `Prototype only — no real money moves` on every screen. Explicitly NOT approved business rules (same status as the cancel-trip ladder).
+4. Cash out flow — amount field with quick chips (50/100/200/Max) + live remainder hint, below-minimum / over-balance inline errors, confirm Sheet with destination + ETA + no-fee, success Alert with `See activity`, withdrawal appended as `processing` ledger line, balance recomputed.
+5. History — unified ledger (trips + withdrawals), newest first, Paid/Pending/Processing states, empty state card. Recent-3 preview on the Balance home with `See all activity` row.
+6. A11y — sr-only h1 per screen, role=status/alert preserved, 48px targets, focus rings inherited. No emoji; lucide-only (`wallet`, `landmark`, `history` added as prototype-led).
+
+Coverage: `pnpm test` 91 passed (83 before: +6 Balance UI, +2 IBAN unit); `pnpm check` passes (token audit + tsc + build, existing wildcard CSS warning only); E2E `e2e/balance.spec.ts` covers method -> cash out -> history in Chrome.
+
+Open questions for the human (do not decide alone): real payout rail/PSP, KYC/verification before first withdrawal, real minimum/fee/ETA, pending-release timing (webhook vs net terms), multi-method support, statement/tax export.
+
+---
+
 ## Account redesign (option A) — same scope, proper iOS design
 
 Routes unchanged: `/v2/account`, `/v2/account/profile`, `/v2/account/profile/edit`, `/v2/account/dismissed`.

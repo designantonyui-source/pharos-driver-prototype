@@ -14,8 +14,10 @@ import {
   CircleX,
   Clock,
   Eye,
+  History,
   Image,
   Info,
+  Landmark,
   LayoutDashboard,
   Languages,
   LoaderCircle,
@@ -33,6 +35,7 @@ import {
   Truck,
   UserRound,
   Users,
+  Wallet,
   X,
 } from 'lucide-react';
 
@@ -60,6 +63,8 @@ import {
  * `bell`, `eye`, `languages`, `mail`, `phone`, `settings`, `shield-check`, `chevron-right`
  * are prototype-led Account additions (same bare-lucide status): menu rows, section icons
  * and navigation chevrons of the new Account proposal.
+ * `wallet`, `landmark`, `history` are prototype-led Balance additions (same bare-lucide
+ * status): the Balance card, the IBAN method row and the ledger history.
  *
  * tokens: size-icon-sm 16 · size-icon-md 20 · size-icon-lg 24
  * colour: never set here — the glyph inherits `currentColor` from its parent
@@ -82,8 +87,10 @@ export const ICONS = {
   'circle-x': CircleX,
   clock: Clock,
   eye: Eye,
+  history: History,
   image: Image,
   info: Info,
+  landmark: Landmark,
   languages: Languages,
   'layout-dashboard': LayoutDashboard,
   loader: LoaderCircle,
@@ -101,6 +108,7 @@ export const ICONS = {
   truck: Truck,
   'user-round': UserRound,
   users: Users,
+  wallet: Wallet,
   x: X,
 } as const;
 

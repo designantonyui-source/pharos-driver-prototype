@@ -6,6 +6,10 @@
 | `/v2/account/profile` | `Account.tsx` (detail) | New proposal, redesigned (option A): back nav + contact card + Edit CTA; no measured screen mapping |
 | `/v2/account/profile/edit` | `Account.tsx` (EditContact) | New prototype-contact-only proposal, redesigned (option A): design-system Inputs + Alerts + skeleton; no auth/OTP |
 | `/v2/account/dismissed` | `src/screens/v2/DismissedLoads.tsx` | New proposal, redesigned (option A): back nav + skeleton/empty/error + Restore/Undo, no measured screen mapping |
+| `/v2/account/balance` | `src/screens/v2/Balance.tsx` (Balance) | New proposal; Available/Pending card + Cash out CTA + method row + recent-3, no measured screen mapping |
+| `/v2/account/balance/method` | `src/screens/v2/Balance.tsx` (PayoutMethodScreen) | New proposal; SEPA IBAN + nickname, mod-97 validation, no measured mapping |
+| `/v2/account/balance/cashout` | `src/screens/v2/Balance.tsx` (CashOut) | New proposal; amount + quick chips + confirm Sheet + success, no measured mapping |
+| `/v2/account/balance/history` | `src/screens/v2/Balance.tsx` (BalanceHistory) | New proposal; unified trip/withdrawal ledger, no measured mapping |
 
 Uses existing tokens, V2Frame, Button and Sheet. See PORT-LOG Account first slice for scope and checks. These entries do not assert Figma fidelity of the proposed layouts.
 

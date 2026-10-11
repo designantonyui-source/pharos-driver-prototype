@@ -5,6 +5,9 @@ import { Home as HomeV2 } from './screens/v2/Home';
 import { ApplicationTracker } from './screens/v2/ApplicationTracker';
 import { TripDetails } from './screens/v2/TripDetails';
 import { DemoToggle } from './components/v2/DemoToggle';
+import { Account, EditContact } from './screens/v2/Account';
+import { DismissedLoads } from './screens/v2/DismissedLoads';
+import { Balance, BalanceHistory, CashOut, PayoutMethodScreen } from './screens/v2/Balance';
 import { V2Soon } from './screens/v2/Soon';
 import { BlHome } from './screens/bl/Home';
 import { BlStart } from './screens/bl/Start';
@@ -35,7 +38,14 @@ export default function App() {
       <Route path="/application/:id" element={<ApplicationTracker />} />
       <Route path="/trip/:id" element={<TripDetails />} />
       <Route path="/v2/trips" element={<V2Soon active="Trips" title="Trips" />} />
-      <Route path="/v2/account" element={<V2Soon active="Account" title="Account" />} />
+      <Route path="/v2/account" element={<Account />} />
+      <Route path="/v2/account/profile" element={<Account detail />} />
+      <Route path="/v2/account/profile/edit" element={<EditContact />} />
+      <Route path="/v2/account/dismissed" element={<DismissedLoads />} />
+      <Route path="/v2/account/balance" element={<Balance />} />
+      <Route path="/v2/account/balance/method" element={<PayoutMethodScreen />} />
+      <Route path="/v2/account/balance/cashout" element={<CashOut />} />
+      <Route path="/v2/account/balance/history" element={<BalanceHistory />} />
       <Route path="/bl" element={<BlHome />} />
       <Route path="/bl/start" element={<BlStart />} />
       <Route path="/bl/search" element={<BlSearch />} />
@@ -50,6 +60,7 @@ export default function App() {
 function Index() {
   const screens = [
     ['/v2', 'NEW · Loads — map-first home (apply in one tap)'],
+    ['/v2/account/balance', 'NEW · Balance — available/pending, cash out, IBAN, history'],
     ['/search', 'Loads — first search (setup)'],
     ['/application/nordcargo', 'Application status tracker'],
     ['/trip/nordcargo', 'Confirmed trip details'],

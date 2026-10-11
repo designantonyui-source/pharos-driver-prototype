@@ -116,6 +116,9 @@ export function Account({ detail = false }: { detail?: boolean }) {
         <MenuRow to="/v2/account/dismissed" icon="eye" title="Dismissed loads" detail={dismissedCount > 0 ? `${dismissedCount} hidden from your feed` : 'Loads you hid from your feed'} badge={dismissedCount} />
         <MenuRow to="/v2" icon="search" title="Find loads" detail="Back to the loads feed" last />
       </AccountSection>
+      <AccountSection label="Earnings">
+        <MenuRow to="/v2/account/balance" icon="wallet" title="Balance" detail="Available, pending, cash out, history" last />
+      </AccountSection>
       <AccountSection label="Profile">
         <MenuRow to="/v2/account/profile" icon="user-round" title="Profile" detail={`${profile.phone || 'No phone'} · ${profile.email || 'No email'}`} />
         <MenuRow to="/v2/account/profile/edit" icon="settings" title="Contact details" detail="Phone and email on this device" last />
