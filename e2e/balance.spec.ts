@@ -51,3 +51,13 @@ test('balance: invoices list, details, PDF and history link', async ({ page }) =
   await page.getByRole('link', { name: /Lille - Brussels.*invoice/ }).click();
   await expect(page.getByText('INV-2026-0042', { exact: false }).first()).toBeVisible();
 });
+
+test('balance: auto-withdraw rule saves and lists runs', async ({ page }) => {
+  await page.goto('/#/v2/account/balance/schedules');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expect(page.getByText('Manual only')).toBeVisible();
+  await page.getByRole('radio', { name: /Every Friday/ }).click();
+  await expect(page.getByText('Rule saved')).toBeVisible();
+  await expect(page.getByText('Export monthly statement (CSV)')).toBeVisible();
+});

@@ -23,13 +23,13 @@
 
 ## 3. Ключевые пути
 - Роуты: `src/App.tsx`, `src/main.tsx`
-- Баланс: `src/screens/v2/Balance.tsx` (Balance, PayoutMethodScreen, CashOut, BalanceHistory, InvoiceList, InvoiceDetails), `src/screens/v2/Balance.test.tsx`, `e2e/balance.spec.ts`
+- Баланс: `src/screens/v2/Balance.tsx` (Balance, PayoutMethodScreen, CashOut, BalanceHistory, InvoiceList, InvoiceDetails, Schedules), `src/screens/v2/Balance.test.tsx`, `e2e/balance.spec.ts (incl. schedules + invoices)`
 - Экраны v2: `src/screens/v2/Home.tsx`, `ApplicationTracker.tsx`, `TripDetails.tsx`, `Account.tsx`, `DismissedLoads.tsx`, `Soon.tsx`
 - Компоненты v2: `src/components/v2/`
 - Общие компоненты: `src/components/Button.tsx`, `Input.tsx`, `Icon.tsx`, `DriverProfile.tsx`
 - Данные: `src/lib/api.ts` (incl. getBalance/getLedger/getPayoutMethod/updatePayoutMethod/requestWithdrawal + PAYOUT_POLICY), `src/lib/store.ts` (ledger + payoutMethod), `src/lib/profile.ts` (IBAN validate/format/mask), `src/lib/v2/loads.ts`
 - Тесты: `*.test.tsx`, `src/lib/*.test.ts`
-- E2E: `e2e/application-flow.spec.ts`, `e2e/account.spec.ts`, `e2e/balance.spec.ts`
+- E2E: `e2e/application-flow.spec.ts`, `e2e/account.spec.ts`, `e2e/balance.spec.ts (incl. schedules + invoices)`
 - Storybook: `*.stories.tsx`
 
 ## 4. Маршруты
@@ -47,6 +47,7 @@
 - `/v2/account/balance/history` — Activity (ledger)
 - `/v2/account/balance/invoices` — Invoices (Awaiting hero, rows, CSV)
 - `/v2/account/balance/invoices/:id` — Invoice details (parties, VAT, PDF, Open trip)
+- `/v2/account/balance/schedules` — Auto-withdraw (rule, destination, runs, statement)
 - `/v2/trips` — заглушка
 - `/search`, `/bl/*` — старый/BL контур
 

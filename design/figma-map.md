@@ -12,6 +12,7 @@
 | `/v2/account/balance/history` | `src/screens/v2/Balance.tsx` (BalanceHistory) | New proposal; unified trip/withdrawal ledger, no measured mapping |
 | `/v2/account/balance/invoices` | `src/screens/v2/Invoices.tsx` (InvoiceList) | New proposal (Wave 2); awaiting hero + rows + CSV, no measured mapping |
 | `/v2/account/balance/invoices/:id` | `src/screens/v2/Invoices.tsx` (InvoiceDetails) | New proposal (Wave 2); parties + VAT + PDF + Open trip, no measured mapping |
+| `/v2/account/balance/schedules` | `src/screens/v2/Schedules.tsx` (Schedules) | New proposal (Wave 3); rule + destination + runs + statement, no measured mapping |
 
 Uses existing tokens, V2Frame, Button and Sheet. See PORT-LOG Account first slice for scope and checks. These entries do not assert Figma fidelity of the proposed layouts.
 

@@ -9,6 +9,7 @@ import { Account, EditContact } from './screens/v2/Account';
 import { DismissedLoads } from './screens/v2/DismissedLoads';
 import { Balance, BalanceHistory, CashOut, PayoutMethodScreen } from './screens/v2/Balance';
 import { InvoiceDetails, InvoiceList } from './screens/v2/Invoices';
+import { Schedules } from './screens/v2/Schedules';
 import { V2Soon } from './screens/v2/Soon';
 import { BlHome } from './screens/bl/Home';
 import { BlStart } from './screens/bl/Start';
@@ -49,6 +50,7 @@ export default function App() {
       <Route path="/v2/account/balance/history" element={<BalanceHistory />} />
       <Route path="/v2/account/balance/invoices" element={<InvoiceList />} />
       <Route path="/v2/account/balance/invoices/:id" element={<InvoiceDetails />} />
+      <Route path="/v2/account/balance/schedules" element={<Schedules />} />
       <Route path="/bl" element={<BlHome />} />
       <Route path="/bl/start" element={<BlStart />} />
       <Route path="/bl/search" element={<BlSearch />} />
@@ -64,6 +66,7 @@ function Index() {
   const screens = [
     ['/v2', 'NEW · Loads — map-first home (apply in one tap)'],
     ['/v2/account/balance', 'NEW · Balance — available/pending, cash out, IBAN, history'],
+    ['/v2/account/balance/schedules', 'NEW · Auto-withdraw — schedules, runs, statement'],
     ['/search', 'Loads — first search (setup)'],
     ['/application/nordcargo', 'Application status tracker'],
     ['/trip/nordcargo', 'Confirmed trip details'],

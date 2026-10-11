@@ -189,4 +189,4 @@ per repo rules (AGENTS.md #3/#8). No wave starts before the human approves it.
 
 | Date | Entry |
 |---|---|
-| 2026-10-11 | Created from Mobbin scan + Balance slice `a8e8206`. IBAN-first rationale, market analysis, 3-wave roadmap, open questions. |
+| 2026-10-11 | Waves 1-3 built: PSP adapter + card/multi-methods (`85162ce`), invoices + PDF/CSV (`154a09a`), schedules + adjustments + statement (this slice). | IBAN-first rationale, market analysis, 3-wave roadmap, open questions. |

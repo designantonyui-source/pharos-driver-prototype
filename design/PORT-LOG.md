@@ -15,6 +15,36 @@ No new tokens. `pnpm test` 91 passed; `pnpm check` passes (token audit + tsc + b
 
 ---
 
+## Wave 3 — payout discipline (schedules, adjustments, statement)
+
+New proposal, not a measured Figma port. Only NavigationBar (586:33), Button (12:38),
+Input (12:166), Alert (575:9632), V2Frame shell and tokens are reused as measured components.
+
+What changed and why:
+
+1. **Schedules** (`payoutSchedule` in store + `Schedules` screen): off / threshold
+   (default EUR 500, editable, min EUR 10) / weekly Friday. Destination picker over
+   saved methods. Rule shape is production-identical — only the runner differs
+   (prototype: evaluated on Balance open; production: server cron/webhook).
+2. **Auto execution** (`evaluateSchedule`): threshold fires at/above the mark,
+   weekly fires once per Friday; both skip unverified methods and below-minimum
+   balances. Each run writes a `ScheduledRun` record + a normal `processing`
+   withdrawal line (provider ref included). Balance shows a success Alert when
+   a run fires on open.
+3. **Adjustments** (explicit ledger kind): dispute / damage / bonus / correction
+   with mandatory note + optional trip link. Positive and negative amounts both
+   flow through `getBalance`. Never a silent edit — the Wave 3 discipline rule.
+   Rendered in History with reason label, note, date and Applied state.
+4. **Accountant export** (`ledgerToCsv`): every ledger line
+   (trips, withdrawals with rail+fee, adjustments with reason) + invoice CSV
+   from Wave 2. Statement button lives next to the schedule rule.
+5. Entry from Balance Documents section (`Auto-withdraw` row) + index link.
+
+Coverage: `pnpm test` 104 passed (was 99: +5 Schedules); `pnpm check` passes;
+E2E covers rule save + runs list in Chrome.
+
+---
+
 ## Wave 2 — invoices (list, details, PDF, CSV)
 
 New proposal, not a measured Figma port. Only NavigationBar (586:33), Button (12:38),

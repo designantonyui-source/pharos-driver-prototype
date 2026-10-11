@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApplicationStatus } from './models';
-import { migrateLegacyMethod, normalizeContactProfile, normalizePayoutMethod, type ContactProfile, type LedgerEntry, type PayoutMethod } from './profile';
+import { migrateLegacyMethod, normalizeContactProfile, normalizePayoutMethod, normalizeSchedule, type ContactProfile, type LedgerEntry, type PayoutMethod, type PayoutSchedule, type ScheduledRun } from './profile';
 
 export type Status = ApplicationStatus;
 
@@ -24,8 +24,12 @@ export type AppState = {
   payoutMethods: PayoutMethod[];
   /** Legacy Wave-0 single method (migrated on read). */
   payoutMethod?: PayoutMethod | { iban: string; label: string };
-  /** Local ledger: paid/pending trips + withdrawals. Prototype-only, never a real balance. */
+  /** Local ledger: paid/pending trips + withdrawals + adjustments. Prototype-only, never a real balance. */
   ledger: LedgerEntry[];
+  /** Auto-withdraw rule (Wave 3). Off by default. */
+  payoutSchedule: PayoutSchedule;
+  /** Record of auto executions (Wave 3, prototype: evaluated on Balance open). */
+  scheduledRuns: ScheduledRun[];
   applications: Record<string, LoadApplication>;
   route: { from: string; to: string };
   loadId: string | null;
@@ -39,6 +43,8 @@ const initial: AppState = {
   contactProfile: { phone: '', email: '' },
   payoutMethods: [],
   ledger: [],
+  payoutSchedule: { mode: 'off' },
+  scheduledRuns: [],
   applications: {},
   route: { from: '', to: '' },
   loadId: null,
@@ -69,6 +75,11 @@ function isLedgerEntry(value: unknown): value is LedgerEntry {
       && (entry.rail === undefined || entry.rail === 'sepa' || entry.rail === 'instant-card')
       && (entry.status === 'processing' || entry.status === 'done');
   }
+  if (entry.kind === 'adjustment') {
+    return typeof entry.id === 'string' && typeof entry.amount === 'number'
+      && (entry.reason === 'dispute' || entry.reason === 'damage' || entry.reason === 'bonus' || entry.reason === 'correction')
+      && typeof entry.note === 'string' && entry.status === 'applied';
+  }
   return false;
 }
 
@@ -97,7 +108,11 @@ function read(): AppState {
       }
     } catch { /* Ignore malformed prototype payout data without losing the journey. */ }
     const ledger = Array.isArray(saved.ledger) ? saved.ledger.filter(isLedgerEntry) : [];
-    return { ...initial, ...saved, applications, status, contactProfile, payoutMethods, payoutMethod: undefined, ledger };
+    const payoutSchedule = normalizeSchedule(saved.payoutSchedule);
+    const scheduledRuns = Array.isArray(saved.scheduledRuns)
+      ? saved.scheduledRuns.filter((r): r is ScheduledRun => typeof r === 'object' && r !== null && typeof (r as ScheduledRun).id === 'string')
+      : [];
+    return { ...initial, ...saved, applications, status, contactProfile, payoutMethods, payoutMethod: undefined, ledger, payoutSchedule, scheduledRuns };
   } catch {
     return initial;
   }
@@ -128,6 +143,9 @@ export const store = {
     else next.payoutMethods = [];
     delete (next as Partial<AppState>).payoutMethod;
     if (!Array.isArray(next.ledger)) next.ledger = [];
+    try { next.payoutSchedule = normalizeSchedule(next.payoutSchedule); }
+    catch { next.payoutSchedule = { mode: 'off' }; }
+    if (!Array.isArray(next.scheduledRuns)) next.scheduledRuns = [];
     localStorage.setItem(KEY, JSON.stringify(next));
     memory = next;
     listeners.forEach((listener) => listener(memory));

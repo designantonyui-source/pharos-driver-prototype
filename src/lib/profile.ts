@@ -10,10 +10,41 @@ export type PayoutMethod =
   | { kind: 'iban'; id: string; iban: string; label: string; isDefault: boolean; verified: boolean }
   | { kind: 'card'; id: string; last4: string; brand: string; label: string; isDefault: boolean; verified: boolean };
 
-/** One ledger line: a paid trip, a pending trip, or a withdrawal. */
+/** One ledger line: a paid trip, a pending trip, a withdrawal, or an adjustment. */
 export type LedgerEntry =
   | { kind: 'trip'; id: string; loadId: string; company: string; from: string; to: string; amount: number; status: 'available' | 'pending'; paidAt: string | null; day: string }
-  | { kind: 'withdrawal'; id: string; amount: number; fee: number; methodLabel: string; rail: 'sepa' | 'instant-card'; status: 'processing' | 'done'; createdAt: string };
+  | { kind: 'withdrawal'; id: string; amount: number; fee: number; methodLabel: string; rail: 'sepa' | 'instant-card'; status: 'processing' | 'done'; createdAt: string }
+  | { kind: 'adjustment'; id: string; amount: number; reason: 'dispute' | 'damage' | 'bonus' | 'correction'; note: string; relatedLoadId: string | null; status: 'applied'; createdAt: string };
+
+/* ---------------- Wave 3: payout schedules ---------------- */
+
+/** Auto-withdraw rule: on a threshold amount, weekly on Friday, or off. */
+export type PayoutSchedule =
+  | { mode: 'off' }
+  | { mode: 'threshold'; threshold: number; methodId: string | null }
+  | { mode: 'weekly'; weekday: 'friday'; methodId: string | null };
+
+/** One scheduled/auto execution record (prototype: evaluated on Balance open). */
+export type ScheduledRun = {
+  id: string;
+  at: string;
+  amount: number;
+  methodLabel: string;
+  trigger: 'threshold' | 'weekly';
+  withdrawalId: string;
+};
+
+export function normalizeSchedule(value: unknown): PayoutSchedule {
+  if (typeof value !== 'object' || value === null) return { mode: 'off' };
+  const v = value as Record<string, unknown>;
+  if (v.mode === 'threshold' && typeof v.threshold === 'number' && v.threshold >= 10) {
+    return { mode: 'threshold', threshold: Math.round(v.threshold * 100) / 100, methodId: typeof v.methodId === 'string' ? v.methodId : null };
+  }
+  if (v.mode === 'weekly') {
+    return { mode: 'weekly', weekday: 'friday', methodId: typeof v.methodId === 'string' ? v.methodId : null };
+  }
+  return { mode: 'off' };
+}
 
 const IBAN_COMPACT = /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/;
 

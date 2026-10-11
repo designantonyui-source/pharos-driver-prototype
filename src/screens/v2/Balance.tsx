@@ -22,7 +22,7 @@ import { V2BackBar } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { Sheet } from '../../components/v2/Sheet';
 import {
-  PAYOUT_POLICY, addCardMethod, addIbanMethod, detectCardBrand, formatCardExpiry,
+  PAYOUT_POLICY, addCardMethod, addIbanMethod, adjustmentLabel, detectCardBrand, evaluateSchedule, formatCardExpiry,
   formatCardNumber, getBalance, getLedger, getPayoutMethods, maskCard,
   maskIban, methodLabel, payoutProvider, quoteFor, removeMethod, requestWithdrawal,
   setDefaultMethod, tokeniseCard, validateCardCvc, validateCardExpiry,
@@ -106,16 +106,30 @@ export function LedgerLine({ entry, last = false, invoiceId }: { entry: LedgerEn
       ? <Link to={`/v2/account/balance/invoices/${invoiceId}`} className={`${cls} focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] focus-visible:-outline-offset-2`}>{inner}<Icon name="chevron-right" size="sm" className="shrink-0 text-[var(--color-text-tertiary)]" /></Link>
       : <div className={cls}>{inner}</div>;
   }
-  const railNote = entry.rail === 'instant-card' ? 'instant' : PAYOUT_POLICY.eta;
+  if (entry.kind === 'withdrawal') {
+    const railNote = entry.rail === 'instant-card' ? 'instant' : PAYOUT_POLICY.eta;
+    return <div className={`flex min-h-[var(--size-control-mobile)] items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${border}`}>
+      <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="landmark" size="md" /></span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="truncate text-body-14 text-[var(--color-text-primary)]">Cash out to {entry.methodLabel}</span>
+        <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{new Date(entry.createdAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })} - {railNote}{entry.fee > 0 ? ` - fee ${formatEuro(entry.fee)}` : ''}</span>
+      </span>
+      <span className="flex shrink-0 flex-col items-end">
+        <span className="text-body-14 text-[var(--color-text-primary)]">-{formatEuro(entry.amount)}</span>
+        <span className="text-caption-12 text-[var(--color-text-secondary)]">{entry.status === 'processing' ? 'Processing' : 'Done'}</span>
+      </span>
+    </div>;
+  }
+  const negative = entry.amount < 0;
   return <div className={`flex min-h-[var(--size-control-mobile)] items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${border}`}>
-    <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="landmark" size="md" /></span>
+    <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="triangle-alert" size="md" /></span>
     <span className="flex min-w-0 flex-1 flex-col">
-      <span className="truncate text-body-14 text-[var(--color-text-primary)]">Cash out to {entry.methodLabel}</span>
-      <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{new Date(entry.createdAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })} - {railNote}{entry.fee > 0 ? ` - fee ${formatEuro(entry.fee)}` : ''}</span>
+      <span className="truncate text-body-14 text-[var(--color-text-primary)]">{adjustmentLabel(entry.reason)}</span>
+      <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{entry.note} - {new Date(entry.createdAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })}</span>
     </span>
     <span className="flex shrink-0 flex-col items-end">
-      <span className="text-body-14 text-[var(--color-text-primary)]">-{formatEuro(entry.amount)}</span>
-      <span className="text-caption-12 text-[var(--color-text-secondary)]">{entry.status === 'processing' ? 'Processing' : 'Done'}</span>
+      <span className={`text-body-14 ${negative ? 'text-[var(--color-text-danger)]' : 'text-[var(--color-status-success-text)]'}`}>{negative ? '-' : '+'}{formatEuro(Math.abs(entry.amount))}</span>
+      <span className="text-caption-12 text-[var(--color-text-secondary)]">Applied</span>
     </span>
   </div>;
 }
@@ -124,20 +138,29 @@ export function Balance() {
   const [summary, setSummary] = useState<BalanceSummary | null>(null);
   const [methods, setMethods] = useState<PayoutMethod[] | null>(null);
   const [recent, setRecent] = useState<LedgerEntry[] | null>(null);
+  const [autoRan, setAutoRan] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const navigate = useNavigate();
   useEffect(() => {
     let live = true;
     setError(false);
-    Promise.all([getBalance(), getPayoutMethods(), getLedger()])
-      .then(([balance, payoutMethods, ledger]) => {
+    // Prototype scheduler tick: evaluates the auto-withdraw rule on open
+    // (production: server cron). Refreshes the balance when a run fires.
+    evaluateSchedule()
+      .then(run => { if (live && run) setAutoRan(`Auto-withdraw ${formatEuro(run.amount)} to ${run.methodLabel} is on its way.`); })
+      .catch(() => {})
+      .finally(() => {
         if (!live) return;
-        setSummary(balance);
-        setMethods(payoutMethods);
-        setRecent(ledger.slice(-3).reverse());
-      })
-      .catch(() => { if (live) setError(true); });
+        Promise.all([getBalance(), getPayoutMethods(), getLedger()])
+          .then(([balance, payoutMethods, ledger]) => {
+            if (!live) return;
+            setSummary(balance);
+            setMethods(payoutMethods);
+            setRecent(ledger.slice(-3).reverse());
+          })
+          .catch(() => { if (live) setError(true); });
+      });
     return () => { live = false; };
   }, [attempt]);
   if (error || !summary || !methods || !recent) {
@@ -146,6 +169,7 @@ export function Balance() {
   const def = methods.find(m => m.isDefault) ?? methods[0];
   const hasMethod = !!def;
   return <BalanceFrame title="Balance">
+    {autoRan && <div className="mt-[var(--spacing-8)]" role="status"><Alert type="success" title="Scheduled withdrawal ran">{autoRan}</Alert></div>}
     <div className="mt-[var(--spacing-8)] rounded-[var(--radius-md)] bg-[var(--color-nav-bg)] p-[var(--spacing-16)] text-[var(--color-nav-text)]">
       <div className="flex items-center gap-[var(--spacing-8)] text-caption-12 uppercase tracking-wide opacity-80">
         <Icon name="wallet" size="sm" />
@@ -171,7 +195,8 @@ export function Balance() {
           <RowLink to="/v2/account/balance/history" icon="history" title="See all activity" detail="Trips and withdrawals" last /></>}
     </Section>
     <Section label="Documents">
-      <RowLink to="/v2/account/balance/invoices" icon="history" title="Invoices" detail="Per-trip paperwork with VAT, PDF export" last />
+      <RowLink to="/v2/account/balance/invoices" icon="history" title="Invoices" detail="Per-trip paperwork with VAT, PDF export" />
+      <RowLink to="/v2/account/balance/schedules" icon="clock" title="Auto-withdraw" detail="Schedules, runs, accountant export" last />
     </Section>
     <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Prototype only - no real money moves. Provider: {payoutProvider.name}.</p>
   </BalanceFrame>;

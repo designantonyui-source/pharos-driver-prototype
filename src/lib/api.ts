@@ -11,8 +11,10 @@ import { store, type LoadApplication, type Status } from './store';
 import { V2_LOADS, type V2Load } from './v2/loads';
 import { BL_ORDERS, type BlOrder } from './bl/logic';
 
-import { maskCard, maskIban, normalizeContactProfile, normalizePayoutMethod, type ContactProfile, type LedgerEntry, type PayoutMethod } from './profile';
+import { maskCard, maskIban, normalizeContactProfile, normalizePayoutMethod, normalizeSchedule, type ContactProfile, type LedgerEntry, type PayoutMethod, type PayoutSchedule, type ScheduledRun } from './profile';
 import { MockPayoutProvider, PROTOTYPE_FEES, type Destination, type PayoutProvider, type PayoutQuote } from './psp';
+export { normalizeSchedule } from './profile';
+export type { PayoutSchedule, ScheduledRun } from './profile';
 export { validatePhone, validateEmail, validateIban, formatIban, maskIban } from './profile';
 export {
   validateCardNumber, detectCardBrand, formatCardNumber, formatCardExpiry,
@@ -58,7 +60,7 @@ function ensureLedger(): LedgerEntry[] {
 
 export type BalanceSummary = { available: number; pending: number; currency: 'EUR' };
 
-/** Available = settled trips minus withdrawals; pending = unsettled trips. */
+/** Available = settled trips ± adjustments minus withdrawals; pending = unsettled trips. */
 export async function getBalance(): Promise<BalanceSummary> {
   await wait(250);
   const ledger = ensureLedger();
@@ -70,6 +72,8 @@ export async function getBalance(): Promise<BalanceSummary> {
       else pending += entry.amount;
     } else if (entry.kind === 'withdrawal') {
       available -= entry.amount + entry.fee;
+    } else if (entry.kind === 'adjustment') {
+      available += entry.amount;
     }
   }
   return { available: Math.max(0, available), pending, currency: 'EUR' };
@@ -177,6 +181,125 @@ export function methodDestination(method: PayoutMethod): Destination {
 
 export function quoteFor(method: PayoutMethod, amount: number): PayoutQuote {
   return payoutProvider.quote(method.kind === 'card' ? 'instant-card' : 'sepa', amount);
+}
+
+/* ---------------- Wave 3: schedules, adjustments, export ---------------- */
+
+export async function getSchedule(): Promise<PayoutSchedule> {
+  return normalizeSchedule(store.get().payoutSchedule);
+}
+
+export async function updateSchedule(schedule: PayoutSchedule): Promise<PayoutSchedule> {
+  await wait(200);
+  const normalized = normalizeSchedule(schedule);
+  if (normalized.mode !== 'off' && normalized.methodId) {
+    const known = store.get().payoutMethods.some(m => m.id === normalized.methodId);
+    if (!known) throw new Error('Unknown payout method');
+  }
+  store.set({ payoutSchedule: normalized });
+  return getSchedule();
+}
+
+export async function getScheduledRuns(): Promise<ScheduledRun[]> {
+  return [...store.get().scheduledRuns].reverse();
+}
+
+/**
+ * Prototype scheduler evaluation: runs on Balance open (production: cron/webhook).
+ * Threshold: fires when available >= threshold (once per threshold crossing —
+ * re-arms when the balance drops below and rises again is out of scope).
+ * Weekly: fires when a Friday passed since the last weekly run.
+ * Returns the executed run, or null when nothing was due.
+ */
+export async function evaluateSchedule(now = new Date()): Promise<ScheduledRun | null> {
+  const schedule = await getSchedule();
+  if (schedule.mode === 'off') return null;
+  const methods = await getPayoutMethods();
+  const method = (schedule.methodId ? methods.find(m => m.id === schedule.methodId) : methods.find(m => m.isDefault) ?? methods[0]) ?? null;
+  if (!method || !method.verified) return null;
+  const { available } = await getBalance();
+  let due: 'threshold' | 'weekly' | null = null;
+  if (schedule.mode === 'threshold') {
+    if (available < Math.max(schedule.threshold, PAYOUT_POLICY.minWithdrawal)) return null;
+    due = 'threshold';
+  } else {
+    const runs = await getScheduledRuns();
+    const lastWeekly = runs.find(r => r.trigger === 'weekly');
+    const lastFriday = lastFridayBefore(now);
+    if (lastWeekly && new Date(lastWeekly.at) >= lastFriday) return null;
+    if (available < PAYOUT_POLICY.minWithdrawal) return null;
+    due = 'weekly';
+  }
+  if (!due) return null;
+  const amount = Math.floor(available * 100) / 100;
+  const { entry } = await requestWithdrawal(amount, method.id);
+  const run: ScheduledRun = {
+    id: `run-${Date.now().toString(36)}`,
+    at: new Date().toISOString(),
+    amount,
+    methodLabel: method.label || methodLabel(method),
+    trigger: due,
+    withdrawalId: entry.id,
+  };
+  store.set({ scheduledRuns: [...store.get().scheduledRuns, run] });
+  return run;
+}
+
+function lastFridayBefore(now: Date): Date {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  // Friday = 5. If today is Friday, the due Friday is today (runs once per day max).
+  const delta = (d.getDay() - 5 + 7) % 7;
+  d.setDate(d.getDate() - delta);
+  return d;
+}
+
+export type AdjustmentReason = 'dispute' | 'damage' | 'bonus' | 'correction';
+
+const ADJUSTMENT_LABEL: Record<AdjustmentReason, string> = {
+  dispute: 'Dispute hold',
+  damage: 'Damage claim',
+  bonus: 'Bonus',
+  correction: 'Correction',
+};
+
+/** Explicit ledger correction — never a silent balance edit (Wave 3 discipline). */
+export async function addAdjustment(input: { amount: number; reason: AdjustmentReason; note: string; relatedLoadId?: string | null }) {
+  await wait(200);
+  const rounded = Math.round(input.amount * 100) / 100;
+  if (!Number.isFinite(rounded) || rounded === 0) throw new Error('Enter a non-zero amount.');
+  if (!input.note.trim()) throw new Error('Add a note explaining the adjustment.');
+  const entry: LedgerEntry = {
+    kind: 'adjustment',
+    id: `adj-${Date.now().toString(36)}`,
+    amount: rounded,
+    reason: input.reason,
+    note: input.note.trim(),
+    relatedLoadId: input.relatedLoadId ?? null,
+    status: 'applied',
+    createdAt: new Date().toISOString(),
+  };
+  store.set({ ledger: [...store.get().ledger, entry] });
+  return entry;
+}
+
+export function adjustmentLabel(reason: AdjustmentReason): string {
+  return ADJUSTMENT_LABEL[reason];
+}
+
+/** Monthly statement CSV: every ledger line + running available (for the accountant). */
+export function ledgerToCsv(ledger: LedgerEntry[]): string {
+  const head = 'date,kind,detail,amount_eur,fee_eur,status';
+  const rows = [...ledger].reverse().map(e => {
+    if (e.kind === 'trip') {
+      return [e.paidAt ? e.paidAt.slice(0, 10) : e.day, 'trip', `"${e.from} - ${e.to} (${e.company})"`, e.amount.toFixed(2), '0.00', e.status].join(',');
+    }
+    if (e.kind === 'withdrawal') {
+      return [e.createdAt.slice(0, 10), 'withdrawal', `"Cash out to ${e.methodLabel} (${e.rail})"`, (-e.amount).toFixed(2), e.fee.toFixed(2), e.status].join(',');
+    }
+    return [e.createdAt.slice(0, 10), `adjustment:${e.reason}`, `"${e.note.replace(/"/g, '""')}"`, e.amount.toFixed(2), '0.00', e.status].join(',');
+  });
+  return [head, ...rows].join('\n');
 }
 
 export class PayoutError extends Error {
