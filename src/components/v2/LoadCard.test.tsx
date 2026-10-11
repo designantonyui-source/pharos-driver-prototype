@@ -58,17 +58,18 @@ describe('LoadCard states', () => {
     expect(screen.getByRole('button', { name: `Hide load ${load.id}. You can restore it later.` })).toBeVisible();
   });
 
-  it('route is the second anchor after the rate, facts split decision and trust', () => {
+  it('route is a vertical timeline above the rate, facts split decision and trust', () => {
     const { container } = render(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
     const route = screen.getByRole('button', { name: 'Lille, France to Brussels, Belgium. Open details.' });
-    expect(route).toHaveClass('text-heading-20');
+    expect(route).toHaveTextContent(load.from);
+    expect(route).toHaveTextContent(load.to);
     expect(route).not.toHaveTextContent('FR → BE');
-    const facts = screen.getByLabelText(/km loaded, .* minutes to pickup/);
-    expect(facts.tagName).toBe('DIV');
-    const lines = facts.querySelectorAll('p');
-    expect(lines.length).toBe(2);
-    expect(lines[0]).toHaveClass('text-body-14');
-    expect(lines[1]).toHaveClass('text-body-14');
+    expect(screen.getByText(`€${load.perKm.toFixed(2)}/km`)).toBeVisible();
+    expect(screen.getByText(`Pickup · ${load.pickupKm} km away`)).toBeVisible();
+    expect(screen.getByText(`Drop-off · ${load.km} km`)).toBeVisible();
+    expect(screen.getByText(`€${load.rate}`)).toBeVisible();
+    expect(screen.getByText(load.window)).toBeVisible();
+    expect(screen.getByText('Today 14:00–15:00, 111 km loaded, 18 km 25 minutes to pickup')).toBeInTheDocument();
     const trust = container.querySelector('article > p.text-label-14');
     expect(trust).toBeVisible();
     expect(screen.getByText('NordCargo')).toHaveClass('font-semibold');
@@ -92,12 +93,12 @@ describe('LoadCard states', () => {
 
   it('far pickup reads semibold warning, near pickup semibold success, mid stays plain', () => {
     const { rerender } = render(<MemoryRouter><LoadCard load={{ ...V2_LOADS[1], onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
-    expect(screen.getByLabelText('Today 16:00–17:00, 68 km loaded, 42 km 45 minutes to pickup')).toBeVisible();
-    const far = screen.getByText('42 km').closest('p');
+    expect(screen.getByText('Today 16:00–17:00, 68 km loaded, 42 km 45 minutes to pickup')).toBeInTheDocument();
+    const far = screen.getByText('Pickup · 42 km away');
     expect(far).toHaveClass('font-semibold');
     expect(far?.className).toMatch(/status-warning-text/);
     rerender(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
-    const near = screen.getByText('18 km').closest('p');
+    const near = screen.getByText('Pickup · 18 km away');
     expect(near).toHaveClass('font-semibold');
     expect(near?.className).toMatch(/status-success-text/);
   });

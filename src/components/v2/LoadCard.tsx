@@ -14,9 +14,13 @@ import { LoadCta } from './LoadCta';
  *
  * Header row: state badge left, booked countdown right (Pickup in X after confirm) — no
  * decide timer; hiding is a left swipe (iOS mail pattern, 88px Hide), no text button.
- * Route carries EU country codes (Lille FR → Brussels BE); cross-border is a
- * quiet trust-line suffix, not a pill. Facts split decision (body-14: day+window+
- * deadhead, ≥40km warning) vs trust (label-14: Company semibold + rating + Verified + paid).
+ * Route is a vertical timeline (Sleek reference Driver Freight Loads Feed): origin dot,
+ * hairline, destination ring; each city is heading-20 with a caption-12 subline
+ * (Pickup · N km away / Drop-off · N km). The €/km chip rides top-right in the
+ * success pair, price is metric-28 with a vehicle subline, the window is an info
+ * time pill — facts stay in sr-only for assistive tech, trust keeps the Company
+ * semibold + rating + Verified + paid line.
+ * Cross-border (FR → BE) stays a quiet trust-line suffix, not a pill.
  *
  * Application state is carried by ONE palette, `color-status-*`: the pill takes the `-bg`/`-text`
  * pair. The former `color-load-state-*` group was a second, off-Figma palette for the same five
@@ -185,25 +189,38 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
         {state === 'booked' && <PickupCountdownMemo pickupTime={pickupTime} />}
       </div>
       ) : null}
-      <p className="flex items-baseline gap-[8px]">
-        <span className="text-metric-28 text-[var(--color-offer-text-price)]">€{load.rate}</span>
-        <span className="text-label-14 text-[var(--color-text-secondary)]">€{load.perKm.toFixed(2)}/km</span>
-      </p>
-      <button type="button" onClick={open} aria-label={routeAriaLabel(load.from, load.to)} className="flex min-h-[44px] items-center gap-[8px] text-left text-heading-20 text-[var(--color-text-primary)]">
-        <span className="truncate">{load.from} <span className="text-caption-12 font-normal text-[var(--color-text-tertiary)]">{countryForCity(load.from)}</span></span><Icon name="arrow-right" size="md" /><span className="truncate">{load.to} <span className="text-caption-12 font-normal text-[var(--color-text-tertiary)]">{countryForCity(load.to)}</span></span>
+      <button type="button" onClick={open} aria-label={routeAriaLabel(load.from, load.to)} className="flex min-w-0 items-start justify-between gap-[12px] text-left">
+        <span className="flex min-w-0 items-stretch gap-[12px]">
+          <span className="flex shrink-0 flex-col items-center" aria-hidden="true">
+            <span className="mt-[6px] h-[10px] w-[10px] rounded-full bg-[var(--color-action-primary)]" />
+            <span className="w-px flex-1 bg-[var(--color-border-default)]" />
+            <span className="mb-[6px] h-[10px] w-[10px] rounded-full border-2 border-[var(--color-action-primary)] bg-[var(--color-bg-surface)]" />
+          </span>
+          <span className="flex min-w-0 flex-col gap-[10px]">
+            <span className="flex min-w-0 flex-col">
+              <span className="text-heading-20 truncate text-[var(--color-text-primary)]">{load.from}</span>
+              <span className={`text-caption-12 truncate ${pickupTone}`}>Pickup · {load.pickupKm} km away</span>
+            </span>
+            <span className="flex min-w-0 flex-col">
+              <span className="text-heading-20 truncate text-[var(--color-text-primary)]">{load.to}</span>
+              <span className="text-caption-12 truncate text-[var(--color-text-secondary)]">Drop-off · {load.km} km</span>
+            </span>
+          </span>
+        </span>
+        <span className="shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-status-success-bg)] px-[10px] py-[4px] text-label-14 text-[var(--color-status-success-text)]" aria-hidden="true">
+          €{load.perKm.toFixed(2)}/km
+        </span>
       </button>
-      <div role="group" aria-label={`${load.day === 'today' ? 'Today' : 'Tomorrow'} ${load.window}, ${load.km} km loaded, ${load.pickupKm} km ${load.pickupMin} minutes to pickup`} className="flex flex-col gap-[2px]">
-        <p aria-hidden="true" className="flex flex-wrap items-center gap-x-[6px] text-body-14 text-[var(--color-text-primary)]">
-          <span className="whitespace-nowrap">{load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window}</span>
-          <span aria-hidden="true" className="text-[var(--color-text-tertiary)]">·</span>
-          <span className="whitespace-nowrap">{load.km} km loaded</span>
-        </p>
-        <p aria-hidden="true" className={`flex flex-wrap items-center gap-x-[6px] text-body-14 ${pickupTone}`}>
-          <span className="inline-flex items-center gap-[4px] whitespace-nowrap"><Icon name="map-pin" size={14} />{load.pickupKm} km</span>
-          <span aria-hidden="true" className="font-normal">·</span>
-          <span className="whitespace-nowrap">{load.pickupMin} min to pickup</span>
-        </p>
-      </div>
+      <p className="flex flex-wrap items-end justify-between gap-[8px]">
+        <span className="flex min-w-0 flex-col">
+          <span className="text-metric-28 text-[var(--color-text-primary)]">€{load.rate}</span>
+          <span className="text-caption-12 truncate text-[var(--color-text-secondary)]">{load.vehicle.split('·')[0].trim()} · {(load.km * 0.06).toFixed(1)} t</span>
+        </span>
+        <span className="inline-flex shrink-0 items-center gap-[4px] rounded-[var(--radius-pill)] bg-[var(--color-status-info-bg)] px-[10px] py-[6px] text-label-14 text-[var(--color-status-info-text)]">
+          <Icon name="clock" size={14} />{load.window}
+        </span>
+      </p>
+      <p className="sr-only">{load.day === 'today' ? 'Today' : 'Tomorrow'} {load.window}, {load.km} km loaded, {load.pickupKm} km {load.pickupMin} minutes to pickup</p>
       <p className="flex items-center gap-[4px] overflow-hidden whitespace-nowrap text-label-14 text-[var(--color-text-primary)]" aria-label={`${load.company}, rating ${load.rating.toFixed(1)}, verified, ${load.paidIn}${cross ? ', cross-border' : ''}`}>
         <span className="shrink-0 font-semibold">{load.company}</span>
         <span aria-hidden="true" className="shrink-0 font-normal text-[var(--color-text-secondary)]"> · <span className="inline-flex items-center gap-[2px]"><Icon name="star" size={12} />{load.rating.toFixed(1)}</span> Verified · {load.paidIn}</span>
