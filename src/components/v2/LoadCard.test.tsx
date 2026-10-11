@@ -48,6 +48,25 @@ describe('LoadCard states', () => {
     expect(screen.queryByText('On your route')).not.toBeInTheDocument();
   });
 
+  it('badge sits left and dismiss sits right in one header row', () => {
+    store.set({ loadId: load.id, status: ApplicationStatus.CANCELLED });
+    const { container } = render(<MemoryRouter><LoadCard load={load} onOpen={() => undefined} onDismiss={() => undefined} /></MemoryRouter>);
+    const header = container.querySelector('article > div');
+    expect(header).toHaveClass('justify-between');
+    const badge = screen.getByText('Cancelled by you', { exact: true });
+    const dismiss = screen.getByRole('button', { name: /Not interested/ });
+    expect(header!.contains(badge)).toBe(true);
+    expect(header!.contains(dismiss)).toBe(true);
+    expect(badge.compareDocumentPosition(dismiss) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('omits the header row when there is no badge and no dismiss', () => {
+    const { container } = render(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Not interested/ })).not.toBeInTheDocument();
+    expect(container.querySelector('article > div.justify-between')).toBeNull();
+  });
+
   it('updates the booked countdown every minute and clears the timer', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-10-10T12:00:00Z'));

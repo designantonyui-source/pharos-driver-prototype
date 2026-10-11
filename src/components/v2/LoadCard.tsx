@@ -88,6 +88,9 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
         : state === 'cancelled' ? { icon: 'x', label: 'Cancelled by you' }
           : (load.onRoute ?? isOnRoute) ? { icon: null, label: 'On your route' } : null;
 
+  const canDismiss = !!onDismiss && (state === 'available' || state === 'cancelled' || state === 'rejected');
+  const showHeader = badge || canDismiss;
+
   function open() {
     if (state === 'booked' || state === 'rejected' || state === 'pending') {
       if (application) store.set(application);
@@ -99,12 +102,13 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
     <article aria-label={`Load ${load.id}`} data-state={state}
       onClick={(event) => { if (!(event.target as HTMLElement).closest('button, a')) open(); }}
       className={`flex w-full cursor-pointer flex-col gap-[8px] rounded-[var(--radius-lg)] border border-[var(--color-offer-border)] p-[12px] shadow-[var(--shadow-card)] ${styles.container}`}>
-      <div className="flex items-start justify-end gap-[8px]">
-        {badge && <span role="status" className={`flex items-center gap-[4px] rounded-[var(--radius-pill)] px-[8px] py-[4px] text-label-12 ${styles.badge}`}>{badge.icon && <Icon name={badge.icon} size={12} />}{badge.label}</span>}
-        {onDismiss && (state === 'available' || state === 'cancelled' || state === 'rejected') && (
+      {showHeader ? (
+      <div className="flex min-h-[44px] items-center justify-between gap-[8px]">
+        {badge ? <span role="status" className={`flex items-center gap-[4px] rounded-[var(--radius-pill)] px-[8px] py-[4px] text-label-12 ${styles.badge}`}>{badge.icon && <Icon name={badge.icon} size={12} />}{badge.label}</span> : <span />}
+        {canDismiss && (
           <button
             type="button"
-            onClick={(event) => { event.stopPropagation(); onDismiss(load); }}
+            onClick={(event) => { event.stopPropagation(); onDismiss!(load); }}
             aria-label={`Not interested in load ${load.id}. Activate to hide it.`}
             className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full text-[var(--color-text-secondary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
           >
@@ -112,6 +116,7 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
           </button>
         )}
       </div>
+      ) : null}
       <p className="flex items-baseline gap-[8px]">
         <span className="text-metric-28 text-[var(--color-offer-text-price)]">€{load.rate}</span>
         <span className="text-label-14 text-[var(--color-text-secondary)]">€{load.perKm.toFixed(2)}/km</span>
