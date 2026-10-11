@@ -156,3 +156,13 @@ it('dismisses only dismissed feed entries and never touches the ledger', async (
   await screen.findByText('Available balance');
   expect((await api.getBalance()).available).toBeCloseTo(570, 2);
 });
+
+it('shows a row-shaped loading skeleton and an empty method illustration', async () => {
+  vi.spyOn(api, 'getPayoutMethods').mockImplementationOnce(() => new Promise(() => {}));
+  setup('/v2/account/balance/method');
+  expect(await screen.findByLabelText('Loading payout methods')).toBeTruthy();
+  cleanup(); router?.dispose(); vi.restoreAllMocks(); store.reset();
+  setup('/v2/account/balance/method');
+  await screen.findByText('Add method');
+  expect(screen.getByText('No payout methods yet')).toBeTruthy();
+});

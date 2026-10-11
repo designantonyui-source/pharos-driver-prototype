@@ -72,3 +72,10 @@ it('exports the full statement CSV for the accountant', async () => {
   expect(csv.split('\n')[0]).toBe('date,kind,detail,amount_eur,fee_eur,status');
   expect(csv).toContain('trip');
 });
+
+it('explains the empty auto-runs state before the first run', async () => {
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank' });
+  setup();
+  await screen.findByText('Export monthly statement (CSV)');
+  expect(screen.getByText(/No auto runs yet/)).toBeTruthy();
+});

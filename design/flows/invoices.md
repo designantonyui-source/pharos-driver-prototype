@@ -10,7 +10,8 @@
 - PDF без зависимостей: self-contained A4 print window (своя ink-on-paper таблица, не app-токены), Save-as-PDF через драйвер; VAT-математика точная, текст selectable, без jsPDF.
 - VAT: intra-EU B2B 0% reverse charge (Art. 196) — прототипный дефолт, НЕ утверждённая схема (§7 в `PAYMENTS-VISION.md`).
 - Связки: Documents → invoices; History trip rows → свой инвойс (chevron + note); invoice → trip (Open trip).
-- Проверки: `pnpm test` 104/104 (+4 Invoices в Wave 2), `pnpm check` чистый; e2e list → details → PDF popup → history link (Chrome).
+- Состояния: row-скелетоны (shared shape), empty «No invoices yet» уже был.
+- Проверки: `pnpm test` 106/106, `pnpm check` чистый; e2e list → details → PDF popup → history link (Chrome).
 
 ## История
 

@@ -11,9 +11,12 @@
 - Adjustments: отдельный kind (dispute/damage/bonus/correction) + обязательная note + опц. trip link; ± суммы через `getBalance`. Никогда silent edit. В History: reason + note + date + Applied.
 - Экспорт: `ledgerToCsv` (трипы + выводы с rail/fee + adjustments с reason) + invoice CSV из Wave 2. Кнопка рядом с правилом. Вход: Documents → `Auto-withdraw`.
 - Уведомления: `Rule saved` → `Toast` сверху (см. `flows/account-ux.md`); скриншот-урок: тост снизу перекрывал кнопку экспорта — больше не внизу.
-- Проверки: `pnpm test` 104/104 (+5 Schedules в Wave 3), `pnpm check` чистый.
+- Состояния: row-скелетоны (shared shape), empty runs «No auto runs yet — turn on a rule above».
+- Проверки: `pnpm test` 106/106, `pnpm check` чистый.
 
 ## История
+
+- **2026-10-11, A. Дисциплина состояний:** см. `flows/balance.md` (скелетоны + empty runs).
 
 - **2026-10-11, Wave 3** (`7b45c42`): schedules + adjustments + statement export. Тесты 104 (было 99).
 - Открытые решения (§7): pending-release, валюты, tax export.

@@ -11,6 +11,10 @@
  * rail picker (SEPA free / card instant), multi-method IBAN + card rows with
  * verifying states, ledger history. Policy is a prototype placeholder -
  * NOT approved business rules (see design/PAYMENTS-VISION.md).
+ *
+ * State discipline (A.1): loading = row skeletons shaped like the rows that follow
+ * (StatusBlock, shared shape with Schedules/Invoices); error = inline Alert + Retry;
+ * empty = icon + headline + one-sentence explainer, never a bare row.
  */
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -69,14 +73,28 @@ function RowLink({ to, icon, title, detail, last = false }: { to: string; icon: 
   </Link>;
 }
 
-function StatusBlock({ error, retry, label }: { error: boolean; retry: () => void; label: string }) {
+function StatusBlock({ error, retry, label, rows = 3 }: { error: boolean; retry: () => void; label: string; rows?: number }) {
   if (error) {
     return <div className="mt-[var(--spacing-16)]"><Alert type="error" title={`Could not load ${label}`}>Check your connection and try again.<span className="mt-[var(--spacing-8)] block"><Button label="Retry" appearance="secondary" onClick={retry} /></span></Alert></div>;
   }
   return <div className="mt-[var(--spacing-8)] flex flex-col gap-[var(--spacing-12)]" role="status" aria-label={`Loading ${label}`}>
-    <div className="h-[140px] animate-pulse rounded-[var(--radius-md)] bg-[var(--color-bg-surface)]" />
-    <div className="h-[96px] animate-pulse rounded-[var(--radius-md)] bg-[var(--color-bg-surface)]" />
+    {Array.from({ length: rows }).map((_, i) => <div key={i} aria-hidden className="flex min-h-[var(--size-control-mobile)] items-center gap-[var(--spacing-12)] rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] px-[var(--spacing-12)] py-[var(--spacing-8)]">
+      <span className="h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)]" />
+      <span className="flex min-w-0 flex-1 flex-col gap-[var(--spacing-4)]">
+        <span className="h-[14px] w-2/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)]" />
+        <span className="h-[12px] w-1/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)]" />
+      </span>
+      <span className="h-[14px] w-[64px] shrink-0 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)]" />
+    </div>)}
     <span className="sr-only">Loading {label}...</span>
+  </div>;
+}
+
+function EmptyState({ icon, title, body }: { icon: IconName; title: string; body: string }) {
+  return <div className="mt-[var(--spacing-16)] flex flex-col items-center gap-[var(--spacing-8)] rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] px-[var(--spacing-16)] py-[var(--spacing-24)] text-center">
+    <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name={icon} size="md" /></span>
+    <p className="text-heading-14 text-[var(--color-text-primary)]">{title}</p>
+    <p className="text-body-14 text-[var(--color-text-secondary)]">{body}</p>
   </div>;
 }
 
@@ -191,7 +209,11 @@ export function Balance() {
           {methods.length > 2 && <RowLink to="/v2/account/balance/method" icon="landmark" title={`See all ${methods.length} methods`} detail="Change default, remove" last />}</>}
     </Section>
     <Section label="Recent activity">
-      {recent.length === 0 ? <p className="px-[var(--spacing-12)] py-[var(--spacing-16)] text-body-14 text-[var(--color-text-secondary)]">No activity yet - completed trips will show here.</p>
+      {recent.length === 0 ? <div className="flex flex-col items-center gap-[var(--spacing-8)] px-[var(--spacing-16)] py-[var(--spacing-24)] text-center">
+        <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="history" size="md" /></span>
+        <p className="text-heading-14 text-[var(--color-text-primary)]">No activity yet</p>
+        <p className="text-body-14 text-[var(--color-text-secondary)]">Completed trips will show here.</p>
+      </div>
         : <>{recent.map(entry => <LedgerLine key={entry.id} entry={entry} />)}
           <RowLink to="/v2/account/balance/history" icon="history" title="See all activity" detail="Trips and withdrawals" last /></>}
     </Section>
@@ -287,7 +309,9 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
     setMethods(await removeMethod(id));
   }
   return <BalanceFrame title="Payout methods" backTo="/v2/account/balance">
-    {methods.length > 0 && <Section label={`${methods.length} saved`} scrollable={methods.length > 3}>
+    {methods.length === 0
+      ? <EmptyState icon="landmark" title="No payout methods yet" body="Add your IBAN for free SEPA transfers or a card for instant payouts." />
+      : <Section label={`${methods.length} saved`} scrollable={methods.length > 3}>
       {methods.map((m, i) => <div key={m.id} className={`flex min-h-[var(--size-control-mobile)] items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${i === methods.length - 1 ? '' : 'border-b border-[var(--color-border-default)]'}`}>
         <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name={m.kind === 'card' ? 'wallet' : 'landmark'} size="md" /></span>
         <span className="flex min-w-0 flex-1 flex-col">
@@ -297,7 +321,7 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
         {!m.isDefault && <button type="button" onClick={() => void makeDefault(m.id)} className="shrink-0 rounded-[var(--radius-sm)] border border-[var(--color-action-border)] px-[var(--spacing-8)] py-[var(--spacing-8)] text-label-12 text-[var(--color-action-text)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]">Default</button>}
         <button type="button" aria-label={`Remove ${m.label || methodLabel(m)}`} onClick={() => void remove(m.id)} className="flex h-[var(--size-control-mobile)] w-[var(--size-control-mobile)] shrink-0 items-center justify-center text-[var(--color-text-secondary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"><Icon name="x" size="sm" /></button>
       </div>)}
-    </Section>}
+      </Section>}
     <Section label="Add method">
       <div className="flex gap-[var(--spacing-8)] p-[var(--spacing-12)]" role="group" aria-label="Method type">
         {(['iban', 'card'] as const).map(t => <button key={t} type="button" aria-pressed={tab === t} onClick={() => setTab(t)} className={`h-[var(--size-control-mobile)] flex-1 rounded-[var(--radius-sm)] border text-label-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${tab === t ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]' : 'border-[var(--color-action-border)] text-[var(--color-action-text)]'}`}>{t === 'iban' ? `Bank (SEPA, free)` : `Card (instant, ${formatEuro(PAYOUT_POLICY.cardFee)})`}</button>)}

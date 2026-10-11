@@ -88,7 +88,7 @@ export function DriverProfile({
           {keyFact}
           {verified && verifiedStyle === 'inline' && (
             <span className="flex items-center gap-[4px] text-label-12 text-[var(--color-status-success-text)]" aria-label="Verified driver">
-              <Icon name="shield-check" size={14} aria-hidden />
+              <Icon name="shield-check" size={14} />
               <span>Verified</span>
             </span>
           )}

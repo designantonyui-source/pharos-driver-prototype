@@ -45,12 +45,19 @@ function Section({ label, children }: { label: string; children: ReactNode }) {
   </section>;
 }
 
-function StatusBlock({ error, retry, label }: { error: boolean; retry: () => void; label: string }) {
+function StatusBlock({ error, retry, label, rows = 3 }: { error: boolean; retry: () => void; label: string; rows?: number }) {
   if (error) {
     return <div className="mt-[var(--spacing-16)]"><Alert type="error" title={`Could not load ${label}`}>Check your connection and try again.<span className="mt-[var(--spacing-8)] block"><Button label="Retry" appearance="secondary" onClick={retry} /></span></Alert></div>;
   }
-  return <div className="mt-[var(--spacing-8)]" role="status" aria-label={`Loading ${label}`}>
-    <div className="h-[140px] animate-pulse rounded-[var(--radius-md)] bg-[var(--color-bg-surface)]" />
+  return <div className="mt-[var(--spacing-8)] flex flex-col gap-[var(--spacing-12)]" role="status" aria-label={`Loading ${label}`}>
+    {Array.from({ length: rows }).map((_, i) => <div key={i} aria-hidden className="flex min-h-[var(--size-control-mobile)] items-center gap-[var(--spacing-12)] rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] px-[var(--spacing-12)] py-[var(--spacing-8)]">
+      <span className="h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)]" />
+      <span className="flex min-w-0 flex-1 flex-col gap-[var(--spacing-4)]">
+        <span className="h-[14px] w-2/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)]" />
+        <span className="h-[12px] w-1/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)]" />
+      </span>
+      <span className="h-[14px] w-[64px] shrink-0 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)]" />
+    </div>)}
     <span className="sr-only">Loading {label}...</span>
   </div>;
 }
@@ -169,7 +176,9 @@ export function Schedules() {
         </span>
       </label>)}
     </Section>}
-    {runs.length > 0 && <Section label={`${runs.length} auto runs`}>
+    {runs.length === 0
+      ? <Section label="Auto runs"><p className="px-[var(--spacing-12)] py-[var(--spacing-16)] text-body-14 text-[var(--color-text-secondary)]">No auto runs yet — turn on a rule above and it will fire from the next Balance open.</p></Section>
+      : <Section label={`${runs.length} auto runs`}>
       {runs.slice(0, 5).map((r, i) => <div key={r.id} className={`flex min-h-[var(--size-control-mobile)] items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${i === Math.min(runs.length, 5) - 1 ? '' : 'border-b border-[var(--color-border-default)]'}`}>
         <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="clock" size="md" /></span>
         <span className="flex min-w-0 flex-1 flex-col">
@@ -177,7 +186,7 @@ export function Schedules() {
           <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{r.trigger === 'weekly' ? 'Friday schedule' : 'Threshold reached'} - {new Date(r.at).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })}</span>
         </span>
       </div>)}
-    </Section>}
+      </Section>}
     <Section label="Accountant">
       <div className="p-[var(--spacing-12)] flex flex-col gap-[var(--spacing-8)]">
         <Button label="Export monthly statement (CSV)" appearance="secondary" onClick={exportStatement} />

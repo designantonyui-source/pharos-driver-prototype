@@ -9,9 +9,12 @@
 - PSP: экраны говорят только с `PayoutProvider` (`src/lib/psp.ts` + `MockPayoutProvider`, refs `mock_sepa_*`/`mock_card_*`). PAN не хранится (token + last4, localStorage-asserted). Policy: SEPA free/1–2 дня, card €1.50/30 мин, min €10 — placeholders, не бизнес-правила (§7 в `PAYMENTS-VISION.md`).
 - Методы: список `id/kind/isDefault/verified`, Wave-0 IBAN мигрирует на чтении. IBAN: mod-97 + mask `DE89 .... 3000`. Карта: Luhn + brand + MM/YY + CVC → `tokeniseCard` в хендлере. Новые методы `verified:false` → `true` после mock round-trip; cash out unverified не даёт.
 - Уведомления: успехи → `Toast` сверху под навбаром (см. `flows/account-ux.md`); ошибки инлайн с Retry; подтверждение в `Sheet`.
-- Проверки: `pnpm test` 104/104, `pnpm check` чистый.
+- Состояния: row-скелетоны (StatusBlock, shared shape) / inline Alert + Retry / empty icon+headline+explainer (methods, recent, history; методы без методов — EmptyState, не `0 saved`).
+- Проверки: `pnpm test` 106/106, `pnpm check` чистый.
 
 ## История
+
+- **2026-10-11, A. Дисциплина состояний:** унифицированные row-скелетоны в Balance/Schedules/Invoices; empty methods + recent на главной + runs в Schedules; контракт состояний в шапке Balance. Тесты 106 (было 104).
 
 - **2026-10-11, Toast сверху:** success-уведомления переведены с инлайн-`Alert` на `Toast` (см. `flows/account-ux.md`). Unit-ассёрты: `role=status` / store state вместо инлайн-текста.
 - **2026-10-11, Wave 1** (`85162ce`): PSP-адаптер, мульти-методы, карта (Luhn/tokenise), verifying states, rail picker. Тесты 95 (было 91: +8 Balance Wave-1, +3 card/IBAN, −1 dismissed-count, +1 Earnings).

@@ -10,7 +10,11 @@
 - **Back nav**: `V2BackBar` + `useV2Back` (history-first + fallback) на всех v2-экранах; `V2Frame` контент ниже 62px статус-бара. Замеренный `NavigationBar Type=Back` 44×44.
 - Проверки: `pnpm test` 104/104, `pnpm check` чистый. Unit-ассёрты тостов: `role=status` / store state (тост auto-dismisses).
 
+- a11y-аудит: Toast подтверждает действие юзера (role=status без кражи фокуса — правильный паттерн); декоративная иконка скрыта от AT, крестик labelled; motion off под reduced-motion. Бейдж Verified: убран лишний aria-hidden (Icon сам скрывает unlabeled-иконки) — скринридер читает «Verified driver» один раз с бейджа. Контраст #216547 на белом — 7.1:1.
+
 ## История
+
+- **2026-10-11, A. Дисциплина состояний:** Toast a11y contract header; Verified badge aria-hidden fix.
 
 - **2026-10-11** (`13720cc`): бейдж верификации со строки подписи → на строку имени (shield-check + Verified у имени).
 - **2026-10-11** (`d1fcb93`): тост снизу (перекрывал primary action — скрин `Rule saved` поверх CSV-кнопки) → наверх под навбар + slide-in; `verifiedStyle="inline"` первой версии (в подписи).

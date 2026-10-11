@@ -12,6 +12,10 @@
  * - destructive/loading states keep inline placement: error Alerts stay in flow
  *   (they need Retry/actions), Sheet confirmations stay modal.
  * - auto-dismiss 4s, manual close button, role=status, slide-in from top.
+ * - a11y: decorative icon is hidden from AT, the close button is labelled;
+ *   auto-dismiss confirms a user action (not fresh content), so role=status
+ *   without focus theft is the right pattern; motion off under
+ *   prefers-reduced-motion (see globals.css).
  */
 import { useEffect, useState, type ReactNode } from 'react';
 import { Icon } from '../Icon';

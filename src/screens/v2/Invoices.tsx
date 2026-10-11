@@ -52,13 +52,19 @@ function StatusChip({ status }: { status: InvoiceStatus }) {
   return <span className={`inline-flex shrink-0 items-center rounded-[var(--radius-pill)] px-[var(--spacing-8)] py-[var(--spacing-4)] text-caption-10 uppercase tracking-wide ${STATUS_TONE[status]}`}>{status}</span>;
 }
 
-function StatusBlock({ error, retry, label }: { error: boolean; retry: () => void; label: string }) {
+function StatusBlock({ error, retry, label, rows = 3 }: { error: boolean; retry: () => void; label: string; rows?: number }) {
   if (error) {
     return <div className="mt-[var(--spacing-16)]"><Alert type="error" title={`Could not load ${label}`}>Check your connection and try again.<span className="mt-[var(--spacing-8)] block"><Button label="Retry" appearance="secondary" onClick={retry} /></span></Alert></div>;
   }
   return <div className="mt-[var(--spacing-8)] flex flex-col gap-[var(--spacing-12)]" role="status" aria-label={`Loading ${label}`}>
-    <div className="h-[96px] animate-pulse rounded-[var(--radius-md)] bg-[var(--color-bg-surface)]" />
-    <div className="h-[96px] animate-pulse rounded-[var(--radius-md)] bg-[var(--color-bg-surface)]" />
+    {Array.from({ length: rows }).map((_, i) => <div key={i} aria-hidden className="flex min-h-[var(--size-control-mobile)] items-center gap-[var(--spacing-12)] rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] px-[var(--spacing-12)] py-[var(--spacing-8)]">
+      <span className="h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)]" />
+      <span className="flex min-w-0 flex-1 flex-col gap-[var(--spacing-4)]">
+        <span className="h-[14px] w-2/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)]" />
+        <span className="h-[12px] w-1/3 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)]" />
+      </span>
+      <span className="h-[14px] w-[64px] shrink-0 animate-pulse rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)]" />
+    </div>)}
     <span className="sr-only">Loading {label}...</span>
   </div>;
 }
