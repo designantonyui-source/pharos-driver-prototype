@@ -35,19 +35,21 @@ describe('FiltersSheet draft semantics', () => {
 });
 
 describe('RouteSheet draft semantics', () => {
-  it('previews the count live and applies the destination', () => {
+  it('previews the count live and applies the route', () => {
     const onApply = vi.fn();
-    const countFor = (to: string) => (to.trim().toLocaleLowerCase() === 'brussels' ? 1 : 0);
+    const countFor = (route: { from: string; to: string }) =>
+      route.to.trim().toLocaleLowerCase() === 'brussels' ? 1 : 0;
     render(
       <MemoryRouter>
-        <RouteSheet open value="Brussels" countFor={countFor} onApply={onApply} onClose={() => undefined} />
+        <RouteSheet open value={{ from: '', to: 'Brussels' }} countFor={countFor} onApply={onApply} onClose={() => undefined} />
       </MemoryRouter>,
     );
     expect(screen.getByRole('button', { name: 'Show 1 load' })).toBeEnabled();
     fireEvent.change(screen.getByLabelText('Destination city'), { target: { value: 'Paris' } });
     expect(screen.getByRole('button', { name: 'No loads match' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Destination city'), { target: { value: 'Brussels' } });
+    fireEvent.change(screen.getByLabelText('Origin city'), { target: { value: 'Paris' } });
     fireEvent.click(screen.getByRole('button', { name: 'Show 1 load' }));
-    expect(onApply).toHaveBeenCalledWith('Brussels');
+    expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
   });
 });

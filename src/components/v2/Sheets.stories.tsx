@@ -47,8 +47,8 @@ export const RouteChange: Story = {
   render: () => (
     <RouteSheet
       open
-      value="Brussels"
-      countFor={(to) => (to.trim().toLocaleLowerCase() === 'brussels' ? 1 : 0)}
+      value={{ from: '', to: 'Brussels' }}
+      countFor={(route) => (route.to.trim().toLocaleLowerCase() === 'brussels' ? 1 : 0)}
       onApply={() => undefined}
       onClose={() => undefined}
     />

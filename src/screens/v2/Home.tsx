@@ -53,17 +53,24 @@ export function Home() {
     () => Object.values(state.applications).filter((a) => a.dismissed).map((a) => a.loadId),
     [state.applications],
   );
+  const origin = state.route.from.trim();
+  const destination = state.route.to.trim() || 'Brussels';
+  const routeLabel = origin ? `${origin} → ${destination}` : destination;
+  const routeMatch = (l: V2Load) =>
+    (destination === '' || l.to.trim().toLocaleLowerCase() === destination.toLocaleLowerCase()) &&
+    (origin === '' || l.from.trim().toLocaleLowerCase() === origin.toLocaleLowerCase());
   const visible = useMemo(
     () => (loads ?? [])
       .filter((l) => !dismissedIds.includes(l.id))
+      .filter(routeMatch)
       .filter((l) => FILTERS.every((f) => !on.includes(f.id) || FILTER_TESTS[f.id](l))),
-    [loads, on, dismissedIds],
+    // routeMatch reads origin/destination — keep them as explicit deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [loads, on, dismissedIds, origin, destination],
   );
   const applied = loads?.find((l) => l.id === state.loadId) ?? null;
   const status = state.status;
   const open = loads?.find((l) => l.id === openId) ?? null;
-  const origin = state.route.from.trim() || 'Lille';
-  const destination = state.route.to.trim() || 'Brussels';
   const minPerKm = visible.length > 0 ? Math.min(...visible.map((l) => l.perKm)) : null;
 
   return (
@@ -72,14 +79,14 @@ export function Home() {
         <button
           type="button"
           onClick={() => setRouteOpen(true)}
-          aria-label={`Direction: ${origin} to ${destination}, ${visible.length} loads. Activate to change.`}
+          aria-label={`Direction: ${routeLabel}, ${visible.length} loads. Activate to change.`}
           className="flex items-center justify-between gap-[8px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] text-left shadow-[var(--shadow-card)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
         >
           <span className="flex min-w-0 items-start gap-[8px] text-[var(--color-text-primary)]">
             <Icon name="map-pin" className="mt-[2px] text-[var(--color-action-primary)]" />
             <span className="flex min-w-0 flex-col">
               <span className="flex min-w-0 items-center gap-[8px]">
-                <span className="text-heading-14 truncate">{origin} → {destination}</span>
+                <span className="text-heading-14 truncate">{routeLabel}</span>
                 <span className="shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-action-primary)] px-[8px] py-[2px] text-label-12 text-[var(--color-action-text-inverse)]">
                   {loads ? `${visible.length} trips` : '…'}
                 </span>
@@ -125,10 +132,13 @@ export function Home() {
       />
       <RouteSheet
         open={routeOpen}
-        value={destination}
-        countFor={(to) => (loads ?? []).filter((l) => l.to.trim().toLocaleLowerCase() === to.trim().toLocaleLowerCase()).length}
-        onApply={(to) => {
-          store.set({ route: { from: state.route.from, to } });
+        value={{ from: state.route.from, to: destination }}
+        countFor={(route) => (loads ?? []).filter((l) =>
+          (route.to.trim() === '' || l.to.trim().toLocaleLowerCase() === route.to.trim().toLocaleLowerCase()) &&
+          (route.from.trim() === '' || l.from.trim().toLocaleLowerCase() === route.from.trim().toLocaleLowerCase()),
+        ).length}
+        onApply={(route) => {
+          store.set({ route });
           setRouteOpen(false);
         }}
         onClose={() => setRouteOpen(false)}
