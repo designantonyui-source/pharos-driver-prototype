@@ -15,6 +15,39 @@ No new tokens. `pnpm test` 91 passed; `pnpm check` passes (token audit + tsc + b
 
 ---
 
+## Wave 1 — payout methods v2 (PSP adapter + card + multi-methods)
+
+New proposal, not a measured Figma port. Only NavigationBar (586:33), Button (12:38),
+Input (12:166), Alert (575:9632), V2Frame shell and tokens are reused as measured components.
+
+What changed and why:
+
+1. **PSP adapter** (`src/lib/psp.ts`): `PayoutProvider` interface + `MockPayoutProvider`
+   + `PROTOTYPE_FEES` (SEPA free/1-2 days, instant-card EUR 1.50/30 min).
+   `api.ts` talks only to the interface — swapping in Stripe/Adyen changes no screen.
+   Production wiring sketch in the contract header. Policy still prototype-only.
+2. **Multi-methods**: `payoutMethod` (single) -> `payoutMethods` (list with
+   `id/kind/isDefault/verified`). Wave-0 stores migrate on read
+   (`migrateLegacyMethod`). Default-first ordering, remove keeps one default.
+3. **Card**: form (number + Luhn, brand detect Visa/MC/Amex, expiry MM/YY, CVC 3/4,
+   holder) -> `tokeniseCard` -> only `token/last4/brand` leave the handler; PAN never
+   persisted (covered by a localStorage assertion test). Masked display `Visa .... 4242`.
+4. **Verifying states**: new methods save as `verified: false`, flip to `true` after
+   a mock round-trip (production: micro-deposits/open banking). Cash out refuses
+   unverified methods with a dedicated error.
+5. **Rail picker in Cash out**: radio list of methods, per-rail quote
+   (fee + ETA), live remainder hint, confirm Sheet names the rail + fee + ETA.
+   Withdrawal ledger lines carry `rail` + `fee` + provider ref (`mock_sepa_*`/`mock_card_*`).
+6. **Methods screen** replaces the single-IBAN form: saved list (default/remove),
+   IBAN + Card tabs, same design-system inputs and Alerts.
+
+Coverage: `pnpm test` 95 passed (was 91: +8 Balance Wave-1, +3 card/IBAN unit, -1
+replaced Account dismissed-count test, +1 Earnings entry test); `pnpm check` passes
+(token audit + tsc + build, existing wildcard CSS warning only);
+E2E `e2e/balance.spec.ts` covers SEPA flow + card instant-fee quote in Chrome.
+
+---
+
 ## Balance first slice — new proposal (not a measured Figma port)
 
 Routes: `/v2/account/balance`, `/v2/account/balance/method`, `/v2/account/balance/cashout`, `/v2/account/balance/history`.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApplicationStatus } from './models';
-import { normalizeContactProfile, normalizePayoutMethod, type ContactProfile, type LedgerEntry, type PayoutMethod } from './profile';
+import { migrateLegacyMethod, normalizeContactProfile, normalizePayoutMethod, type ContactProfile, type LedgerEntry, type PayoutMethod } from './profile';
 
 export type Status = ApplicationStatus;
 
@@ -20,8 +20,10 @@ export type LoadApplication = {
 export type AppState = {
   /** Prototype only; identity is deliberately not persisted or editable. */
   contactProfile: ContactProfile;
-  /** Payout destination (SEPA IBAN). Empty iban = not set. */
-  payoutMethod: PayoutMethod;
+  /** Payout destinations (Wave 1: several IBANs + one card). Empty = not set. */
+  payoutMethods: PayoutMethod[];
+  /** Legacy Wave-0 single method (migrated on read). */
+  payoutMethod?: PayoutMethod | { iban: string; label: string };
   /** Local ledger: paid/pending trips + withdrawals. Prototype-only, never a real balance. */
   ledger: LedgerEntry[];
   applications: Record<string, LoadApplication>;
@@ -35,7 +37,7 @@ const KEY = 'pharos-driver-prototype';
 
 const initial: AppState = {
   contactProfile: { phone: '', email: '' },
-  payoutMethod: { iban: '', label: '' },
+  payoutMethods: [],
   ledger: [],
   applications: {},
   route: { from: '', to: '' },
@@ -64,6 +66,7 @@ function isLedgerEntry(value: unknown): value is LedgerEntry {
   if (entry.kind === 'withdrawal') {
     return typeof entry.id === 'string' && typeof entry.amount === 'number'
       && typeof entry.fee === 'number'
+      && (entry.rail === undefined || entry.rail === 'sepa' || entry.rail === 'instant-card')
       && (entry.status === 'processing' || entry.status === 'done');
   }
   return false;
@@ -83,12 +86,18 @@ function read(): AppState {
     try {
       if (saved.contactProfile) contactProfile = normalizeContactProfile(saved.contactProfile);
     } catch { /* Ignore malformed prototype contact data without losing the journey. */ }
-    let payoutMethod = initial.payoutMethod;
+    let payoutMethods = initial.payoutMethods;
     try {
-      if (saved.payoutMethod) payoutMethod = normalizePayoutMethod(saved.payoutMethod);
+      if (Array.isArray(saved.payoutMethods)) {
+        payoutMethods = saved.payoutMethods.map(normalizePayoutMethod);
+      } else if (saved.payoutMethod) {
+        // Wave-0 shape { iban, label } migrates to a one-item verified list.
+        const single = saved.payoutMethod as PayoutMethod | { iban: string; label: string };
+        payoutMethods = 'kind' in single ? [normalizePayoutMethod(single)] : migrateLegacyMethod(single);
+      }
     } catch { /* Ignore malformed prototype payout data without losing the journey. */ }
     const ledger = Array.isArray(saved.ledger) ? saved.ledger.filter(isLedgerEntry) : [];
-    return { ...initial, ...saved, applications, status, contactProfile, payoutMethod, ledger };
+    return { ...initial, ...saved, applications, status, contactProfile, payoutMethods, payoutMethod: undefined, ledger };
   } catch {
     return initial;
   }
@@ -115,7 +124,9 @@ export const store = {
       };
     }
     next.contactProfile = normalizeContactProfile(next.contactProfile);
-    next.payoutMethod = normalizePayoutMethod(next.payoutMethod);
+    if (Array.isArray(next.payoutMethods)) next.payoutMethods = next.payoutMethods.map(normalizePayoutMethod);
+    else next.payoutMethods = [];
+    delete (next as Partial<AppState>).payoutMethod;
     if (!Array.isArray(next.ledger)) next.ledger = [];
     localStorage.setItem(KEY, JSON.stringify(next));
     memory = next;

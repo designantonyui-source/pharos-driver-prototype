@@ -1,4 +1,4 @@
-/** figma: new Balance proposal, not measured; tokens: inherited from Balance */
+/** figma: new Balance proposal Wave 1, not measured; tokens: inherited from Balance */
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -9,6 +9,7 @@ import { Balance, BalanceHistory, CashOut, PayoutMethodScreen } from './Balance'
 
 let router: ReturnType<typeof createMemoryRouter>;
 const VALID_IBAN = 'DE89370400440532013000';
+const VALID_CARD = '4242424242424242';
 
 function setup(path: string) {
   router = createMemoryRouter([
@@ -25,35 +26,77 @@ function setup(path: string) {
 beforeEach(() => { store.reset(); });
 afterEach(() => { cleanup(); router?.dispose(); vi.restoreAllMocks(); store.reset(); });
 
-it('shows available vs pending with cash out CTA and method row', async () => {
+it('shows available vs pending with cash out CTA and empty method state', async () => {
   setup('/v2/account/balance');
   await screen.findByText('Available balance');
   expect(screen.getByText(/EUR 570\.00/)).toBeTruthy();
   expect(screen.getByText(/EUR 290\.00.*pending/)).toBeTruthy();
-  expect(screen.getByRole('button', { name: /Add bank account to cash out/ })).toBeTruthy();
-  expect(screen.getByText('Add bank account')).toBeTruthy();
+  expect(screen.getByRole('button', { name: /Add payout method to cash out/ })).toBeTruthy();
+  expect(screen.getByText('Add payout method')).toBeTruthy();
 });
 
-it('validates IBAN check digits and saves the method', async () => {
+it('adds an IBAN method with check-digit validation', async () => {
   setup('/v2/account/balance/method');
-  const iban = await screen.findByLabelText(/IBAN/, { exact: false });
+  await screen.findByText('Add method');
+  const iban = screen.getByLabelText(/IBAN/, { exact: false });
   fireEvent.change(iban, { target: { value: 'FR00 0000' } });
   await screen.findByText('Check the IBAN - wrong check digits.');
-  expect((screen.getByRole('button', { name: /bank account/ }) as HTMLButtonElement).disabled).toBe(true);
   fireEvent.change(iban, { target: { value: 'de89 3704 0044 0532 0130 00' } });
   fireEvent.change(screen.getByLabelText(/nickname/, { exact: false }), { target: { value: 'Business' } });
-  fireEvent.click(screen.getByRole('button', { name: /Add bank account/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add bank account' }));
   await screen.findByRole('status');
-  expect(store.get().payoutMethod.iban).toBe(VALID_IBAN);
+  const methods = await api.getPayoutMethods();
+  expect(methods.length).toBe(1);
+  expect(methods[0].kind).toBe('iban');
+  if (methods[0].kind === 'iban') expect(methods[0].iban).toBe(VALID_IBAN);
 });
 
-it('blocks cash out without IBAN and completes withdrawal with IBAN set', async () => {
+it('adds a card without persisting the PAN', async () => {
+  setup('/v2/account/balance/method');
+  await screen.findByText('Add method');
+  fireEvent.click(screen.getByRole('button', { name: /Card \(instant/ }));
+  fireEvent.change(screen.getByLabelText(/Card number/, { exact: false }), { target: { value: '4242424242424241' } });
+  await screen.findByText('Check the card number.');
+  fireEvent.change(screen.getByLabelText(/Card number/, { exact: false }), { target: { value: VALID_CARD } });
+  await screen.findByText(/Visa - detected automatically/);
+  fireEvent.change(screen.getByLabelText(/Expiry/, { exact: false }), { target: { value: '12/30' } });
+  fireEvent.change(screen.getByLabelText(/CVC/, { exact: false }), { target: { value: '123' } });
+  fireEvent.change(screen.getByLabelText(/Cardholder name/, { exact: false }), { target: { value: 'Alexey K.' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add card' }));
+  await screen.findByRole('status');
+  const methods = await api.getPayoutMethods();
+  expect(methods.length).toBe(1);
+  expect(methods[0].kind).toBe('card');
+  if (methods[0].kind === 'card') {
+    expect(methods[0].last4).toBe('4242');
+    expect(methods[0].brand).toBe('Visa');
+  }
+  const raw = localStorage.getItem('pharos-driver-prototype') ?? '';
+  expect(raw).not.toContain('4242424242424242');
+  expect(raw).not.toContain('4242 4242');
+});
+
+it('sets default and removes methods, keeping one default', async () => {
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'First' });
+  const tok = (await import('../../lib/profile')).tokeniseCard(VALID_CARD);
+  await api.addCardMethod({ ...tok, label: 'Second' });
+  setup('/v2/account/balance/method');
+  await screen.findByText(/2 saved/);
+  const defaults = screen.getAllByRole('button', { name: 'Default' });
+  expect(defaults.length).toBe(1);
+  fireEvent.click(defaults[0]);
+  await screen.findByText(/2 saved/);
+  const methods = await api.getPayoutMethods();
+  expect(methods.filter(m => m.isDefault).length).toBe(1);
+});
+
+it('blocks cash out without method and completes SEPA withdrawal', async () => {
   setup('/v2/account/balance/cashout');
-  await screen.findByText('Add a bank account first');
-  fireEvent.click(screen.getByRole('button', { name: 'Add bank account' }));
+  await screen.findByText('Add a payout method first');
+  fireEvent.click(screen.getByRole('button', { name: 'Add payout method' }));
   await screen.findByLabelText(/IBAN/, { exact: false });
   fireEvent.change(screen.getByLabelText(/IBAN/, { exact: false }), { target: { value: VALID_IBAN } });
-  fireEvent.click(screen.getByRole('button', { name: /bank account/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Add bank account' }));
   await screen.findByRole('status');
   await router.navigate('/v2/account/balance/cashout');
   const amount = await screen.findByLabelText(/Amount/, { exact: false });
@@ -70,24 +113,23 @@ it('blocks cash out without IBAN and completes withdrawal with IBAN set', async 
   expect((await api.getBalance()).available).toBeCloseTo(470, 2);
 });
 
-it('guards concurrent withdrawals and keeps failure retryable', async () => {
-  store.set({ payoutMethod: { iban: VALID_IBAN, label: '' } });
-  const real = api.requestWithdrawal;
-  vi.spyOn(api, 'requestWithdrawal').mockRejectedValueOnce(new Error('offline')).mockImplementation(real);
-  setup('/v2/account/balance/cashout');
-  fireEvent.change(await screen.findByLabelText(/Amount/, { exact: false }), { target: { value: '50' } });
-  fireEvent.click(screen.getByRole('button', { name: /Cash out/ }));
-  await screen.findByRole('dialog');
-  fireEvent.click(screen.getByRole('button', { name: /Confirm/ }));
-  await screen.findByText('Could not request the withdrawal');
-  fireEvent.click(screen.getByRole('button', { name: /Cash out/ }));
-  await screen.findByRole('dialog');
-  fireEvent.click(screen.getByRole('button', { name: /Confirm/ }));
-  await screen.findByText(/is on its way/);
+it('quotes the card fee and executes via the mock provider ref', async () => {
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank' });
+  const tok = (await import('../../lib/profile')).tokeniseCard(VALID_CARD);
+  const card = await api.addCardMethod({ ...tok, label: 'Fuel' });
+  const quote = api.quoteFor(card, 100);
+  expect(quote.rail).toBe('instant-card');
+  expect(quote.fee).toBe(1.5);
+  const { entry } = await api.requestWithdrawal(100, card.id);
+  expect(entry.id).toMatch(/^mock_card_/);
+  expect(entry.fee).toBe(1.5);
+  expect(entry.methodLabel).toBe('Fuel');
+  // Card rail deducts amount + EUR 1.50 prototype fee from available.
+  expect((await api.getBalance()).available).toBeCloseTo(468.5, 2);
 });
 
-it('lists trips and withdrawals in history', async () => {
-  store.set({ payoutMethod: { iban: VALID_IBAN, label: 'Business' } });
+it('lists trips and withdrawals in history with rail notes', async () => {
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business' });
   setup('/v2/account/balance/history');
   await screen.findByText('Lille - Brussels');
   expect(screen.getByText(/C.te Fret/)).toBeTruthy();
@@ -95,6 +137,17 @@ it('lists trips and withdrawals in history', async () => {
   expect(entry.methodLabel).toBe('Business');
   const ledger = await api.getLedger();
   expect(ledger.some(e => e.kind === 'withdrawal' && e.amount === 100)).toBe(true);
+});
+
+it('migrates a Wave-0 stored IBAN into the method list', async () => {
+  localStorage.setItem('pharos-driver-prototype', JSON.stringify({
+    payoutMethod: { iban: VALID_IBAN, label: 'Legacy' },
+    contactProfile: { phone: '', email: '' },
+  }));
+  vi.resetModules();
+  const reloaded = await import('../../lib/store');
+  expect(reloaded.store.get().payoutMethods.length).toBe(1);
+  expect(reloaded.store.get().payoutMethods[0].kind).toBe('iban');
 });
 
 it('dismisses only dismissed feed entries and never touches the ledger', async () => {

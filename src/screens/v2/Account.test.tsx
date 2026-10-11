@@ -46,10 +46,11 @@ it('disables unchanged and invalid values, saves once and clears dirty state', a
   expect(save).toHaveBeenCalledTimes(1);
   expect(unload()).toBe(false);
 });
-it('shows the dismissed count on the Account menu', async () => {
+it('shows the Earnings entry to Balance on the Account menu', async () => {
   setup(false, 'account');
   await screen.findByText('Alexey K.');
-  expect(screen.getByText(/Loads you hid from your feed|hidden from your feed/)).toBeTruthy();
+  expect(screen.getByRole('link', { name: /Balance/ })).toBeTruthy();
+  expect(screen.getByText('Available, pending, cash out, history')).toBeTruthy();
 });
 it('blocks tabs and data-router back, keeps editing or discards', async () => {
   setup(); fireEvent.change(await screen.findByLabelText('Phone', { exact: false }), { target: { value: '123456789' } });

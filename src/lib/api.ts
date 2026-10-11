@@ -11,16 +11,26 @@ import { store, type LoadApplication, type Status } from './store';
 import { V2_LOADS, type V2Load } from './v2/loads';
 import { BL_ORDERS, type BlOrder } from './bl/logic';
 
-import { normalizeContactProfile, normalizePayoutMethod, maskIban, type ContactProfile, type LedgerEntry, type PayoutMethod } from './profile';
+import { maskCard, maskIban, normalizeContactProfile, normalizePayoutMethod, type ContactProfile, type LedgerEntry, type PayoutMethod } from './profile';
+import { MockPayoutProvider, PROTOTYPE_FEES, type Destination, type PayoutProvider, type PayoutQuote } from './psp';
 export { validatePhone, validateEmail, validateIban, formatIban, maskIban } from './profile';
+export {
+  validateCardNumber, detectCardBrand, formatCardNumber, formatCardExpiry,
+  maskCard, tokeniseCard, validateCardCvc, validateCardExpiry,
+} from './profile';
 export type { ContactProfile, LedgerEntry, PayoutMethod } from './profile';
+export type { Destination, PayoutQuote, Rail } from './psp';
 
-/** Prototype payout policy (NOT approved business rules — see PORT-LOG): SEPA 1–2 business
- *  days, no fee in prototype. Instant card payout is out of scope. Minimum withdrawal €10. */
+/** The plugged-in provider. Production: replace with the Stripe/Adyen implementation. */
+export const payoutProvider: PayoutProvider = new MockPayoutProvider();
+
+/** Prototype payout policy (NOT approved business rules — see PAYMENTS-VISION.md §7). */
 export const PAYOUT_POLICY = Object.freeze({
   rail: 'SEPA transfer',
-  eta: '1–2 business days',
-  fee: 0,
+  eta: PROTOTYPE_FEES.sepa.eta,
+  fee: PROTOTYPE_FEES.sepa.fee,
+  cardEta: PROTOTYPE_FEES['instant-card'].eta,
+  cardFee: PROTOTYPE_FEES['instant-card'].fee,
   minWithdrawal: 10,
   currency: 'EUR',
 });
@@ -70,16 +80,103 @@ export async function getLedger(): Promise<LedgerEntry[]> {
   return [...ensureLedger()];
 }
 
-export async function getPayoutMethod(): Promise<PayoutMethod> {
-  return { ...store.get().payoutMethod };
+/** All payout destinations, default first. */
+export async function getPayoutMethods(): Promise<PayoutMethod[]> {
+  const methods = [...store.get().payoutMethods];
+  methods.sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+  return methods;
 }
 
-/** Only IBAN + label are accepted; stored compact-uppercase. Empty IBAN clears the method. */
-export async function updatePayoutMethod(method: PayoutMethod) {
+export async function getDefaultMethod(): Promise<PayoutMethod | null> {
+  const methods = await getPayoutMethods();
+  return methods.find(m => m.isDefault) ?? methods[0] ?? null;
+}
+
+/** Legacy accessor — kept so old callers keep compiling during Wave 1. */
+export async function getPayoutMethod(): Promise<{ iban: string; label: string }> {
+  const found = (await getPayoutMethods()).find(m => m.kind === 'iban');
+  return found && found.kind === 'iban' ? { iban: found.iban, label: found.label } : { iban: '', label: '' };
+}
+
+function newId(prefix: string): string {
+  return `${prefix}-${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
+}
+
+/** Add an IBAN method (verifying -> verified after a mock check). */
+export async function addIbanMethod(input: { iban: string; label: string }) {
   await wait(300);
-  const payoutMethod = normalizePayoutMethod(method);
-  store.set({ payoutMethod });
-  return getPayoutMethod();
+  const compact = input.iban.replace(/[\s-]/g, '').toUpperCase();
+  const method: PayoutMethod = normalizePayoutMethod({
+    kind: 'iban', id: newId('iban'), iban: compact,
+    label: input.label, isDefault: false, verified: false,
+  });
+  const methods = [...store.get().payoutMethods, { ...method, isDefault: store.get().payoutMethods.length === 0 }];
+  store.set({ payoutMethods: methods });
+  // Mock verification round-trip (production: micro-deposits / open banking).
+  await wait(400);
+  store.set({ payoutMethods: store.get().payoutMethods.map(m => m.id === method.id ? { ...m, verified: true } : m) });
+  return (await getPayoutMethods()).find(m => m.id === method.id)!;
+}
+
+/** Add a card from a one-time token (PAN never stored — see profile.tokeniseCard). */
+export async function addCardMethod(input: { token: string; last4: string; brand: string; label: string }) {
+  await wait(300);
+  if (!input.token || !/^\d{4}$/.test(input.last4) || !input.brand) throw new Error('Invalid card token');
+  const method: PayoutMethod = normalizePayoutMethod({
+    kind: 'card', id: newId('card'), last4: input.last4,
+    brand: input.brand, label: input.label, isDefault: false, verified: false,
+  });
+  const methods = [...store.get().payoutMethods, { ...method, isDefault: store.get().payoutMethods.length === 0 }];
+  store.set({ payoutMethods: methods });
+  await wait(400);
+  store.set({ payoutMethods: store.get().payoutMethods.map(m => m.id === method.id ? { ...m, verified: true } : m) });
+  return (await getPayoutMethods()).find(m => m.id === method.id)!;
+}
+
+export async function setDefaultMethod(id: string): Promise<PayoutMethod[]> {
+  const methods = store.get().payoutMethods.map(m => ({ ...m, isDefault: m.id === id }));
+  if (!methods.some(m => m.id === id)) throw new Error('Unknown method');
+  store.set({ payoutMethods: methods });
+  return getPayoutMethods();
+}
+
+export async function removeMethod(id: string): Promise<PayoutMethod[]> {
+  const methods = store.get().payoutMethods.filter(m => m.id !== id);
+  if (methods.length > 0 && !methods.some(m => m.isDefault)) methods[0] = { ...methods[0], isDefault: true };
+  store.set({ payoutMethods: methods });
+  return getPayoutMethods();
+}
+
+/** Legacy single-IBAN writer — kept so old callers keep compiling during Wave 1. */
+export async function updatePayoutMethod(input: { iban: string; label: string }) {
+  await wait(100);
+  const compact = input.iban.replace(/[\s-]/g, '').toUpperCase();
+  if (!compact) {
+    store.set({ payoutMethods: [] });
+    return { iban: '', label: '' };
+  }
+  const existing = (await getPayoutMethods()).find(m => m.kind === 'iban');
+  if (existing) {
+    store.set({ payoutMethods: store.get().payoutMethods.map(m => m.id === existing.id ? { ...m, label: input.label } : m) });
+    return { iban: compact, label: input.label };
+  }
+  await addIbanMethod(input);
+  return { iban: compact, label: input.label };
+}
+
+export function methodLabel(method: PayoutMethod): string {
+  if (method.kind === 'card') return maskCard(method.last4, method.brand);
+  return maskIban(method.iban);
+}
+
+export function methodDestination(method: PayoutMethod): Destination {
+  return method.kind === 'card'
+    ? { kind: 'card', token: `stored_${method.id}`, last4: method.last4, brand: method.brand, label: method.label }
+    : { kind: 'iban', iban: method.iban, label: method.label };
+}
+
+export function quoteFor(method: PayoutMethod, amount: number): PayoutQuote {
+  return payoutProvider.quote(method.kind === 'card' ? 'instant-card' : 'sepa', amount);
 }
 
 export class PayoutError extends Error {
@@ -90,28 +187,34 @@ export class PayoutError extends Error {
   }
 }
 
-/** Prototype withdrawal: validates amount vs available balance + €10 minimum + IBAN set,
- *  appends a `processing` ledger line. No real money moves. */
-export async function requestWithdrawal(amount: number) {
-  await wait(600);
+/** Prototype withdrawal through the PSP adapter: validates amount vs available
+ *  balance + EUR 10 minimum + verified method, quotes fee/ETA per rail,
+ *  executes via the provider, appends a `processing` ledger line.
+ *  No real money moves — the mock returns `mock_sepa_*` / `mock_card_*` refs. */
+export async function requestWithdrawal(amount: number, methodId?: string) {
   const rounded = Math.round(amount * 100) / 100;
-  if (!Number.isFinite(rounded) || rounded <= 0) throw new PayoutError('INVALID_AMOUNT', 'Enter an amount greater than €0.');
-  const method = store.get().payoutMethod;
-  if (!method.iban) throw new PayoutError('NO_METHOD', 'Add a bank account (IBAN) first.');
-  if (rounded < PAYOUT_POLICY.minWithdrawal) throw new PayoutError('BELOW_MINIMUM', `Minimum withdrawal is €${PAYOUT_POLICY.minWithdrawal}.`);
+  if (!Number.isFinite(rounded) || rounded <= 0) throw new PayoutError('INVALID_AMOUNT', 'Enter an amount greater than EUR 0.');
+  const methods = await getPayoutMethods();
+  const method = (methodId ? methods.find(m => m.id === methodId) : methods.find(m => m.isDefault) ?? methods[0]) ?? null;
+  if (!method) throw new PayoutError('NO_METHOD', 'Add a payout method first.');
+  if (!method.verified) throw new PayoutError('NO_METHOD', 'Your payout method is still verifying — try again shortly.');
+  if (rounded < PAYOUT_POLICY.minWithdrawal) throw new PayoutError('BELOW_MINIMUM', `Minimum withdrawal is EUR ${PAYOUT_POLICY.minWithdrawal}.`);
   const { available } = await getBalance();
   if (rounded > available) throw new PayoutError('INSUFFICIENT', 'Amount exceeds your available balance.');
+  const quote = quoteFor(method, rounded);
+  const result = await payoutProvider.execute(quote.rail, rounded, methodDestination(method));
   const entry: LedgerEntry = {
     kind: 'withdrawal',
-    id: `wd-${Date.now()}`,
+    id: result.providerRef,
     amount: rounded,
-    fee: PAYOUT_POLICY.fee,
-    methodLabel: method.label || maskIban(method.iban),
+    fee: quote.fee,
+    methodLabel: method.label || methodLabel(method),
+    rail: quote.rail,
     status: 'processing',
     createdAt: new Date().toISOString(),
   };
   store.set({ ledger: [...store.get().ledger, entry] });
-  return { entry, eta: PAYOUT_POLICY.eta };
+  return { entry, eta: quote.eta };
 }
 
 /** Matches existing DriverProfile defaults; prototype identity is read-only. */

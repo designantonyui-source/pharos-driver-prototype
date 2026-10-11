@@ -80,10 +80,10 @@ describe('store persistence ordering', () => {
   });
 });
 
-import { formatIban, maskIban, normalizePayoutMethod, validateIban } from './profile';
+import { detectCardBrand, formatCardExpiry, formatCardNumber, formatIban, migrateLegacyMethod, normalizePayoutMethod, tokeniseCard, validateCardCvc, validateCardExpiry, validateCardNumber, validateIban } from './profile';
 
-describe('prototype payout method (IBAN)', () => {
-  it('accepts empty as not-set and validates real IBANs with mod-97', () => {
+describe('prototype payout methods (Wave 1: IBAN + card)', () => {
+  it('accepts empty IBAN as not-set and validates real IBANs with mod-97', () => {
     expect(validateIban('')).toBe(true);
     expect(validateIban('DE89370400440532013000')).toBe(true);
     expect(validateIban('de89 3704 0044 0532 0130 00')).toBe(true);
@@ -92,10 +92,36 @@ describe('prototype payout method (IBAN)', () => {
     expect(validateIban('FR00 0000')).toBe(false);
     expect(validateIban('not-an-iban')).toBe(false);
   });
-  it('normalizes to compact uppercase and formats in groups of four', () => {
-    expect(normalizePayoutMethod({ iban: 'de89 3704 0044 0532 0130 00', label: ' Business ' })).toEqual({ iban: 'DE89370400440532013000', label: 'Business' });
+  it('normalizes Wave-1 method shapes and migrates the Wave-0 single IBAN', () => {
+    expect(normalizePayoutMethod({ kind: 'iban', id: 'a', iban: 'de89 3704 0044 0532 0130 00', label: ' Business ', isDefault: true, verified: false }))
+      .toEqual({ kind: 'iban', id: 'a', iban: 'DE89370400440532013000', label: 'Business', isDefault: true, verified: false });
+    expect(normalizePayoutMethod({ kind: 'card', id: 'c', last4: '4242', brand: 'Visa', label: '', isDefault: false, verified: false }).kind).toBe('card');
     expect(formatIban('DE89370400440532013000')).toBe('DE89 3704 0044 0532 0130 00');
-    expect(maskIban('DE89370400440532013000')).toBe('DE89 \u2022\u2022\u2022\u2022 3000');
-    expect(() => normalizePayoutMethod({ iban: 'bad', label: '' })).toThrow('Invalid IBAN');
+    expect(migrateLegacyMethod({ iban: 'DE89370400440532013000', label: 'Old' })).toEqual([
+      { kind: 'iban', id: 'migrated-iban', iban: 'DE89370400440532013000', label: 'Old', isDefault: true, verified: true },
+    ]);
+    expect(migrateLegacyMethod({ iban: '', label: '' })).toEqual([]);
+    expect(migrateLegacyMethod(null)).toEqual([]);
+  });
+  it('validates cards with Luhn, detects brands, formats and tokenises without storing PAN', () => {
+    expect(validateCardNumber('4242 4242 4242 4242')).toBe(true);
+    expect(validateCardNumber('5555 5555 5555 4444')).toBe(true);
+    expect(validateCardNumber('4242 4242 4242 4241')).toBe(false);
+    expect(validateCardNumber('123')).toBe(false);
+    expect(detectCardBrand('4242424242424242')).toBe('Visa');
+    expect(detectCardBrand('5555555555554444')).toBe('Mastercard');
+    expect(detectCardBrand('378282246310005')).toBe('Amex');
+    expect(formatCardNumber('4242-4242-4242-4242')).toBe('4242 4242 4242 4242');
+    expect(formatCardExpiry('1230')).toBe('12/30');
+    expect(validateCardExpiry('12/30')).toBe(true);
+    expect(validateCardExpiry('01/20')).toBe(false);
+    expect(validateCardCvc('123', 'Visa')).toBe(true);
+    expect(validateCardCvc('1234', 'Amex')).toBe(true);
+    expect(validateCardCvc('12', 'Visa')).toBe(false);
+    const tok = tokeniseCard('4242424242424242');
+    expect(tok.last4).toBe('4242');
+    expect(tok.brand).toBe('Visa');
+    expect(tok.token).toMatch(/^tok_mock_/);
+    expect(() => tokeniseCard('4242424242424241')).toThrow('Invalid card number');
   });
 });
