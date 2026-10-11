@@ -64,7 +64,7 @@ export function Home() {
 
   return (
     <V2Frame active="Loads">
-      <div className="absolute inset-x-0 top-[8px] bottom-[calc(117px-var(--status-bar-h))] z-20 flex flex-col gap-[8px] px-[16px]">
+      <div className="absolute inset-x-0 top-[8px] bottom-[117px] z-20 flex flex-col gap-[8px] px-[16px]">
         <button
           type="button"
           onClick={() => setRouteOpen(true)}

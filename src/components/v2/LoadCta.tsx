@@ -60,7 +60,7 @@ export function LoadCta({ loadId }: { loadId: string }) {
         <Button label={canReapply ? 'Apply again' : load ? `Apply for €${load.rate}` : 'Loading load details…'} disabled={!load} onClick={() => setOpen(true)} />
       )}
       {duplicate && createPortal(
-        <p role="status" className="absolute inset-x-[16px] bottom-[calc(117px-var(--status-bar-h))] z-50 rounded-[var(--radius-md)] bg-[var(--color-bg-subtle)] p-[12px] text-body-14 text-[var(--color-text-primary)] shadow-[var(--shadow-card)]">You already applied for this load</p>,
+        <p role="status" className="absolute inset-x-[16px] bottom-[117px] z-50 rounded-[var(--radius-md)] bg-[var(--color-bg-subtle)] p-[12px] text-body-14 text-[var(--color-text-primary)] shadow-[var(--shadow-card)]">You already applied for this load</p>,
         anchor.current?.closest('[data-load-overlay-root]') ?? document.body,
       )}
       {open && load && createPortal(

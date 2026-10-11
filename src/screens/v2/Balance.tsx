@@ -41,17 +41,17 @@ function BalanceFrame({ title, backTo, children }: { title: string; backTo?: str
         ? <V2BackBar title={title} fallback={backTo} />
         : <V2BackBar title={title} fallback="/v2/account" />}
     </div>
-    <main className="absolute inset-x-0 top-[var(--nav-bar-h)] bottom-[calc(var(--tab-bar-h)+var(--home-indicator-h)-var(--status-bar-h))] overflow-y-auto px-[var(--spacing-16)] pb-[var(--spacing-24)] pt-[var(--spacing-8)] text-[var(--color-text-primary)]">
+    <main className="absolute inset-x-0 top-[var(--nav-bar-h)] bottom-[calc(var(--tab-bar-h)+var(--home-indicator-h))] overflow-y-auto px-[var(--spacing-16)] pb-[var(--spacing-24)] pt-[var(--spacing-8)] text-[var(--color-text-primary)]">
       <h1 className="sr-only">{title}</h1>
       {children}
     </main>
   </V2Frame>;
 }
 
-function Section({ label, children }: { label: string; children: ReactNode }) {
+function Section({ label, children, scrollable = false }: { label: string; children: ReactNode; scrollable?: boolean }) {
   return <section aria-label={label} className="mt-[var(--spacing-16)]">
     <h2 className="px-[var(--spacing-12)] pb-[var(--spacing-8)] text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">{label}</h2>
-    <div className="overflow-hidden rounded-[var(--radius-md)] bg-[var(--color-bg-surface)]">{children}</div>
+    <div className={`overflow-hidden rounded-[var(--radius-md)] bg-[var(--color-bg-surface)]${scrollable ? ' max-h-[280px] overflow-y-auto' : ''}`}>{children}</div>
   </section>;
 }
 
@@ -252,7 +252,7 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
     setMethods(await removeMethod(id));
   }
   return <BalanceFrame title="Payout methods" backTo="/v2/account/balance">
-    {methods.length > 0 && <Section label={`${methods.length} saved`}>
+    {methods.length > 0 && <Section label={`${methods.length} saved`} scrollable={methods.length > 3}>
       {methods.map((m, i) => <div key={m.id} className={`flex min-h-[var(--size-control-mobile)] items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${i === methods.length - 1 ? '' : 'border-b border-[var(--color-border-default)]'}`}>
         <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name={m.kind === 'card' ? 'wallet' : 'landmark'} size="md" /></span>
         <span className="flex min-w-0 flex-1 flex-col">

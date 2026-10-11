@@ -31,7 +31,7 @@ function AccountFrame({ title, backTo, children }: { title: string; backTo?: str
         ? <V2BackBar title={title} fallback={backTo} />
         : <NavigationBar type="home" title={title} avatar="AK" />}
     </div>
-    <main className="absolute inset-x-0 top-[var(--nav-bar-h)] bottom-[calc(var(--tab-bar-h)+var(--home-indicator-h)-var(--status-bar-h))] overflow-y-auto px-[var(--spacing-16)] pb-[var(--spacing-24)] pt-[var(--spacing-8)] text-[var(--color-text-primary)]">
+    <main className="absolute inset-x-0 top-[var(--nav-bar-h)] bottom-[calc(var(--tab-bar-h)+var(--home-indicator-h))] overflow-y-auto px-[var(--spacing-16)] pb-[var(--spacing-24)] pt-[var(--spacing-8)] text-[var(--color-text-primary)]">
       <h1 className="sr-only">{title}</h1>
       {children}
     </main>
