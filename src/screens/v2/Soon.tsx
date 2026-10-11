@@ -5,7 +5,7 @@ import { Icon } from '../../components/Icon';
 export function V2Soon({ active, title }: { active: string; title: string }) {
   return (
     <V2Frame active={active}>
-      <div className="absolute inset-x-0 top-[96px] px-[16px]">
+      <div className="absolute inset-x-0 top-[34px] px-[16px]">
         <h1 className="text-heading-24 text-[var(--color-text-primary)]">{title}</h1>
         <div className="mt-[24px] flex flex-col items-center gap-[8px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[24px] text-center shadow-[var(--shadow-card)]">
           <Icon name="clock" size="lg" className="text-[var(--color-text-secondary)]" />

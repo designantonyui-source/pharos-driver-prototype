@@ -86,7 +86,7 @@ export function ApplicationTrackerView({
       <div className="absolute inset-x-0 top-0 z-20">
         <V2BackBar title="Application status" fallback={listPath} />
       </div>
-      <div className="absolute inset-x-0 top-[var(--nav-bar-back-h)] bottom-[117px] flex flex-col px-[16px]">
+      <div className="absolute inset-x-0 top-[var(--nav-bar-back-h)] bottom-[calc(117px-var(--status-bar-h))] flex flex-col px-[16px]">
         <h1 className="sr-only">Application status</h1>
 
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-[12px]">

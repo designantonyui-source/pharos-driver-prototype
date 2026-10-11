@@ -34,7 +34,7 @@ export function DismissedLoadsView({ loads, loading, fetchError, mutationError, 
     <div className="absolute inset-x-0 top-0 z-20">
       <V2BackBar title="Dismissed loads" fallback="/v2/account" />
     </div>
-    <main className="absolute inset-x-0 top-[var(--nav-bar-h)] bottom-[calc(var(--tab-bar-h)+var(--home-indicator-h))] overflow-y-auto px-[var(--spacing-16)] pb-[var(--spacing-24)] pt-[var(--spacing-8)] text-[var(--color-text-primary)]">
+    <main className="absolute inset-x-0 top-[var(--nav-bar-h)] bottom-[calc(var(--tab-bar-h)+var(--home-indicator-h)-var(--status-bar-h))] overflow-y-auto px-[var(--spacing-16)] pb-[var(--spacing-24)] pt-[var(--spacing-8)] text-[var(--color-text-primary)]">
       <p className="px-[var(--spacing-12)] text-body-14 text-[var(--color-text-secondary)]">Hidden loads stay here. Restore one to see it in your feed again — hiding is free and never affects your score.</p>
       <h1 className="sr-only">Dismissed loads</h1>
       <div className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-12)]">

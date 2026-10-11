@@ -47,7 +47,7 @@ export function TripDetailsView({ load }: { load: V2Load }) {
       <div className="absolute inset-x-0 top-0 z-20">
         <V2BackBar title="Trip details" fallback={`/application/${load.id}`} />
       </div>
-      <div className="absolute inset-x-0 top-[var(--nav-bar-back-h)] bottom-[117px] flex flex-col px-[16px]">
+      <div className="absolute inset-x-0 top-[var(--nav-bar-back-h)] bottom-[calc(117px-var(--status-bar-h))] flex flex-col px-[16px]">
         <h1 className="sr-only">Trip details</h1>
 
         <main className="flex min-h-0 flex-1 flex-col gap-[12px] overflow-y-auto pb-[12px]">

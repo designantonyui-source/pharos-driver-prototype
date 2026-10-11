@@ -23,10 +23,12 @@ const TABS: { label: string; icon: IconName; to: string }[] = [
 export function V2Frame({ active = 'Loads', children }: { active?: string; children: ReactNode }) {
   return (
     <div data-load-overlay-root className="relative h-[var(--screen-h)] w-[var(--screen-w)] overflow-hidden bg-[var(--color-bg-canvas)]">
-      {children}
-
       <div className="absolute inset-x-0 top-0 z-30">
         <StatusBar type="ios" />
+      </div>
+
+      <div className="absolute inset-x-0 top-[var(--status-bar-h)] bottom-0">
+        {children}
       </div>
 
       <nav className="absolute inset-x-0 top-[var(--tab-bar-y)] z-30 flex h-[var(--tab-bar-h)] w-full justify-around bg-[var(--color-bg-surface)] px-[16px] pt-[8px]">

@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getLoads } from '../../lib/api';
-import { useStore } from '../../lib/store';
+import { dismissLoad, getLoads, restoreLoad } from '../../lib/api';
+import { store, useStore } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
 import { Icon } from '../../components/Icon';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { LoadSheet } from '../../components/v2/LoadSheet';
 import { ApplicationBanner } from '../../components/v2/ApplicationBanner';
+import { FiltersButton } from '../../components/FiltersButton';
+import { FILTERS, FiltersSheet } from '../../components/v2/FiltersSheet';
+import { RouteSheet } from '../../components/v2/RouteSheet';
 import { SmartLoadList } from '../../components/v2/SmartLoadList';
 
 /**
@@ -19,11 +22,11 @@ import { SmartLoadList } from '../../components/v2/SmartLoadList';
  * No form first: the feed is already there; direction + three quick filters narrow it. Applying is one tap and the
  * driver stays on the current view with a live banner. Status moves with the Demo panel (→ dispatcher approved, → confirmed).
  */
-const FILTERS = [
-  { id: 'today', label: 'Today', test: (l: V2Load) => l.day === 'today' },
-  { id: 'rate', label: '€3+/km', test: (l: V2Load) => l.perKm >= 3 },
-  { id: 'near', label: 'Under 30 km', test: (l: V2Load) => l.pickupKm < 30 },
-] as const;
+const FILTER_TESTS: Record<string, (l: V2Load) => boolean> = {
+  today: (l) => l.day === 'today',
+  rate: (l) => l.perKm >= 3,
+  near: (l) => l.pickupKm < 30,
+};
 
 export function Home() {
   const navigate = useNavigate();
@@ -34,68 +37,93 @@ export function Home() {
   const [loads, setLoads] = useState<V2Load[] | null>(null);
   const [on, setOn] = useState<string[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [routeOpen, setRouteOpen] = useState(false);
 
   useEffect(() => {
     getLoads().then(setLoads);
   }, []);
 
+  const countFor = (ids: string[]) =>
+    (loads ?? []).filter((l) => FILTERS.every((f) => !ids.includes(f.id) || FILTER_TESTS[f.id](l))).length;
+  // Dismissed loads leave the feed but stay restorable (decline is free, never a score input).
+  const dismissedIds = useMemo(
+    () => Object.values(state.applications).filter((a) => a.dismissed).map((a) => a.loadId),
+    [state.applications],
+  );
   const visible = useMemo(
-    () => (loads ?? []).filter((l) => FILTERS.every((f) => !on.includes(f.id) || f.test(l))),
-    [loads, on],
+    () => (loads ?? [])
+      .filter((l) => !dismissedIds.includes(l.id))
+      .filter((l) => FILTERS.every((f) => !on.includes(f.id) || FILTER_TESTS[f.id](l))),
+    [loads, on, dismissedIds],
   );
   const applied = loads?.find((l) => l.id === state.loadId) ?? null;
   const status = state.status;
   const open = loads?.find((l) => l.id === openId) ?? null;
-
-  const toggle = (id: string) => setOn((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  const destination = state.route.to.trim() || 'Brussels';
 
   return (
     <V2Frame active="Loads">
-      <div className="absolute inset-x-0 top-[70px] bottom-[117px] z-20 flex flex-col gap-[8px] px-[16px]">
-        <div className="flex items-center justify-between rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] shadow-[var(--shadow-card)]">
+      <div className="absolute inset-x-0 top-[8px] bottom-[calc(117px-var(--status-bar-h))] z-20 flex flex-col gap-[8px] px-[16px]">
+        <button
+          type="button"
+          onClick={() => setRouteOpen(true)}
+          aria-label={`Direction: loads towards ${destination}. Activate to change.`}
+          className="flex items-center justify-between rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] text-left shadow-[var(--shadow-card)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+        >
           <span className="flex items-center gap-[8px] text-[var(--color-text-primary)]">
             <Icon name="map-pin" className="text-[var(--color-action-primary)]" />
             <span className="flex flex-col">
               <span className="text-caption-12 text-[var(--color-text-secondary)]">Loads towards</span>
-              <span className="text-heading-14">{state.route.to.trim() || 'Brussels'}</span>
+              <span className="text-heading-14">{destination}</span>
             </span>
           </span>
-          <span className="text-label-12 text-[var(--color-text-secondary)]">
-            {loads ? `${visible.length} loads` : 'Searching…'}
+          <span className="flex items-center gap-[8px]">
+            <span className="text-label-12 text-[var(--color-text-secondary)]">
+              {loads ? `${visible.length} loads` : 'Searching…'}
+            </span>
+            <Icon name="chevron-down" size="sm" className="text-[var(--color-text-secondary)]" />
           </span>
-        </div>
-
-        <div className="flex shrink-0 gap-[8px]">
-          {FILTERS.map((f) => {
-            const sel = on.includes(f.id);
-            return (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => toggle(f.id)}
-                aria-pressed={sel}
-                className={`h-[36px] rounded-[var(--radius-pill)] border px-[14px] text-label-14 shadow-[var(--shadow-card)] ${
-                  sel
-                    ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]'
-                    : 'border-[var(--color-border-default)] bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]'
-                }`}
-              >
-                {f.label}
-              </button>
-            );
-          })}
-        </div>
+        </button>
 
         {applied && status && <ApplicationBanner load={applied} status={status} onOpen={() => navigate(`/application/${applied.id}${scenarioSearch}`)} />}
 
         <SmartLoadList
           loads={visible}
           loading={loads === null}
-          currentRoute={{ from: state.route.from, to: state.route.to.trim() || 'Brussels' }}
+          currentRoute={{ from: state.route.from, to: destination }}
           onOpen={(load) => setOpenId(load.id)}
+          onClearFilters={on.length > 0 ? () => setOn([]) : undefined}
+          onDismiss={(load) => { void dismissLoad(load.id); }}
+          dismissedIds={dismissedIds}
+          onRestore={(loadId) => { void restoreLoad(loadId); }}
+          tabsPrefix={
+            <FiltersButton
+              count={on.length > 0 ? on.length : undefined}
+              onClick={() => setFiltersOpen(true)}
+              className="shrink-0"
+            />
+          }
         />
       </div>
 
+      <FiltersSheet
+        open={filtersOpen}
+        active={on}
+        countFor={countFor}
+        onApply={(ids) => { setOn(ids); setFiltersOpen(false); }}
+        onClose={() => setFiltersOpen(false)}
+      />
+      <RouteSheet
+        open={routeOpen}
+        value={destination}
+        countFor={(to) => (loads ?? []).filter((l) => l.to.trim().toLocaleLowerCase() === to.trim().toLocaleLowerCase()).length}
+        onApply={(to) => {
+          store.set({ route: { from: state.route.from, to } });
+          setRouteOpen(false);
+        }}
+        onClose={() => setRouteOpen(false)}
+      />
       {open && (
         <LoadSheet
           load={open}
