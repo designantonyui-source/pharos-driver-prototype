@@ -133,6 +133,12 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
   const canDismiss = !!onDismiss && (state === 'available' || state === 'cancelled' || state === 'rejected');
   const cross = crossBorder(load.from, load.to);
   const farPickup = load.pickupKm >= 40;
+  const nearPickup = load.pickupKm < 30;
+  const pickupTone = farPickup
+    ? 'font-semibold text-[var(--color-status-warning-text)]'
+    : nearPickup
+      ? 'font-semibold text-[var(--color-status-success-text)]'
+      : 'text-[var(--color-text-secondary)]';
   // Swipe-to-hide (iOS mail pattern): track horizontal drag, reveal Hide action past 72px.
   const [swipeX, setSwipeX] = useState(0);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -192,7 +198,7 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
           <span aria-hidden="true" className="text-[var(--color-text-tertiary)]">·</span>
           <span className="whitespace-nowrap">{load.km} km loaded</span>
         </p>
-        <p aria-hidden="true" className={`flex flex-wrap items-center gap-x-[6px] text-body-14 ${farPickup ? 'font-semibold text-[var(--color-status-warning-text)]' : 'text-[var(--color-text-secondary)]'}`}>
+        <p aria-hidden="true" className={`flex flex-wrap items-center gap-x-[6px] text-body-14 ${pickupTone}`}>
           <span className="inline-flex items-center gap-[4px] whitespace-nowrap"><Icon name="map-pin" size={14} />{load.pickupKm} km</span>
           <span aria-hidden="true" className="font-normal">·</span>
           <span className="whitespace-nowrap">{load.pickupMin} min to pickup</span>

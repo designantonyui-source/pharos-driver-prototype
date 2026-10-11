@@ -90,12 +90,16 @@ describe('LoadCard states', () => {
     expect(routeAriaLabel('Lille', 'Brussels')).toBe('Lille, France to Brussels, Belgium. Open details.');
   });
 
-  it('far pickup reads semibold warning, near pickup stays plain', () => {
+  it('far pickup reads semibold warning, near pickup semibold success, mid stays plain', () => {
     const { rerender } = render(<MemoryRouter><LoadCard load={{ ...V2_LOADS[1], onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
     expect(screen.getByLabelText('Today 16:00–17:00, 68 km loaded, 42 km 45 minutes to pickup')).toBeVisible();
-    expect(screen.getByText('42 km').closest('p')).toHaveClass('font-semibold');
+    const far = screen.getByText('42 km').closest('p');
+    expect(far).toHaveClass('font-semibold');
+    expect(far?.className).toMatch(/status-warning-text/);
     rerender(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
-    expect(screen.getByText('18 km').closest('p')).not.toHaveClass('font-semibold');
+    const near = screen.getByText('18 km').closest('p');
+    expect(near).toHaveClass('font-semibold');
+    expect(near?.className).toMatch(/status-success-text/);
   });
 
   it('swipe-to-hide reveals the Hide action and hides the card', () => {
