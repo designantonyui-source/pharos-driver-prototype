@@ -52,7 +52,7 @@ export function TripDetailsView({ load }: { load: V2Load }) {
 
         <main className="flex min-h-0 flex-1 flex-col gap-[12px] overflow-y-auto pb-[12px]">
           <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-[var(--shadow-card)]" aria-label="Trip summary">
-            <span className="inline-flex rounded-[var(--radius-pill)] bg-[var(--color-status-success-bg)] px-[8px] py-[4px] text-label-12 text-[var(--color-status-success-text)]">{cancelled ? 'Cancelled by you' : 'Confirmed'}</span>
+            <span className={`inline-flex rounded-[var(--radius-pill)] px-[8px] py-[4px] text-label-12 ${cancelled ? 'bg-[var(--color-status-neutral-bg)] text-[var(--color-status-neutral-text)]' : 'bg-[var(--color-status-success-bg)] text-[var(--color-status-success-text)]'}`}>{cancelled ? 'Cancelled by you' : 'Confirmed'}</span>
             <p className="mt-[12px] text-heading-32 text-[var(--color-text-primary)]">€{load.rate}</p>
             <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">{load.km} km loaded · {load.paidIn}</p>
           </section>
