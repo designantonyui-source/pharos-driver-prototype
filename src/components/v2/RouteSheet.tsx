@@ -1,10 +1,12 @@
 /**
  * v2 · RouteSheet — change the feed direction without leaving `/v2` (closes P2-1:
  * direction used to live only on `/search`). Two fields, live count, Apply commits.
- * City chips mirror the focused field (From/To label) and mark the active city
- * selected, like the FiltersSheet pills — one-tap without typing.
+ * City chips mirror the focused field (From/To label), carry the live match count
+ * for the tap they would make, and go disabled at zero — a chip never promises a
+ * feed it cannot show. Tapping a chip fills the field AND moves focus to the other
+ * one, so origin → destination completes in two taps with no typing.
  * props: open, value, countFor, onApply, onClose, cities
- * tokens: color-bg-surface, color-text-primary, color-text-secondary,
+ * tokens: color-bg-surface, color-text-primary, color-text-secondary, color-text-disabled,
  *         color-action-primary, color-action-text-inverse, color-border-default, radius-md, radius-pill
  */
 import { useEffect, useState } from 'react';
@@ -37,9 +39,12 @@ export function RouteSheet({
   }, [open, value.from, value.to]);
   const visible = countFor({ from: fromDraft, to: toDraft });
   const tapCity = (city: string) => {
-    if (focused === 'from') setFromDraft(city);
-    else setToDraft(city);
+    if (focused === 'from') { setFromDraft(city); setFocused('to'); }
+    else { setToDraft(city); setFocused('from'); }
   };
+  /** What tapping this chip would leave in the feed — 0 means the chip is dead weight. */
+  const countForChip = (city: string) =>
+    focused === 'from' ? countFor({ from: city, to: toDraft }) : countFor({ from: fromDraft, to: city });
 
   return (
     <Sheet open={open} onClose={onClose} label="Change direction">
@@ -81,20 +86,26 @@ export function RouteSheet({
           <div className="mt-[8px] flex flex-wrap gap-[8px]" role="group" aria-labelledby="route-cities-label">
             {cities.map((city) => {
               const selected = (focused === 'from' ? fromDraft : toDraft).trim().toLocaleLowerCase() === city.trim().toLocaleLowerCase();
+              const matches = countForChip(city);
+              const dead = matches === 0;
+              const side = focused === 'from' ? 'origin' : 'destination';
               return (
                 <button
                   key={city}
                   type="button"
                   onClick={() => tapCity(city)}
+                  disabled={dead}
                   aria-pressed={selected}
-                  aria-label={selected ? `${city}, selected as ${focused === 'from' ? 'origin' : 'destination'}. Activate to keep it.` : `Use ${city} as ${focused === 'from' ? 'origin' : 'destination'}`}
+                  aria-label={dead ? `${city} — no loads as ${side}` : selected ? `${city}, ${matches} ${matches === 1 ? 'load' : 'loads'} as ${side}, selected. Activate to keep it.` : `Use ${city} as ${side}, ${matches} ${matches === 1 ? 'load' : 'loads'}`}
                   className={`min-h-[44px] rounded-[var(--radius-pill)] border px-[14px] text-label-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
-                    selected
-                      ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]'
-                      : 'border-[var(--color-border-default)] bg-[var(--color-bg-surface)] text-[var(--color-action-text)]'
+                    dead
+                      ? 'cursor-not-allowed border-[var(--color-border-default)] bg-[var(--color-bg-surface)] text-[var(--color-text-disabled)] opacity-60'
+                      : selected
+                        ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]'
+                        : 'border-[var(--color-border-default)] bg-[var(--color-bg-surface)] text-[var(--color-action-text)]'
                   }`}
                 >
-                  {city}
+                  {city} · {matches}
                 </button>
               );
             })}

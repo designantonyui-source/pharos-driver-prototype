@@ -3,7 +3,10 @@
 > Рабочий файл потока. Правило: сверху 10 строк правды, снизу append-only история.
 > Маппинг: `design/figma-map.md`.
 
-## Текущее состояние (2026-10-11)
+## Текущее состояние (2026-10-12)
+
+- Чипы RouteSheet v2: живой счёт `Город · N` через `countFor` (счёт того тапа, который чип сделает), `0` → `disabled` (`aria-label` «no loads», `cursor-not-allowed`, `text-disabled`), тап двигает фокус origin↔destination — маршрут собирается в два тапа без печати. Unit: чипы считают + фокус + лейбл следует за фокусом.
+- E2E честно поверх маршрута Brussels: превью фильтров считает по всему фиду (Today → `Show 4`), маршрут применяется сверху (фид держит свои 2); пустое состояние — через тупик Antwerp → Paris (`No loads match` disabled, Escape закрывает). Тесты: unit 127/127, E2E application-flow 8/8, `pnpm check` чистый.
 
 - Хаб: `/v2/trips` → `src/screens/v2/Trips.tsx` (вкладка Trips в `V2Frame`; раньше заглушка `V2Soon`). Секции: Active trip hero (nav-bg card + Open trip) → In review → Past. Тесты: `Trips.test.tsx` (5), stories: Empty / Mixed / AllPast.
 - Данные: `store.applications` + `V2_LOADS` через `api.getLoads`; новой модели нет. Dismissed скрыты (живут в `/v2/account/dismissed`). Cancelled-after-confirm ведёт в `/trip/:id`, остальное прошлое — в `/application/:id`.
@@ -14,6 +17,7 @@
 
 ## История
 
+- **2026-10-12, Route chips v2 + E2E honesty:** чипы несут живой счёт тапа (`countForChip`), ноль — disabled, тап двигает фокус (unit: счёт + фокус + лейбл). E2E переписаны честно: direction-селекторы — точные имена (`Direction: Brussels, 2 loads…`), direction-тест проверяет сужение фида (Antwerp → только belroute), filters-тест признаёт, что превью считает без маршрута (Today → `Show 4`, фид держит 2), пустое состояние — через тупик Antwerp → Paris. Новый тест `route chips count live and the dead end recovers`. E2E 8/8.
 - **2026-10-11, Feed polish:** тени `shadow-[var(--shadow-card)]` не резолвились в Tailwind v4 (замер: `box-shadow: none`) — весь фид переведён на утилиту `shadow-card`, замер Chrome: `rgba(23,42,53,.055) 0px 6px 20px`. Чипы RouteSheet стали тогглами: лейбл зеркалит фокус (`From/To`), выбранный город `aria-pressed` + залитая пилюля как в FiltersSheet. Строка техники — значение фида дословно (старый `km × 0.06` врал на 3 из 6 лоадов). Хедер считает loads, не trips (plural-aware). Empty-state: `No loads match — try widening the search.` + `Clear filters` и `Change direction` (`onOpenRoute`). Пины карты для трёх новых лоадов Paris/Amsterdam. Тесты 127 (было 126: +1 label-follows-focus, расширены chips + empty).
 
 - **2026-10-11, Card pro:** крест убран (читался как «закрыть окно» + 44px пустоты) — скрытие свайпом влево (iOS mail, 88px Hide) + текст `Hide this load` для AT; правый угол отдан живому таймеру (`Decide in X` из decideMin/S8 до заявки, `Pickup in X` после confirm); trust-строка `Company semibold · ★ rating Verified · Paid · cross-border` вместо винегрета; пилюля FR→BE ушла в тихий суффикс. Тесты 125 (было 122: +2 swipe, +1 trust/cross-border).

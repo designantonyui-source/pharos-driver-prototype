@@ -53,21 +53,25 @@ describe('RouteSheet draft semantics', () => {
     expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
   });
 
-  it('city chips fill the focused field', () => {
+  it('city chips fill the focused field and move focus on', () => {
     const onApply = vi.fn();
+    // Origin Paris leaves only paris-brussels for Brussels: every destination chip
+    // except Brussels reads 0 and goes disabled — a chip never promises an empty feed.
+    const countFor = (route: { from: string; to: string }) =>
+      route.from.trim().toLocaleLowerCase() === 'paris' && route.to.trim().toLocaleLowerCase() === 'brussels' ? 1 : 0;
     render(
       <MemoryRouter>
-        <RouteSheet open value={{ from: '', to: '' }} countFor={() => 1} onApply={onApply} onClose={() => undefined} cities={['Paris', 'Brussels']} />
+        <RouteSheet open value={{ from: 'Paris', to: '' }} countFor={countFor} onApply={onApply} onClose={() => undefined} cities={['Paris', 'Brussels', 'Lille']} />
       </MemoryRouter>,
     );
-    fireEvent.focus(screen.getByLabelText('Origin city'));
-    fireEvent.click(screen.getByRole('button', { name: 'Use Paris as origin' }));
-    expect(screen.getByLabelText('Origin city')).toHaveValue('Paris');
-    // The tapped city reads selected, like the FiltersSheet pills.
-    expect(screen.getByRole('button', { name: 'Paris, selected as origin. Activate to keep it.' })).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.focus(screen.getByLabelText('Destination city'));
-    fireEvent.click(screen.getByRole('button', { name: 'Use Brussels as destination' }));
-    expect(screen.getByRole('button', { name: 'Brussels, selected as destination. Activate to keep it.' })).toHaveAttribute('aria-pressed', 'true');
+    // Focus lands on destination on open: Brussels counts 1, Lille counts 0.
+    expect(screen.getByRole('button', { name: 'Use Brussels as destination, 1 load' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Lille — no loads as destination' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Use Brussels as destination, 1 load' }));
+    expect(screen.getByLabelText('Destination city')).toHaveValue('Brussels');
+    // The tap moved focus to origin: the group label follows it.
+    expect(screen.getByRole('group', { name: 'From — Paris' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Paris, 1 load as origin, selected. Activate to keep it.' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Show 1 load' }));
     expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
   });
