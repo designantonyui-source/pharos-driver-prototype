@@ -1,10 +1,10 @@
 /**
- * figma: prototype-led · CancelTripSheet — confirmed-trip cancellation (policy not approved).
- * within 15 min of confirm or >24 h before pickup → no penalty;
- * less than 24 h → reliability warning. Reason is recorded for the future score.
- * props: open, load, penalty, onConfirm, onClose
- * tokens: color-bg-surface, color-text-primary, color-text-secondary, color-status-warning-bg,
- *         color-status-warning-text, radius-md
+ * figma: prototype-led · CancelTripSheet — confirmed-trip cancellation
+ * (policy is a preview, not yet approved)
+ * props: open, load, penalty, cancelling, error, onConfirm, onClose
+ * tokens: color-bg-surface, color-text-primary, color-text-secondary,
+ *         color-status-warning-bg, color-status-warning-text, color-bg-subtle,
+ *         radius-md
  */
 import { useEffect, useState } from 'react';
 import { Button } from '../Button';
@@ -18,7 +18,7 @@ type Reason = NonNullable<LoadApplication['cancelReason']>;
 const REASONS: { id: Reason; label: string }[] = [
   { id: 'breakdown', label: 'Vehicle breakdown' },
   { id: 'delay', label: 'Delayed on a previous load' },
-  { id: 'better-load', label: 'Found another load' },
+  { id: 'better-load', label: 'Found a better load' },
   { id: 'other', label: 'Other reason' },
 ];
 
@@ -51,17 +51,40 @@ export function CancelTripSheet({
       <p className="mt-[var(--spacing-8)] text-body-14 text-[var(--color-text-secondary)]">
         {load.from} → {load.to} · €{load.rate}
       </p>
+      {/* Consequences block */}
       {penalty === 'none' ? (
-        <p className="mt-[var(--spacing-12)] rounded-[var(--radius-md)] bg-[var(--color-bg-subtle)] p-[var(--spacing-12)] text-body-14 text-[var(--color-text-primary)]">
-          Demo preview: no reliability warning. Cancellation policy is not approved.
-        </p>
+        <div className="mt-[var(--spacing-12)] rounded-[var(--radius-md)] bg-[var(--color-bg-subtle)] p-[var(--spacing-12)]">
+          <p className="text-body-14 text-[var(--color-text-primary)]">
+            No reliability impact expected.
+          </p>
+          <p className="mt-[var(--spacing-4)] text-body-14 text-[var(--color-text-secondary)]">
+            You can cancel free of charge at this stage.
+          </p>
+        </div>
       ) : (
-        <p className="mt-[var(--spacing-12)] rounded-[var(--radius-md)] bg-[var(--color-status-warning-bg)] p-[var(--spacing-12)] text-body-14 text-[var(--color-status-warning-text)]" role="alert">
-          Demo only: cancellation may affect reliability. The policy is not approved; no real penalty is applied.
-        </p>
+        <div
+          className="mt-[var(--spacing-12)] rounded-[var(--radius-md)] bg-[var(--color-status-warning-bg)] p-[var(--spacing-12)]"
+          role="alert"
+        >
+          <p className="text-body-14 text-[var(--color-status-warning-text)]">
+            This may affect your reliability score.
+          </p>
+          <p className="mt-[var(--spacing-4)] text-body-14 text-[var(--color-status-warning-text)]">
+            Cancellations close to pickup are reviewed by the dispatcher.
+          </p>
+        </div>
       )}
 
-      {error && <p role="alert" className="text-body-14 text-[var(--color-text-danger)]">{error}</p>}
+      {/* Small honest note for portfolio / demo clarity */}
+      <p className="mt-[var(--spacing-8)] text-caption-12 text-[var(--color-text-secondary)]">
+        Cancellation policy is still being finalized — this is a preview.
+      </p>
+
+      {error && (
+        <p role="alert" className="mt-[var(--spacing-12)] text-body-14 text-[var(--color-text-danger)]">
+          {error}
+        </p>
+      )}
       <div className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-8)]" role="radiogroup" aria-label="Cancel reason">
         {REASONS.map((r) => {
           const sel = reason === r.id;
