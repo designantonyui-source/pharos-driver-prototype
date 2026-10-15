@@ -436,6 +436,18 @@ export async function restoreLoad(loadId: string) {
 
 export type CancelTripPenalty = 'none' | 'warning';
 
+/** Preview-only cancellation consequence calculation, shared by confirmation UI and action. */
+export function cancellationPenalty(application: LoadApplication, pickupTime?: string, now = Date.now()): CancelTripPenalty {
+  const confirmedAt = application.submittedAt ? Date.parse(application.submittedAt) : NaN;
+  const pickupAt = pickupTime ? Date.parse(pickupTime) : NaN;
+  const minsSinceConfirm = Number.isFinite(confirmedAt) ? (now - confirmedAt) / 60_000 : Infinity;
+  const hoursToPickup = Number.isFinite(pickupAt) ? (pickupAt - now) / 3_600_000 : NaN;
+  return (minsSinceConfirm >= 0 && minsSinceConfirm <= 15)
+    || (Number.isFinite(hoursToPickup) && hoursToPickup >= 24) ? 'none' : 'warning';
+}
+
+
+
 /**
  * Cancel a CONFIRMED trip (Uber Freight ladder):
  * within 15 min of confirm OR more than 24 h before pickup → 'none';
@@ -450,12 +462,7 @@ export async function cancelTrip(loadId: string, reason: NonNullable<LoadApplica
     throw new Error('No confirmed trip to cancel');
   }
   const load = getLoad(loadId);
-  const confirmedAt = application.submittedAt ? Date.parse(application.submittedAt) : Date.now();
-  const pickupAt = load?.pickupTime ? Date.parse(load.pickupTime) : NaN;
-  const minsSinceConfirm = (Date.now() - confirmedAt) / 60_000;
-  const hoursToPickup = Number.isFinite(pickupAt) ? (pickupAt - Date.now()) / 3_600_000 : NaN;
-  const penalty: CancelTripPenalty =
-    minsSinceConfirm <= 15 || (Number.isFinite(hoursToPickup) && hoursToPickup >= 24) ? 'none' : 'warning';
+  const penalty = cancellationPenalty(application, load?.pickupTime);
   store.set({
     loadId,
     status: ApplicationStatus.CANCELLED,
