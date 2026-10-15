@@ -24,21 +24,20 @@ function setup(path: string) {
 beforeEach(() => { localStorage.clear(); });
 afterEach(() => { cleanup(); router?.dispose(); vi.restoreAllMocks(); localStorage.clear(); });
 
-it('lists invoices newest-first with statuses and awaiting total', async () => {
+it('lists invoices newest-first with paid history', async () => {
   setup('/v2/account/balance/invoices');
-  await screen.findByText('INV-2026-0042 - NordCargo');
-  expect(screen.getByText(/Awaiting payment/)).toBeTruthy();
+  await screen.findByText('INV-2026-0038 - BelRoute');
   expect(screen.getAllByText('paid').length).toBeGreaterThan(0);
-  expect(screen.getAllByText('pending').length).toBeGreaterThan(0);
-  fireEvent.click(screen.getByRole('link', { name: /INV-2026-0042/ }));
+  expect(screen.queryByText('pending')).toBeNull();
+  fireEvent.click(screen.getByRole('link', { name: /INV-2026-0038/ }));
   await screen.findByText('Reverse charge');
 });
 
 it('shows invoice details with parties, VAT math and actions', async () => {
-  setup('/v2/account/balance/invoices/inv-2026-0042');
-  await screen.findByText('INV-2026-0042', { selector: 'p.sr-only' });
+  setup('/v2/account/balance/invoices/inv-2026-0038');
+  await screen.findByText('INV-2026-0038', { selector: 'p.sr-only' });
   expect(screen.getByText(/Northway Freight SPRL/)).toBeTruthy();
-  expect(screen.getByText(/NordCargo BV/)).toBeTruthy();
+  expect(screen.getByText(/BelRoute BV/)).toBeTruthy();
   expect(screen.getAllByText(/reverse charge/i).length).toBeGreaterThan(0);
   const open = vi.spyOn(window, 'open').mockReturnValue(null);
   fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
@@ -49,22 +48,22 @@ it('shows invoice details with parties, VAT math and actions', async () => {
 
 it('links a history trip row to its invoice', async () => {
   setup('/v2/account/balance/history');
-  const link = await screen.findByRole('link', { name: /Lille - Brussels.*invoice/ });
+  const link = await screen.findByRole('link', { name: /Ghent - Antwerp.*invoice/ });
   fireEvent.click(link);
-  await screen.findByText('INV-2026-0042', { selector: 'p.sr-only' });
+  await screen.findByText('INV-2026-0038', { selector: 'p.sr-only' });
 });
 
 it('exposes invoice lookup by load and accountant CSV', async () => {
   const invoices = await getInvoices();
-  expect(invoices.length).toBe(3);
-  expect(invoices[0].id).toBe('inv-2026-0042');
+  expect(invoices.length).toBe(2);
+  expect(invoices[0].id).toBe('inv-2026-0038');
   expect(await getInvoice('nope')).toBeNull();
-  expect((await getInvoiceForLoad('nordcargo'))?.number).toBe('INV-2026-0042');
+  expect(await getInvoiceForLoad('nordcargo')).toBeNull();
   const csv = invoicesToCsv(invoices);
-  expect(csv.split('\n').length).toBe(4);
-  expect(csv).toContain('INV-2026-0042');
+  expect(csv.split('\n').length).toBe(3);
+  expect(csv).toContain('INV-2026-0038');
   const html = invoiceHtml(invoices[0]);
-  expect(html).toContain('INV-2026-0042');
+  expect(html).toContain('INV-2026-0038');
   expect(html).toContain('reverse charge');
-  expect(html).toContain('EUR 360.00');
+  expect(html).toContain('EUR 210.00');
 });

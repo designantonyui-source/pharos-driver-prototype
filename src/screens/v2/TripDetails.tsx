@@ -8,10 +8,37 @@ import { V2Frame } from '../../components/v2/V2Frame';
 import { CancelTripSheet } from '../../components/v2/CancelTripSheet';
 import { TripDocumentsSheet } from '../../components/v2/TripDocumentsSheet';
 import { Toast, useToast } from '../../components/v2/Toast';
-import { TRIP_STAGE_STEPS, advanceTripStage, cancelTrip, cancellationPenalty, getTripDetails, setEnRoute, submitProofOfDelivery, type TripStage } from '../../lib/api';
+import { TRIP_STAGE_STEPS, advanceTripStage, cancelTrip, cancellationPenalty, getDefaultMethod, getTripDetails, methodLabel, setEnRoute, submitProofOfDelivery, type PayoutMethod, type TripStage } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore, type LoadApplication } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
+
+/**
+ * Payout row: shows the REAL payout method from the store, never the static load mock.
+ * No method yet → explicit "Add payout method" CTA instead of a fake IBAN.
+ */
+function PayoutRow({ load }: { load: V2Load }) {
+  const [method, setMethod] = useState<PayoutMethod | null | undefined>(undefined);
+  useEffect(() => {
+    let live = true;
+    getDefaultMethod().then((m) => { if (live) setMethod(m); }).catch(() => { if (live) setMethod(null); });
+    return () => { live = false; };
+  }, []);
+  const body = method === undefined ? 'Checking payout method…'
+    : method ? `${load.payoutDate} → ${methodLabel(method)}`
+    : 'No payout method yet — add one to receive earnings';
+  return (
+    <Link
+      to={method ? '/v2/account/balance' : '/v2/account/balance/method'}
+      className="mt-[12px] flex min-h-[var(--size-control-mobile)] items-center gap-[8px] rounded-[var(--radius-md)] bg-[var(--color-nav-active)] px-[12px] text-body-14 text-[var(--color-text-inverse)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+      aria-label={`Payout: ${body}. ${method ? 'Open Balance.' : 'Add payout method.'}`}
+    >
+      <span className="shrink-0" aria-hidden><Icon name="wallet" size="sm" /></span>
+      <span className="min-w-0 flex-1">{body}</span>
+      <span className="shrink-0" aria-hidden><Icon name="chevron-right" size="sm" /></span>
+    </Link>
+  );
+}
 
 /**
  * figma: prototype-led · TripDetails — confirmed load itinerary; route /trip/:id
@@ -150,15 +177,7 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
             <p className="mt-[4px] text-body-14 opacity-90">
               {load.km} km loaded · €{load.perKm.toFixed(2)}/km
             </p>
-            <Link
-              to="/v2/account/balance"
-              className="mt-[12px] flex min-h-[var(--size-control-mobile)] items-center gap-[8px] rounded-[var(--radius-md)] bg-[var(--color-nav-active)] px-[12px] text-body-14 text-[var(--color-text-inverse)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
-              aria-label={`Payout ${load.payoutDate} to ${load.payoutMethod}. Open Balance.`}
-            >
-              <span className="shrink-0" aria-hidden><Icon name="wallet" size="sm" /></span>
-              <span className="min-w-0 flex-1">{load.payoutDate} → {load.payoutMethod}</span>
-              <span className="shrink-0" aria-hidden><Icon name="chevron-right" size="sm" /></span>
-            </Link>
+            <PayoutRow load={load} />
           </section>
 
           {/* Progress */}

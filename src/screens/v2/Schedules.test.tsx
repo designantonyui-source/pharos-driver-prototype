@@ -30,7 +30,7 @@ it('saves a threshold rule and fires it on evaluation', async () => {
   expect((await api.getSchedule()).mode).toBe('threshold');
   const run = await api.evaluateSchedule();
   expect(run?.trigger).toBe('threshold');
-  expect(run?.amount).toBeCloseTo(570, 2);
+  expect(run?.amount).toBeCloseTo(500, 2);
   expect((await api.getBalance()).available).toBeCloseTo(0, 2);
   const runs = await api.getScheduledRuns();
   expect(runs.length).toBe(1);

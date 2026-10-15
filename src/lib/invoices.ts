@@ -49,7 +49,7 @@ function eur(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-/** Prototype seed: one invoice per settled/pending trip in the mock feed. */
+/** Prototype seed: history invoices only — the demo trip invoice is created by the scenario. */
 function seedInvoices(): Invoice[] {
   const now = Date.now();
   const iso = (ms: number) => new Date(ms).toISOString();
@@ -57,7 +57,6 @@ function seedInvoices(): Invoice[] {
     id: string; number: string; loadId: string; company: string; from: string; to: string;
     issuedAgo: number; dueIn: number; amount: number; status: InvoiceStatus; buyerVat: string;
   }> = [
-    { id: 'inv-2026-0042', number: 'INV-2026-0042', loadId: 'nordcargo', company: 'NordCargo', from: 'Lille', to: 'Brussels', issuedAgo: 4, dueIn: 3, amount: 360, status: 'pending', buyerVat: 'BE 0987.654.321' },
     { id: 'inv-2026-0038', number: 'INV-2026-0038', loadId: 'belroute', company: 'BelRoute', from: 'Ghent', to: 'Antwerp', issuedAgo: 9, dueIn: -2, amount: 210, status: 'paid', buyerVat: 'BE 0456.123.789' },
     { id: 'inv-2026-0031', number: 'INV-2026-0031', loadId: 'calais-lille', company: 'Côte Fret', from: 'Calais', to: 'Lille', issuedAgo: 16, dueIn: -9, amount: 290, status: 'paid', buyerVat: 'FR 98 765432109' },
   ];
@@ -91,6 +90,56 @@ function seedInvoices(): Invoice[] {
 let cache: Invoice[] | null = null;
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+/**
+ * Demo-trip invoice: created once the delivery completes, id + route + amount
+ * match the feed load and the pending ledger line. Status follows the money:
+ * `pending` until the customer pays, `paid` when the trip becomes available.
+ */
+export async function createDemoInvoice(input: {
+  loadId: string; company: string; from: string; to: string; amount: number; buyerVat: string;
+}): Promise<Invoice> {
+  const now = new Date();
+  const vatRate = 0;
+  const vatAmount = 0;
+  const number = `INV-${now.getFullYear()}-0043`;
+  cache ??= seedInvoices();
+  const existing = cache.find(i => i.loadId === input.loadId);
+  if (existing) return existing;
+  const invoice: Invoice = {
+    id: `inv-${now.getFullYear()}-0043`,
+    number,
+    loadId: input.loadId,
+    company: input.company,
+    from: input.from,
+    to: input.to,
+    issuedAt: now.toISOString(),
+    dueAt: new Date(now.getTime() + 7 * 86_400_000).toISOString(),
+    amount: Math.round(input.amount * 100) / 100,
+    vatRate,
+    vatAmount,
+    total: Math.round(input.amount * 100) / 100 + vatAmount,
+    currency: 'EUR',
+    status: 'pending',
+    seller: { name: 'Northway Freight SPRL', address: 'Rue de Lille 42, 59800 Lille, France', vatId: 'FR 12 345678901' },
+    buyer: { name: `${input.company} BV`, address: 'Customer address on file', vatId: input.buyerVat },
+    lines: [{ description: `Freight ${input.from} – ${input.to}`, lane: `${input.from} → ${input.to}`, amount: Math.round(input.amount * 100) / 100 }],
+    note: 'Intra-EU supply — VAT reverse charge applies (Article 196, VAT Directive 2006/112/EC).',
+  };
+  cache = [...cache, invoice];
+  return invoice;
+}
+
+/** Demo-trip invoice follows the payout: customer paid → invoice paid. */
+export async function markDemoInvoicePaid(loadId: string): Promise<Invoice | null> {
+  cache ??= seedInvoices();
+  const invoice = cache.find(i => i.loadId === loadId);
+  if (!invoice) return null;
+  if (invoice.status === 'paid') return invoice;
+  const paid = { ...invoice, status: 'paid' as const };
+  cache = cache.map(i => i.id === invoice.id ? paid : i);
+  return paid;
+}
 
 export async function getInvoices(): Promise<Invoice[]> {
   await wait(250);

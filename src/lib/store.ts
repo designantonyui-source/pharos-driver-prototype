@@ -81,7 +81,7 @@ function isLedgerEntry(value: unknown): value is LedgerEntry {
     return typeof entry.id === 'string' && typeof entry.amount === 'number'
       && typeof entry.fee === 'number'
       && (entry.rail === undefined || entry.rail === 'sepa' || entry.rail === 'instant-card')
-      && (entry.status === 'processing' || entry.status === 'done');
+      && (entry.status === 'processing' || entry.status === 'delayed' || entry.status === 'done' || entry.status === 'failed' || entry.status === 'returned');
   }
   if (entry.kind === 'adjustment') {
     return typeof entry.id === 'string' && typeof entry.amount === 'number'

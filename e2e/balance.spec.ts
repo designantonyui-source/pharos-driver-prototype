@@ -17,7 +17,7 @@ test('balance: IBAN method then SEPA cash out to history', async ({ page }) => {
   await page.getByRole('button', { name: /Confirm/ }).click();
   await expect(page.getByText(/is on its way/)).toBeVisible();
   await page.goto('/#/v2/account/balance/history');
-  await expect(page.getByText(/Lille - Brussels/)).toBeVisible();
+  await expect(page.getByText(/Ghent - Antwerp/)).toBeVisible();
 });
 
 test('balance: card method with instant fee quote', async ({ page }) => {
@@ -41,15 +41,15 @@ test('balance: invoices list, details, PDF and history link', async ({ page }) =
   await page.goto('/#/v2/account/balance/invoices');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await expect(page.getByText('INV-2026-0042 - NordCargo')).toBeVisible();
-  await page.getByRole('link', { name: /INV-2026-0042/ }).click();
+  await expect(page.getByText('INV-2026-0038 - BelRoute')).toBeVisible();
+  await page.getByRole('link', { name: /INV-2026-0038/ }).click();
   await expect(page.getByText('Reverse charge')).toBeVisible();
   await page.getByRole('button', { name: 'Download PDF' }).click();
   const popup = await page.waitForEvent('popup').catch(() => null);
   if (popup) await popup.close();
   await page.goto('/#/v2/account/balance/history');
-  await page.getByRole('link', { name: /Lille - Brussels.*invoice/ }).click();
-  await expect(page.getByText('INV-2026-0042', { exact: false }).first()).toBeVisible();
+  await page.getByRole('link', { name: /Ghent - Antwerp.*invoice/ }).click();
+  await expect(page.getByText('INV-2026-0038', { exact: false }).first()).toBeVisible();
 });
 
 test('balance: auto-withdraw rule saves and lists runs', async ({ page }) => {

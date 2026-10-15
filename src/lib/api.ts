@@ -10,6 +10,7 @@ import { ApplicationStatus } from './models';
 import { store, type LoadApplication, type Status } from './store';
 import { V2_LOADS, type V2Load } from './v2/loads';
 import { BL_ORDERS, type BlOrder } from './bl/logic';
+import { createDemoInvoice } from './invoices';
 
 import { maskCard, maskIban, normalizeContactProfile, normalizePayoutMethod, normalizeSchedule, type ContactProfile, type LedgerEntry, type PayoutMethod, type PayoutSchedule, type ScheduledRun } from './profile';
 import { MockPayoutProvider, PROTOTYPE_FEES, type Destination, type PayoutProvider, type PayoutQuote } from './psp';
@@ -26,6 +27,28 @@ export type { Destination, PayoutQuote, Rail } from './psp';
 /** The plugged-in provider. Production: replace with the Stripe/Adyen implementation. */
 export const payoutProvider: PayoutProvider = new MockPayoutProvider();
 
+/**
+ * Portfolio demo assumption (product): the driver is an owner-driver — they run
+ * their own carrier (Northway Freight SPRL) and are entitled to receive trip revenue
+ * and manage payout details. Prototype-only: no KYC/KYB, no real money.
+ */
+export const OWNER_DRIVER_ASSUMPTION = Object.freeze({
+  role: 'owner-driver',
+  carrier: 'Northway Freight SPRL',
+  note: 'Prototype assumption: the driver receives trip revenue and manages payout details.',
+});
+
+/**
+ * Portfolio demo trip: the single load every payments scenario runs on.
+ * id, route, rate and documents must match everywhere (loads feed, trip, invoice, ledger).
+ */
+export const DEMO_LOAD_ID = 'nordcargo';
+export function getDemoLoad(): V2Load {
+  const load = V2_LOADS.find((l) => l.id === DEMO_LOAD_ID);
+  if (!load) throw new Error('Demo load is missing from the feed');
+  return load;
+}
+
 /** Prototype payout policy (NOT approved business rules — see PAYMENTS-VISION.md §7). */
 export const PAYOUT_POLICY = Object.freeze({
   rail: 'SEPA transfer',
@@ -39,14 +62,14 @@ export const PAYOUT_POLICY = Object.freeze({
 
 const DAY_MS = 86_400_000;
 
-/** Seed ledger: two settled trips + one pending (net-7 style), so Balance has content on first run. */
+/** Seed ledger: settled history ONLY. The demo trip (DEMO_LOAD_ID) never seeds —
+ * its money appears only by completing delivery in the scenario. */
 function seedLedger(): LedgerEntry[] {
   const now = Date.now();
   const iso = (ms: number) => new Date(ms).toISOString();
   return [
-    { kind: 'trip', id: 'trip-nordcargo-4821', loadId: 'nordcargo', company: 'NordCargo', from: 'Lille', to: 'Brussels', amount: 360, status: 'available', paidAt: iso(now - 3 * DAY_MS), day: 'Tue' },
     { kind: 'trip', id: 'trip-belroute-1184', loadId: 'belroute', company: 'BelRoute', from: 'Ghent', to: 'Antwerp', amount: 210, status: 'available', paidAt: iso(now - 6 * DAY_MS), day: 'Sat' },
-    { kind: 'trip', id: 'trip-calais-0932', loadId: 'calais-lille', company: 'Côte Fret', from: 'Calais', to: 'Lille', amount: 290, status: 'pending', paidAt: null, day: 'Thu' },
+    { kind: 'trip', id: 'trip-calais-0932', loadId: 'calais-lille', company: 'Côte Fret', from: 'Calais', to: 'Lille', amount: 290, status: 'available', paidAt: iso(now - 9 * DAY_MS), day: 'Sun' },
   ];
 }
 
@@ -517,6 +540,7 @@ export async function advanceTripStage(loadId: string, expected: TripStage, next
     patch.deliveryProofConfirmed = true;
     patch.deliveryCompletedAt = deliveredAt;
     // Delivered work becomes pending payout (net-7 style) — the Balance story starts here.
+    // The demo invoice is created alongside so trip, ledger and invoice always agree.
     const load = getLoad(loadId);
     if (load && !current.ledger.some((entry) => entry.kind === 'trip' && entry.loadId === loadId)) {
       ledger = [
@@ -534,6 +558,10 @@ export async function advanceTripStage(loadId: string, expected: TripStage, next
           day: new Date(deliveredAt).toLocaleDateString('en-GB', { weekday: 'short' }),
         },
       ];
+      await createDemoInvoice({
+        loadId, company: load.company, from: load.from, to: load.to,
+        amount: load.rate, buyerVat: 'BE 0987.654.321',
+      });
     }
   }
   store.set({ ledger, applications: { [loadId]: { ...application, ...patch } } });

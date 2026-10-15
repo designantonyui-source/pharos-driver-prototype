@@ -29,8 +29,8 @@ afterEach(() => { cleanup(); router?.dispose(); vi.restoreAllMocks(); store.rese
 it('shows available vs pending with cash out CTA and empty method state', async () => {
   setup('/v2/account/balance');
   await screen.findByText('Available balance');
-  expect(screen.getByText(/EUR 570\.00/)).toBeTruthy();
-  expect(screen.getByText(/EUR 290\.00.*pending/)).toBeTruthy();
+  expect(screen.getByText(/EUR 500\.00/)).toBeTruthy();
+  expect(screen.queryByText(/pending/)).toBeNull();
   expect(screen.getByRole('button', { name: /Add payout method to cash out/ })).toBeTruthy();
   expect(screen.getByText('Add payout method')).toBeTruthy();
 });
@@ -110,7 +110,7 @@ it('blocks cash out without method and completes SEPA withdrawal', async () => {
   await screen.findByRole('dialog');
   fireEvent.click(screen.getByRole('button', { name: /Confirm/ }));
   await screen.findByText(/is on its way/);
-  expect((await api.getBalance()).available).toBeCloseTo(470, 2);
+  expect((await api.getBalance()).available).toBeCloseTo(400, 2);
 });
 
 it('quotes the card fee and executes via the mock provider ref', async () => {
@@ -125,13 +125,13 @@ it('quotes the card fee and executes via the mock provider ref', async () => {
   expect(entry.fee).toBe(1.5);
   expect(entry.methodLabel).toBe('Fuel');
   // Card rail deducts amount + EUR 1.50 prototype fee from available.
-  expect((await api.getBalance()).available).toBeCloseTo(468.5, 2);
+  expect((await api.getBalance()).available).toBeCloseTo(398.5, 2);
 });
 
 it('lists trips and withdrawals in history with rail notes', async () => {
   await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business' });
   setup('/v2/account/balance/history');
-  await screen.findByText('Lille - Brussels');
+  await screen.findByText('Ghent - Antwerp');
   expect(screen.getByText(/C.te Fret/)).toBeTruthy();
   const { entry } = await api.requestWithdrawal(100);
   expect(entry.methodLabel).toBe('Business');
@@ -154,7 +154,7 @@ it('dismisses only dismissed feed entries and never touches the ledger', async (
   store.set({ applications: { nordcargo: { loadId: 'nordcargo', status: ApplicationStatus.CANCELLED, submittedAt: null, dismissed: true } } });
   setup('/v2/account/balance');
   await screen.findByText('Available balance');
-  expect((await api.getBalance()).available).toBeCloseTo(570, 2);
+  expect((await api.getBalance()).available).toBeCloseTo(500, 2);
 });
 
 it('shows a row-shaped loading skeleton and an empty method illustration', async () => {
