@@ -8,31 +8,29 @@ import { Icon } from '../Icon';
  * Full-width with city labels; the solid mint leg grows with the stage.
  * Dark-card palette: dashed nav-text, progress match-bg, white truck badge.
  */
-function RouteArt({ progress, from, to }: { progress: number; from: string; to: string }) {
-  const x0 = 16;
-  const x1 = 184;
-  const y = 22;
+function RouteArt({ progress }: { progress: number }) {
+  const x0 = 12;
+  const x1 = 188;
+  const y = 20;
   const tx = x0 + Math.min(0.92, Math.max(0.14, progress)) * (x1 - x0);
   return (
-    <svg viewBox="0 0 200 52" className="h-[64px] w-full" aria-hidden focusable="false">
+    <svg viewBox="0 0 200 32" className="h-[32px] w-full" aria-hidden focusable="false">
       <line x1={x0} y1={y} x2={x1} y2={y} stroke="var(--color-nav-text)" strokeOpacity="0.35" strokeWidth="2" strokeDasharray="5 5" strokeLinecap="round" />
       <line x1={x0} y1={y} x2={Math.max(tx, x0)} y2={y} stroke="var(--color-status-match-bg)" strokeWidth="3" strokeLinecap="round" />
-      <circle cx={x0} cy={y} r="9" fill="none" stroke="var(--color-text-inverse)" strokeOpacity="0.35" strokeWidth="2" />
-      <circle cx={x0} cy={y} r="5" fill="var(--color-text-inverse)" />
-      <g transform={`translate(${x1 - 12} ${y - 28})`}>
-        <path d="M12 0C5.4 0 0 5.2 0 11.6 0 20 12 28 12 28s12-8 12-16.4C24 5.2 18.6 0 12 0z" fill="var(--color-status-match-bg)" />
-        <circle cx="12" cy="11" r="4.5" fill="var(--color-nav-bg)" />
+      <circle cx={x0} cy={y} r="7" fill="none" stroke="var(--color-text-inverse)" strokeOpacity="0.35" strokeWidth="2" />
+      <circle cx={x0} cy={y} r="4" fill="var(--color-text-inverse)" />
+      <g transform={`translate(${x1 - 10} ${y - 24})`}>
+        <path d="M10 0C4.5 0 0 4.3 0 9.7 0 16.7 10 23.3 10 23.3s10-6.6 10-13.6C20 4.3 15.5 0 10 0z" fill="var(--color-status-match-bg)" />
+        <circle cx="10" cy="9" r="3.8" fill="var(--color-nav-bg)" />
       </g>
       <g>
-        <circle cx={tx} cy={y} r="14" fill="var(--color-text-inverse)" stroke="var(--color-border-default)" strokeWidth="1.5" />
-        <g transform={`translate(${tx - 8} ${y - 8})`} stroke="var(--color-action-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
-          <path d="M1 5h9v7H1zM10 8h4l3 3v1h-7z" />
-          <circle cx="4.5" cy="13.5" r="1.6" />
-          <circle cx="13.5" cy="13.5" r="1.6" />
+        <circle cx={tx} cy={y} r="12" fill="var(--color-text-inverse)" stroke="var(--color-border-default)" strokeWidth="1.5" />
+        <g transform={`translate(${tx - 7} ${y - 7})`} stroke="var(--color-action-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+          <path d="M0.8 4.2h7.6v5.9H0.8zM8.4 6.8h3.4l2.5 2.5v.8H8.4z" />
+          <circle cx="3.8" cy="11.4" r="1.3" />
+          <circle cx="11.4" cy="11.4" r="1.3" />
         </g>
       </g>
-      <text x={x0} y="48" textAnchor="start" fontSize="10" fill="var(--color-nav-text)" opacity="0.85">{from}</text>
-      <text x={x1} y="48" textAnchor="end" fontSize="10" fill="var(--color-nav-text)" opacity="0.85">{to}</text>
     </svg>
   );
 }
@@ -107,29 +105,28 @@ export function ApplicationBanner({
       <button
         type="button"
         onClick={onOpen}
-        className="flex w-full flex-col gap-[8px] rounded-[var(--radius-lg)] bg-[var(--color-nav-bg)] p-[16px] text-left text-[var(--color-nav-text)] shadow-card"
+        className="flex w-full flex-col gap-[6px] rounded-[var(--radius-lg)] bg-[var(--color-nav-bg)] p-[12px] text-left text-[var(--color-nav-text)] shadow-card"
       >
         <span className="flex items-center justify-between gap-[8px]">
-          <span className="flex items-center gap-[8px] text-label-12">
+          <span className="flex items-center gap-[6px] text-caption-10">
             <span aria-hidden className="relative flex h-[8px] w-[8px]">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-status-success-bg)] opacity-60" />
               <span className="relative inline-flex h-[8px] w-[8px] rounded-full bg-[var(--color-status-match-bg)]" />
             </span>
             ACTIVE TRIP · {tripId}
           </span>
-          <span className="flex items-center gap-[4px] text-label-14 text-[var(--color-text-inverse)]">
+          <span className="flex items-center gap-[2px] text-label-12 text-[var(--color-text-inverse)]">
             Open trip
             <Icon name="chevron-right" size="sm" />
           </span>
         </span>
-        <span className="text-heading-20 text-[var(--color-text-inverse)]">
-          {headline}
+        <span className="flex items-center justify-between gap-[8px]">
+          <span className="min-w-0 text-heading-14 text-[var(--color-text-inverse)]">
+            {headline} · {next}
+          </span>
         </span>
-        <span className="text-body-14 opacity-80">
-          {next}
-        </span>
-        <RouteArt progress={progress} from={load.from} to={load.to} />
-        <span className="flex items-center justify-between text-caption-12 opacity-80">
+        <RouteArt progress={progress} />
+        <span className="flex items-center justify-between text-caption-10 opacity-80">
           <span>{load.from} → {load.to} · €{load.rate}</span>
           <span>{stepLabel}</span>
         </span>
