@@ -41,6 +41,7 @@ test('filters narrow the feed and the empty state recovers', async ({ page }) =>
   await expect(routeSheet).toBeVisible();
   await routeSheet.getByLabel('Origin city').fill('Antwerp');
   await routeSheet.getByLabel('Destination city').fill('Paris');
+  await routeSheet.getByRole('heading', { name: 'Loads towards' }).click();
   await expect(routeSheet.getByRole('button', { name: 'No loads match' })).toBeDisabled();
   await page.keyboard.press('Escape');
   await expect(routeSheet).toHaveCount(0);
@@ -57,6 +58,7 @@ test('direction changes without leaving the feed', async ({ page }) => {
   await page.getByRole('button', { name: 'Direction: Brussels, 2 loads. Activate to change.' }).click();
   await expect(page.getByRole('dialog', { name: 'Change direction' })).toBeVisible();
   await page.getByLabel('Destination city').fill('Antwerp');
+  await page.getByRole('heading', { name: 'Loads towards' }).click();
   await expect(page.getByRole('button', { name: 'Show 1 load' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Show 1 load' })).toBeEnabled();
   await page.getByRole('button', { name: 'Show 1 load' }).click();
@@ -66,22 +68,20 @@ test('direction changes without leaving the feed', async ({ page }) => {
   await expect(page.getByRole('article', { name: 'Load paris-brussels' })).toHaveCount(0);
 });
 
-test('route chips count live and the dead end recovers', async ({ page }) => {
+test('route suggestions carry live counts and the dead end recovers', async ({ page }) => {
   await page.goto('/#/v2');
   await page.getByRole('button', { name: 'Direction: Brussels, 2 loads. Activate to change.' }).click();
   const sheet = page.getByRole('dialog', { name: 'Change direction' });
   await expect(sheet).toBeVisible();
-  // Focus lands on destination: dead-end cities stay hidden, a live one shows
-  // its count — the chip never promises an empty feed.
-  // (Empty origin browses anywhere, so Brussels is selected with its 2 loads.)
-  await expect(sheet.getByRole('button', { name: 'Calais — no loads as destination' })).toHaveCount(0);
-  const brussels = sheet.getByRole('button', { name: 'Brussels, 2 loads as destination, selected. Activate to keep it.' });
-  await expect(brussels).toBeEnabled();
-  await expect(brussels).toHaveAttribute('aria-pressed', 'true');
-  // Two taps, no typing: Brussels as destination moves focus to origin.
-  await brussels.click();
-  await expect(sheet.getByRole('group', { name: 'From — pick an origin' })).toBeVisible();
-  await sheet.getByRole('button', { name: 'Use Paris as origin, 1 load' }).click();
+  // Suggestions live inside the focused field: dead ends read "No loads",
+  // a live one shows its count — never promising an empty feed.
+  await sheet.getByLabel('Destination city').click();
+  const suggestions = sheet.getByTestId('route-destination-suggestions');
+  await expect(suggestions).toBeVisible();
+  await expect(suggestions.getByRole('option', { name: 'Brussels, 2 loads' })).toBeEnabled();
+  // Type to filter, pick Paris as origin via its own suggestions.
+  await sheet.getByLabel('Origin city').fill('Paris');
+  await sheet.getByRole('heading', { name: 'Loads towards' }).click();
   await expect(sheet.getByRole('button', { name: 'Show 1 load' })).toBeEnabled();
   await sheet.getByRole('button', { name: 'Show 1 load' }).click();
   await expect(page.getByRole('button', { name: 'Direction: Paris → Brussels, 1 load. Activate to change.' })).toBeVisible();
@@ -91,6 +91,7 @@ test('route chips count live and the dead end recovers', async ({ page }) => {
   await expect(sheet).toBeVisible();
   await sheet.getByLabel('Origin city').fill('Antwerp');
   await sheet.getByLabel('Destination city').fill('Paris');
+  await sheet.getByRole('heading', { name: 'Loads towards' }).click();
   await expect(sheet.getByRole('button', { name: 'No loads match' })).toBeDisabled();
   // No apply possible — close and confirm the entry point is honest instead.
   await page.keyboard.press('Escape');

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { FiltersSheet } from './FiltersSheet';
@@ -53,10 +53,10 @@ describe('RouteSheet draft semantics', () => {
     expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
   });
 
-  it('city chips fill the focused field and move focus on', () => {
+  it('suggests cities inside the field with live counts', () => {
     const onApply = vi.fn();
-    // Origin Paris leaves only paris-brussels for Brussels: every destination chip
-    // except Brussels reads 0 and is hidden — a chip never promises an empty feed.
+    // Origin Paris leaves only paris-brussels for Brussels: every other
+    // destination suggestion reads 0 — it never promises an empty feed.
     const countFor = (route: { from: string; to: string }) =>
       route.from.trim().toLocaleLowerCase() === 'paris' && route.to.trim().toLocaleLowerCase() === 'brussels' ? 1 : 0;
     render(
@@ -64,27 +64,27 @@ describe('RouteSheet draft semantics', () => {
         <RouteSheet open value={{ from: 'Paris', to: '' }} countFor={countFor} onApply={onApply} onClose={() => undefined} cities={['Paris', 'Brussels', 'Lille']} />
       </MemoryRouter>,
     );
-    // Focus lands on destination on open: Brussels counts 1, Lille counts 0 and stays hidden.
-    expect(screen.getByRole('button', { name: 'Use Brussels as destination, 1 load' })).toBeEnabled();
-    expect(screen.queryByRole('button', { name: 'Lille — no loads as destination' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Use Brussels as destination, 1 load' }));
+    fireEvent.focus(screen.getByLabelText('Destination city'));
+    const box = within(screen.getByTestId('route-destination-suggestions'));
+    expect(box.getByRole('option', { name: 'Brussels, 1 load' })).toBeEnabled();
+    expect(box.getByRole('option', { name: 'Lille, no loads' })).toBeDisabled();
+    fireEvent.click(box.getByRole('option', { name: 'Brussels, 1 load' }));
     expect(screen.getByLabelText('Destination city')).toHaveValue('Brussels');
-    // The tap moved focus to origin: the group label follows it.
-    expect(screen.getByRole('group', { name: 'From — Paris' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Paris, 1 load as origin, selected. Activate to keep it.' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Show 1 load' }));
     expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
   });
 
-  it('labels the chips with the focused field', () => {
+  it('filters suggestions as the driver types', () => {
     render(
       <MemoryRouter>
-        <RouteSheet open value={{ from: 'Lille', to: '' }} countFor={() => 1} onApply={() => undefined} onClose={() => undefined} cities={['Lille']} />
+        <RouteSheet open value={{ from: '', to: '' }} countFor={() => 1} onApply={() => undefined} onClose={() => undefined} cities={['Paris', 'Brussels', 'Lille']} />
       </MemoryRouter>,
     );
-    // Focus lands on destination on open; the chip group names it.
-    expect(screen.getByRole('group', { name: 'To — pick a destination' })).toBeVisible();
-    fireEvent.focus(screen.getByLabelText('Origin city'));
-    expect(screen.getByRole('group', { name: 'From — Lille' })).toBeVisible();
+    fireEvent.focus(screen.getByLabelText('Destination city'));
+    const box = within(screen.getByTestId('route-destination-suggestions'));
+    expect(box.getByRole('option', { name: 'Paris, 1 load' })).toBeVisible();
+    fireEvent.change(screen.getByLabelText('Destination city'), { target: { value: 'bru' } });
+    expect(box.queryByRole('option', { name: 'Paris, 1 load' })).not.toBeInTheDocument();
+    expect(box.getByRole('option', { name: 'Brussels, 1 load' })).toBeVisible();
   });
 });

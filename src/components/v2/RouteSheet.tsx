@@ -1,17 +1,130 @@
 /**
  * v2 · RouteSheet — change the feed direction without leaving `/v2` (closes P2-1:
  * direction used to live only on `/search`). Two fields, live count, Apply commits.
- * City chips mirror the focused field (From/To label), carry the live match count
- * for the tap they would make, and go disabled at zero — a chip never promises a
- * feed it cannot show. Tapping a chip fills the field AND moves focus to the other
- * one, so origin → destination completes in two taps with no typing.
+ * Each field filters the known cities as the driver types and offers them as an
+ * inline suggestion list (count included) — no chip rows, no dead options.
  * props: open, value, countFor, onApply, onClose, cities
- * tokens: color-bg-surface, color-text-primary, color-text-secondary, color-text-disabled,
- *         color-action-primary, color-action-text-inverse, color-border-default, radius-md, radius-pill
+ * tokens: color-bg-surface, color-text-primary, color-text-secondary,
+ *         color-action-primary, color-action-text-inverse, color-border-default, radius-md
  */
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '../Button';
 import { Sheet } from './Sheet';
+
+function matchesFor(cities: string[], query: string): string[] {
+  const q = query.trim().toLocaleLowerCase();
+  if (!q) return cities;
+  return cities.filter((city) => city.toLocaleLowerCase().includes(q));
+}
+
+function CityField({
+  id,
+  label,
+  value,
+  placeholder,
+  cities,
+  countFor,
+  open,
+  onOpen,
+  onClose,
+  onChange,
+  onPick,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  cities: string[];
+  /** Loads the route would match if this city were committed. */
+  countFor: (city: string) => number;
+  /** Only one suggestion list is open at a time. */
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  onChange: (value: string) => void;
+  onPick: (city: string) => void;
+}) {
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (boxRef.current && !boxRef.current.contains(event.target as Node)) onClose();
+    };
+    const onScroll = () => onClose();
+    const sheet = boxRef.current?.closest('[role="dialog"]');
+    document.addEventListener('pointerdown', onPointerDown);
+    sheet?.addEventListener('scroll', onScroll, true);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      sheet?.removeEventListener('scroll', onScroll, true);
+    };
+  }, [open, onClose ]);
+
+  const options = matchesFor(cities, value).slice(0, 6);
+
+  return (
+    <div ref={boxRef} className="relative">
+      <label className="block" htmlFor={id}>
+        <span className="text-label-14 text-[var(--color-text-secondary)]">{label}</span>
+      </label>
+      <input
+        id={id}
+        type="text"
+        role="combobox"
+        aria-expanded={options.length > 0 && open}
+        aria-autocomplete="list"
+        aria-controls={`${id}-suggestions`}
+        value={value}
+        onChange={(event) => { onChange(event.target.value); onOpen(); }}
+        onFocus={onOpen}
+        onBlur={() => {
+          // Let the option tap land first (pointerdown fires before blur).
+          window.setTimeout(() => onClose(), 150);
+        }}
+        onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }}
+        placeholder={placeholder}
+        autoComplete="off"
+        className="mt-[8px] flex min-h-[44px] w-full items-center rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-[12px] text-body-16 text-[var(--color-text-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+      />
+      {open && options.length > 0 && (
+        <ul
+          id={`${id}-suggestions`}
+          data-testid={`${id}-suggestions`}
+          role="listbox"
+          className="absolute inset-x-0 top-full z-10 mt-[4px] max-h-[216px] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] py-[4px] shadow-card"
+        >
+          {options.map((city) => {
+            const matches = countFor(city);
+            const dead = matches === 0;
+            return (
+              <li key={city} role="presentation">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={value.trim().toLocaleLowerCase() === city.trim().toLocaleLowerCase()}
+                  aria-label={`${city}, ${dead ? 'no loads' : `${matches} ${matches === 1 ? 'load' : 'loads'}`}`}
+                  disabled={dead}
+                  onClick={() => { onPick(city); onClose(); }}
+                  className={`flex min-h-[44px] w-full items-center justify-between gap-[8px] px-[12px] text-left text-body-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
+                    dead
+                      ? 'cursor-not-allowed text-[var(--color-text-disabled)]'
+                      : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)] active:bg-[var(--color-bg-subtle)]'
+                  }`}
+                >
+                  <span aria-hidden>{city}</span>
+                  <span aria-hidden className="shrink-0 text-caption-12 text-[var(--color-text-secondary)]">
+                    {dead ? 'No loads' : `${matches} ${matches === 1 ? 'load' : 'loads'}`}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function RouteSheet({
   open,
@@ -33,83 +146,44 @@ export function RouteSheet({
 }) {
   const [fromDraft, setFromDraft] = useState(value.from);
   const [toDraft, setToDraft] = useState(value.to);
-  const [focused, setFocused] = useState<'from' | 'to'>('to');
+  const [openField, setOpenField] = useState<'from' | 'to' | null>(null);
+  const closeSuggestions = useCallback(() => setOpenField(null), []);
   useEffect(() => {
-    if (open) { setFromDraft(value.from); setToDraft(value.to); setFocused('to'); }
+    if (open) { setFromDraft(value.from); setToDraft(value.to); setOpenField(null); }
   }, [open, value.from, value.to]);
   const visible = countFor({ from: fromDraft, to: toDraft });
-  const tapCity = (city: string) => {
-    if (focused === 'from') { setFromDraft(city); setFocused('to'); }
-    else { setToDraft(city); setFocused('from'); }
-  };
-  /** What tapping this chip would leave in the feed — 0 means the chip is dead weight. */
-  const countForChip = (city: string) =>
-    focused === 'from' ? countFor({ from: city, to: toDraft }) : countFor({ from: fromDraft, to: city });
 
   return (
     <Sheet open={open} onClose={onClose} label="Change direction">
       <h2 className="text-heading-20 text-[var(--color-text-primary)]">Loads towards</h2>
       <div className="mt-[16px] flex flex-col gap-[12px]">
-        <label className="block">
-          <span className="text-label-14 text-[var(--color-text-secondary)]">Origin city</span>
-          <input
-            type="text"
-            value={fromDraft}
-            onChange={(event) => setFromDraft(event.target.value)}
-            onFocus={() => setFocused('from')}
-            placeholder="Anywhere"
-            autoComplete="off"
-            className="mt-[8px] flex min-h-[44px] w-full items-center rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-[12px] text-body-16 text-[var(--color-text-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
-          />
-        </label>
-        <label className="block">
-          <span className="text-label-14 text-[var(--color-text-secondary)]">Destination city</span>
-          <input
-            type="text"
-            value={toDraft}
-            onChange={(event) => setToDraft(event.target.value)}
-            onFocus={() => setFocused('to')}
-            placeholder="Brussels"
-            autoComplete="off"
-            className="mt-[8px] flex min-h-[44px] w-full items-center rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-[12px] text-body-16 text-[var(--color-text-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
-          />
-        </label>
+        <CityField
+          id="route-origin"
+          label="Origin city"
+          value={fromDraft}
+          placeholder="Anywhere"
+          cities={cities}
+          countFor={(city) => countFor({ from: city, to: toDraft })}
+          open={openField === 'from'}
+          onOpen={() => setOpenField('from')}
+          onClose={closeSuggestions}
+          onChange={setFromDraft}
+          onPick={setFromDraft}
+        />
+        <CityField
+          id="route-destination"
+          label="Destination city"
+          value={toDraft}
+          placeholder="Brussels"
+          cities={cities}
+          countFor={(city) => countFor({ from: fromDraft, to: city })}
+          open={openField === 'to'}
+          onOpen={() => setOpenField('to')}
+          onClose={closeSuggestions}
+          onChange={setToDraft}
+          onPick={setToDraft}
+        />
       </div>
-      {cities.length > 0 && (
-        <div className="mt-[12px]">
-          <p id="route-cities-label" className="text-label-14 text-[var(--color-text-secondary)]">
-            {focused === 'from' ? 'From' : 'To'} — {focused === 'from' ? fromDraft || 'pick an origin' : toDraft || 'pick a destination'}
-          </p>
-          <div className="mt-[8px] flex gap-[8px] overflow-x-auto pb-[4px]" role="group" aria-labelledby="route-cities-label">
-            {cities.map((city) => {
-              const selected = (focused === 'from' ? fromDraft : toDraft).trim().toLocaleLowerCase() === city.trim().toLocaleLowerCase();
-              const matches = countForChip(city);
-              const dead = matches === 0;
-              if (dead && !selected) return null;
-              const side = focused === 'from' ? 'origin' : 'destination';
-              return (
-                <button
-                  key={city}
-                  type="button"
-                  onClick={() => tapCity(city)}
-                  disabled={dead}
-                  aria-pressed={selected}
-                  aria-label={dead ? `${city} — no loads as ${side}` : selected ? `${city}, ${matches} ${matches === 1 ? 'load' : 'loads'} as ${side}, selected. Activate to keep it.` : `Use ${city} as ${side}, ${matches} ${matches === 1 ? 'load' : 'loads'}`}
-                  className={`min-h-[44px] shrink-0 rounded-[var(--radius-pill)] border px-[14px] text-label-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
-                    dead
-                      ? 'cursor-not-allowed border-[var(--color-border-default)] bg-[var(--color-bg-surface)] text-[var(--color-text-disabled)] opacity-60'
-                      : selected
-                        ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]'
-                        : 'border-[var(--color-border-default)] bg-[var(--color-bg-surface)] text-[var(--color-action-text)]'
-                  }`}
-                >
-                  {city} · {matches}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
       <div className="mt-[20px]">
         <Button
           label={visible === 0 ? 'No loads match' : `Show ${visible} ${visible === 1 ? 'load' : 'loads'}`}
