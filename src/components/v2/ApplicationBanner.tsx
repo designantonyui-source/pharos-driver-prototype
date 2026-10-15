@@ -1,4 +1,5 @@
 import { ApplicationStatus } from '../../lib/models';
+import { TRIP_STAGE_STEPS } from '../../lib/api';
 import type { LoadApplication } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
 import { Icon } from '../Icon';
@@ -46,19 +47,12 @@ export function ApplicationBanner({
     // duplicated — the load card below already shows from → to.
     const eta = enRoute === 'delivery' ? `${load.km} km to go`
       : `${load.pickupKm} km to go`;
+    // 5 trip stages double as the floater's ступеньки: filled = passed, rest dim.
+    const stepIndex = Math.max(0, TRIP_STAGE_STEPS.findIndex((s) => s.id === stage));
+    const stepLabel = TRIP_STAGE_STEPS[stepIndex]?.label ?? 'Confirmed';
     const sub = enRoute
-      ? `En route to ${enRoute} · ${stage === 'delivered' ? 'Step 5 of 5' : enRoute === 'delivery' ? 'Step 3 of 5' : 'Step 1 of 5'}`
-      : stage === 'at-pickup' ? 'At pickup · Step 2 of 5'
-      : stage === 'loaded' ? 'Loaded · Step 3 of 5'
-      : stage === 'at-delivery' ? 'At delivery · Step 4 of 5'
-      : stage === 'delivered' ? 'Delivered · Step 5 of 5'
-      : 'Confirmed · Step 1 of 5';
-    const progress =
-      stage === 'delivered' ? 1
-      : stage === 'at-delivery' ? 0.85
-      : stage === 'loaded' || enRoute === 'delivery' ? 0.55
-      : stage === 'at-pickup' ? 0.2
-      : 0.05;
+      ? `En route to ${enRoute} · Step ${stepIndex + 1} of ${TRIP_STAGE_STEPS.length}`
+      : `${stepLabel} · Step ${stepIndex + 1} of ${TRIP_STAGE_STEPS.length}`;
     return (
       <button
         type="button"
@@ -92,8 +86,10 @@ export function ApplicationBanner({
             <Icon name="chevron-right" size="sm" />
           </span>
         </span>
-        <span aria-hidden className="h-[3px] w-full bg-[var(--color-nav-text)] opacity-20">
-          <span className="block h-full rounded-r-full bg-[var(--color-status-match-bg)]" style={{ width: `${Math.round(progress * 100)}%` }} />
+        <span aria-hidden className="flex w-full gap-[3px] px-[12px] pb-[8px]">
+          {TRIP_STAGE_STEPS.map((s, i) => (
+            <span key={s.id} className={`h-[4px] flex-1 rounded-full ${i <= stepIndex ? 'bg-[var(--color-status-match-bg)]' : 'bg-[var(--color-nav-text)] opacity-25'}`} />
+          ))}
         </span>
       </button>
     );
