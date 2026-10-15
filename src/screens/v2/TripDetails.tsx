@@ -6,7 +6,7 @@ import { V2BackBar, useV2Back } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { CancelTripSheet } from '../../components/v2/CancelTripSheet';
 import { Toast, useToast } from '../../components/v2/Toast';
-import { cancelTrip, cancellationPenalty, getLoads } from '../../lib/api';
+import { advanceTripStage, cancelTrip, cancellationPenalty, getLoads, type TripStage } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore, type LoadApplication } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
@@ -43,6 +43,24 @@ export function TripDetailsView({ load }: { load: V2Load }) {
   }
 
   const cancelled = state.applications[load.id]?.cancelledAfterConfirm === true;
+  const tripStage: TripStage = state.applications[load.id]?.tripStage ?? 'confirmed';
+  const [updatingStage, setUpdatingStage] = useState(false);
+  const [stageError, setStageError] = useState<string | null>(null);
+  const nextStage: Partial<Record<TripStage, { stage: TripStage; label: string }>> = {
+    confirmed: { stage: 'at-pickup', label: 'Confirm arrival at pickup' },
+    'at-pickup': { stage: 'loaded', label: 'Confirm loading complete' },
+    loaded: { stage: 'at-delivery', label: 'Confirm arrival at delivery' },
+    'at-delivery': { stage: 'delivered', label: 'Confirm delivery complete' },
+  };
+  const nextAction = nextStage[tripStage];
+  async function confirmMilestone() {
+    if (!nextAction || updatingStage) return;
+    setUpdatingStage(true);
+    setStageError(null);
+    try { await advanceTripStage(load.id, tripStage, nextAction.stage); }
+    catch { setStageError('Could not update the trip. Please try again.'); }
+    finally { setUpdatingStage(false); }
+  }
 
   const stops = [
     { label: 'Pickup', city: load.from, day: load.day, window: load.window },
@@ -71,7 +89,7 @@ export function TripDetailsView({ load }: { load: V2Load }) {
                   : 'bg-[var(--color-status-success-bg)] text-[var(--color-status-success-text)]'
               }`}
             >
-              {cancelled ? 'Cancelled by you' : 'Confirmed'}
+              {cancelled ? 'Cancelled by you' : tripStage === 'delivered' ? 'Delivered' : tripStage === 'confirmed' ? 'Confirmed' : tripStage === 'at-pickup' ? 'At pickup' : tripStage === 'loaded' ? 'Loaded · In transit' : 'At delivery'}
             </span>
 
             {cancelled && (
@@ -123,9 +141,14 @@ export function TripDetailsView({ load }: { load: V2Load }) {
           </section>
         </main>
 
+        {!cancelled && <p role="status" className="text-body-14 text-[var(--color-text-secondary)]">
+          {tripStage === 'delivered' ? 'Delivery recorded. Documents and payment are handled separately.' : 'Confirm each milestone when it actually happens.'}
+        </p>}
+        {stageError && <p role="alert" className="text-body-14 text-[var(--color-text-secondary)]">{stageError}</p>}
         {/* Actions */}
         <div className="flex shrink-0 flex-col gap-[8px] py-[8px]">
-          {!cancelled && (
+          {!cancelled && nextAction && <Button label={nextAction.label} disabled={updatingStage} onClick={() => { void confirmMilestone(); }} />}
+          {!cancelled && tripStage !== 'delivered' && (
             <Button
               label="Navigation"
               icon={<Icon name="map-pin" />}
@@ -143,7 +166,7 @@ export function TripDetailsView({ load }: { load: V2Load }) {
               }
             />
           )}
-          {!cancelled && (
+          {!cancelled && tripStage === 'confirmed' && (
             <Button
               label="Cancel trip"
               appearance="secondary"
