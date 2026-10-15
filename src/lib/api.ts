@@ -436,6 +436,33 @@ export async function restoreLoad(loadId: string) {
 
 export type CancelTripPenalty = 'none' | 'warning';
 
+/** Trip stage timeline for the TripDetails stepper (prototype-led, driver-confirmed milestones). */
+export const TRIP_STAGE_STEPS = [
+  { id: 'confirmed', label: 'Confirmed' },
+  { id: 'at-pickup', label: 'At pickup' },
+  { id: 'loaded', label: 'Loaded' },
+  { id: 'at-delivery', label: 'At delivery' },
+  { id: 'delivered', label: 'Delivered' },
+] as const;
+
+export type TripStageStepId = (typeof TRIP_STAGE_STEPS)[number]['id'];
+
+/** One confirmed-trip view model: load + application + trip id (screens never assemble this themselves). */
+export async function getTripDetails(loadId: string) {
+  await wait(300);
+  const load = getLoad(loadId);
+  if (!load) return null;
+  const application = store.getApplicationForLoad(loadId);
+  if (!application || application.status !== ApplicationStatus.CONFIRMED) return null;
+  return {
+    load,
+    application,
+    tripId: application.tripId ?? `TR-${loadId}`,
+    tripStage: (application.tripStage ?? 'confirmed') as TripStage,
+    cancelled: application.cancelledAfterConfirm === true,
+  };
+}
+
 /** Preview-only cancellation consequence calculation, shared by confirmation UI and action. */
 export function cancellationPenalty(application: LoadApplication, pickupTime?: string, now = Date.now()): CancelTripPenalty {
   const confirmedAt = application.submittedAt ? Date.parse(application.submittedAt) : NaN;

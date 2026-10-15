@@ -1,27 +1,30 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Button } from '../../components/Button';
+import { Button, ButtonLink } from '../../components/Button';
 import { Icon } from '../../components/Icon';
+import { ProgressStep, type ProgressState } from '../../components/ProgressStep';
 import { V2BackBar, useV2Back } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { CancelTripSheet } from '../../components/v2/CancelTripSheet';
+import { TripDocumentsSheet } from '../../components/v2/TripDocumentsSheet';
 import { Toast, useToast } from '../../components/v2/Toast';
-import { advanceTripStage, cancelTrip, cancellationPenalty, getLoads, submitProofOfDelivery, type TripStage } from '../../lib/api';
+import { TRIP_STAGE_STEPS, advanceTripStage, cancelTrip, cancellationPenalty, getTripDetails, submitProofOfDelivery, type TripStage } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore, type LoadApplication } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
 
 /**
  * figma: prototype-led · TripDetails — confirmed load itinerary; route /trip/:id
- * props: load (view); route id and global application state (screen)
+ * props: load, tripId (view); route id and global application state (screen)
  * tokens: color-bg-surface, color-bg-subtle, color-text-primary, color-text-secondary,
  *         color-action-primary, color-status-success-bg, color-status-success-text, radius-lg, shadow-card
  */
-export function TripDetailsView({ load }: { load: V2Load }) {
+export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string }) {
   const navigate = useNavigate();
   const { state } = useStore();
   const { toast, show, dismiss } = useToast();
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [docsOpen, setDocsOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const closeCancel = useCallback(() => {
@@ -85,14 +88,19 @@ export function TripDetailsView({ load }: { load: V2Load }) {
   }
 
   const stops = [
-    { label: 'Pickup', city: load.from, day: load.day, window: load.window },
-    { label: 'Delivery', city: load.to, day: load.deliveryDay, window: load.deliveryWindow },
+    { label: 'Pickup', city: load.from, day: load.day, window: load.window, site: load.pickupSite, mapsQuery: `${load.pickupSite.address}` },
+    { label: 'Delivery', city: load.to, day: load.deliveryDay, window: load.deliveryWindow, site: load.deliverySite, mapsQuery: `${load.deliverySite.address}` },
   ];
+
+  const stageIndex = TRIP_STAGE_STEPS.findIndex((step) => step.id === tripStage);
+  const stepStates: ProgressState[] = TRIP_STAGE_STEPS.map((_, i) =>
+    cancelled ? 'next' : i < stageIndex ? 'done' : i === stageIndex ? 'current' : 'next',
+  );
 
   return (
     <V2Frame active="Trips">
       <div className="absolute inset-x-0 top-0 z-20">
-        <V2BackBar title="Trip details" fallback={`/application/${load.id}`} />
+        <V2BackBar title={`Trip ${tripId}`} fallback="/v2/trips" />
       </div>
 
       <div className="absolute inset-x-0 top-[var(--nav-bar-back-h)] bottom-[117px] flex flex-col px-[16px]">
@@ -104,15 +112,18 @@ export function TripDetailsView({ load }: { load: V2Load }) {
             className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card"
             aria-label="Trip summary"
           >
-            <span
-              className={`inline-flex rounded-[var(--radius-pill)] px-[8px] py-[4px] text-label-12 ${
-                cancelled
-                  ? 'bg-[var(--color-status-neutral-bg)] text-[var(--color-status-neutral-text)]'
-                  : 'bg-[var(--color-status-success-bg)] text-[var(--color-status-success-text)]'
-              }`}
-            >
-              {cancelled ? 'Cancelled by you' : tripStage === 'delivered' ? 'Delivered' : tripStage === 'confirmed' ? 'Confirmed' : tripStage === 'at-pickup' ? 'At pickup' : tripStage === 'loaded' ? 'Loaded · In transit' : 'At delivery'}
-            </span>
+            <div className="flex items-center justify-between gap-[8px]">
+              <span
+                className={`inline-flex rounded-[var(--radius-pill)] px-[8px] py-[4px] text-label-12 ${
+                  cancelled
+                    ? 'bg-[var(--color-status-neutral-bg)] text-[var(--color-status-neutral-text)]'
+                    : 'bg-[var(--color-status-success-bg)] text-[var(--color-status-success-text)]'
+                }`}
+              >
+                {cancelled ? 'Cancelled by you' : tripStage === 'delivered' ? 'Delivered' : tripStage === 'confirmed' ? 'Confirmed' : tripStage === 'at-pickup' ? 'At pickup' : tripStage === 'loaded' ? 'Loaded · In transit' : 'At delivery'}
+              </span>
+              <span className="text-caption-12 text-[var(--color-text-secondary)]">{tripId}</span>
+            </div>
 
             {cancelled && (
               <p className="mt-[8px] text-body-14 text-[var(--color-text-secondary)]">
@@ -124,8 +135,34 @@ export function TripDetailsView({ load }: { load: V2Load }) {
               €{load.rate}
             </p>
             <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
-              {load.km} km loaded · {load.paidIn}
+              {load.km} km loaded · €{load.perKm.toFixed(2)}/km · {load.payoutDate} → {load.payoutMethod}
             </p>
+          </section>
+
+          {/* Progress */}
+          {!cancelled && (
+            <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card" aria-label="Trip progress">
+              <h2 className="text-heading-20 text-[var(--color-text-primary)]">Trip progress</h2>
+              <ol className="mt-[12px] flex flex-col" aria-label={`Step ${stageIndex + 1} of ${TRIP_STAGE_STEPS.length}`}>
+                {TRIP_STAGE_STEPS.map((step, i) => (
+                  <ProgressStep key={step.id} state={stepStates[i]} number={i + 1} label={step.label} />
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {/* Cargo */}
+          <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card" aria-label="Cargo">
+            <h2 className="text-heading-20 text-[var(--color-text-primary)]">Cargo</h2>
+            <p className="mt-[8px] flex items-center gap-[8px] text-body-14 text-[var(--color-text-primary)]">
+              <span className="text-[var(--color-action-primary)]" aria-hidden><Icon name="package" /></span>
+              {load.vehicle}
+            </p>
+            {!cancelled && (tripStage === 'confirmed' || tripStage === 'at-pickup') && (
+              <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
+                {load.pickupKm} km · {load.pickupMin} min to pickup
+              </p>
+            )}
           </section>
 
           {/* Route */}
@@ -137,14 +174,26 @@ export function TripDetailsView({ load }: { load: V2Load }) {
                   <span className="mt-[4px] text-[var(--color-action-primary)]">
                     <Icon name="map-pin" />
                   </span>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-label-12 text-[var(--color-text-secondary)]">{stop.label}</p>
                     <p className="mt-[4px] text-heading-20 text-[var(--color-text-primary)]">
                       {stop.city}
                     </p>
+                    <p className="mt-[4px] text-body-14 text-[var(--color-text-primary)]">
+                      {stop.site.address}
+                    </p>
                     <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
                       {stop.day === 'today' ? 'Today' : 'Tomorrow'} · {stop.window}
                     </p>
+                    <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
+                      {stop.site.note} · {stop.site.contact}
+                    </p>
+                    <ButtonLink
+                      label={`Navigate to ${stop.label.toLowerCase()}`}
+                      onClick={() => {
+                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(stop.mapsQuery)}&travelmode=driving`, '_blank', 'noopener,noreferrer');
+                      }}
+                    />
                   </div>
                 </li>
               ))}
@@ -160,6 +209,18 @@ export function TripDetailsView({ load }: { load: V2Load }) {
             <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
               Customer rating: {load.rating.toFixed(1)} / 5
             </p>
+            {!cancelled && (
+              <div className="mt-[12px]">
+                <Button
+                  label="Contact dispatcher"
+                  appearance="secondary"
+                  icon={<Icon name="phone" size="sm" />}
+                  onClick={() =>
+                    show({ tone: 'info', title: 'Dispatcher chat is not connected in this demo.' })
+                  }
+                />
+              </div>
+            )}
           </section>
         </main>
 
@@ -201,17 +262,16 @@ export function TripDetailsView({ load }: { load: V2Load }) {
           )}
           {!cancelled && (
             <Button
-              label="Documents"
+              label={`Documents (${load.documents.length})`}
               appearance="secondary"
-              onClick={() =>
-                show({ tone: 'info', title: 'Trip documents are not connected in this demo.' })
-              }
+              icon={<Icon name="file-text" size="sm" />}
+              onClick={() => setDocsOpen(true)}
             />
           )}
           {!cancelled && tripStage === 'confirmed' && (
-            <Button
+            <ButtonLink
               label="Cancel trip"
-              appearance="secondary"
+              full
               onClick={() => setCancelOpen(true)}
             />
           )}
@@ -230,6 +290,7 @@ export function TripDetailsView({ load }: { load: V2Load }) {
         onConfirm={confirmCancel}
         onClose={closeCancel}
       />
+      <TripDocumentsSheet open={docsOpen} load={load} onClose={() => setDocsOpen(false)} />
       <Toast toast={toast} onClose={dismiss} />
     </V2Frame>
   );
@@ -237,24 +298,27 @@ export function TripDetailsView({ load }: { load: V2Load }) {
 
 export function TripDetails() {
   const { id = '' } = useParams();
-  const { state } = useStore();
-  const [loads, setLoads] = useState<V2Load[] | null>(null);
+  const [details, setDetails] = useState<Awaited<ReturnType<typeof getTripDetails>> | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
     setLoadError(false);
-    setLoads(null);
-    getLoads().then((items) => { if (active) setLoads(items); })
+    setDetails(null);
+    getTripDetails(id).then((item) => { if (active) setDetails(item); })
       .catch(() => { if (active) setLoadError(true); });
     return () => { active = false; };
-  }, [loadAttempt]);
+  }, [id, loadAttempt]);
 
   const emptyBack = useV2Back('/v2');
-  const load = loads?.find((item) => item.id === id);
-  if (load && (state.applications[id]?.status === ApplicationStatus.CONFIRMED || state.applications[id]?.cancelledAfterConfirm)) {
-    return <TripDetailsView load={load} />;
+  if (details) {
+    if (details.cancelled) {
+      return <TripDetailsView load={details.load} tripId={details.tripId} />;
+    }
+    if (details.application.status === ApplicationStatus.CONFIRMED) {
+      return <TripDetailsView load={details.load} tripId={details.tripId} />;
+    }
   }
   return (
     <V2Frame active="Trips">
@@ -263,7 +327,7 @@ export function TripDetails() {
       </div>
       <main className="absolute inset-x-0 top-[var(--nav-bar-back-h)] px-[16px]">
         <h1 className="sr-only">Trip details</h1>
-        <p role="status" className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] text-body-14 text-[var(--color-text-secondary)]">{loadError ? 'Could not load trip details. Check your connection and try again.' : loads === null ? 'Loading trip…' : 'No confirmed trip is available for this load.'}</p>
+        <p role="status" className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] text-body-14 text-[var(--color-text-secondary)]">{loadError ? 'Could not load trip details. Check your connection and try again.' : details === null ? 'Loading trip…' : 'No confirmed trip is available for this load.'}</p>
         {loadError && <div className="mt-[16px]"><Button label="Retry" onClick={() => setLoadAttempt((n) => n + 1)} /></div>}
         <div className="mt-[16px]"><Button label="Back to loads" appearance="secondary" onClick={emptyBack} /></div>
       </main>

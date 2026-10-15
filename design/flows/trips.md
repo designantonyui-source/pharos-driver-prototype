@@ -3,7 +3,11 @@
 > Рабочий файл потока. Правило: сверху 10 строк правды, снизу append-only история.
 > Маппинг: `design/figma-map.md`.
 
-## Текущее состояние (2026-10-12)
+## Текущее состояние (2026-10-15)
+
+- TripDetails UX-добивка: summary с TRIP_ID + payout (`€/km · дата → метод`), степпер `Trip progress` (5 стейджей через `ProgressStep`), Cargo-блок (vehicle + deadhead), Route с адресами/контактами/гейтами + per-stop Navigate (точный адрес в Google Maps), Customer с `Contact dispatcher`, Documents → `TripDocumentsSheet` (CMR + инструкции) вместо тоста, Cancel trip — text-link (`ButtonLink`). Back ведёт в `/v2/trips`.
+- Данные: `V2Load.pickupSite/deliverySite/payoutDate/payoutMethod/documents` + `api.getTripDetails()` (единая view-модель: load + application + tripId + stage) + `TRIP_STAGE_STEPS`. Экран идёт через api, не собирает сам. Иконка `file-text` добавлена в реестр.
+- Проверки: unit 140/140 (+2 getTripDetails), E2E application-flow 8/8, `pnpm check` чистый.
 
 - Чипы RouteSheet v2: живой счёт `Город · N` через `countFor` (счёт того тапа, который чип сделает), `0` → `disabled` (`aria-label` «no loads», `cursor-not-allowed`, `text-disabled`), тап двигает фокус origin↔destination — маршрут собирается в два тапа без печати. Unit: чипы считают + фокус + лейбл следует за фокусом.
 - E2E честно поверх маршрута Brussels: превью фильтров считает по всему фиду (Today → `Show 4`), маршрут применяется сверху (фид держит свои 2); пустое состояние — через тупик Antwerp → Paris (`No loads match` disabled, Escape закрывает). Тесты: unit 127/127, E2E application-flow 8/8, `pnpm check` чистый.
@@ -27,3 +31,4 @@
 - **2026-10-11, Sheet width fix:** `QuickApplyModal` через `LoadCta` порталился в `document.body` и на десктопе растягивался во всю ширину вместо рамки 402px — портал переведён внутрь `[data-load-overlay-root]` (V2Frame), замер Chrome: dialog 402×404 внутри frame 402×874. Регресс-тест: диалог внутри overlay-root. Тесты 117 (было 116).
 - **2026-10-11, Trips polish:** отмена заявки переведена с `window.confirm` на `CancelApplicationSheet` (Withdraw/Keep, stories Default/Loading); демо-заглушки трекера и деталей (Dispute/Chat/Navigation/Documents) — с `window.alert` на info-`Toast` сверху. E2E переведены на Sheet/Toast. Тесты 116 (было 113: +3 Sheet/keep/toast, +2 toast stubs, −2 confirm).
 - **2026-10-11, Trips hub:** новый экран вместо `V2Soon`; группировка active/review/past; declined отделён от cancelled тоном danger vs neutral. Тесты 111 (было 106: +5 Trips).
+- **2026-10-15, TripDetails UX-добивка:** summary несёт TRIP_ID + payout (`€/km · дата → метод`); добавлен степпер `Trip progress` (5 стейджей, `ProgressStep` done/current/next); новый Cargo-блок (vehicle + deadhead до пикапа); Route показывает адрес/гейт/контакт каждого стопа + per-stop `Navigate to pickup/delivery` (точный адрес в Google Maps вместо города); Customer получил `Contact dispatcher`; Documents открыт как `TripDocumentsSheet` (CMR + инструкции, тост-заглушка убран); Cancel trip переведён с secondary-кнопки на text-link; Back ведёт в `/v2/trips`. Данные: `pickupSite/deliverySite/payoutDate/payoutMethod/documents` в `V2Load`, `api.getTripDetails()` + `TRIP_STAGE_STEPS`, иконка `file-text` в реестре. Тесты: unit 140/140 (+2 getTripDetails), E2E application-flow 8/8, `pnpm check` чистый.

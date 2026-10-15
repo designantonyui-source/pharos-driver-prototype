@@ -2,6 +2,12 @@
  * Driver v2 — mock load feed. Only `src/lib/api.ts` imports this; screens go through the api.
  * Epic: pharos-driver-flow-stories.md (S2 details-v2 data, S8 two deadlines).
  */
+export type TripSite = {
+  address: string;
+  contact: string;
+  note: string;
+};
+
 export type V2Load = {
   id: string;
   company: string;
@@ -25,6 +31,15 @@ export type V2Load = {
   decideMin: number;
   /** shared approvals deadline (S8: second deadline) */
   approvalsBy: string;
+  /** Prototype trip-site details (address, contact, gate note). */
+  pickupSite: TripSite;
+  deliverySite: TripSite;
+  /** Concrete payout date for the trip summary (mock). */
+  payoutDate: string;
+  /** Payout destination label (mock). */
+  payoutMethod: string;
+  /** Trip documents attached to the load (mock). */
+  documents: { id: string; name: string; detail: string }[];
 };
 
 export function pickupTimestamp(day: V2Load['day'], window: string): string {
@@ -56,6 +71,22 @@ export const V2_LOADS: V2Load[] = [
     paidIn: 'Paid in 7 days',
     decideMin: 80,
     approvalsBy: '11:00',
+    pickupSite: {
+      address: 'Rue des Champs 12, 59000 Lille',
+      contact: '+33 3 20 11 22 33',
+      note: 'Gate B · Bay 4 · Report at reception',
+    },
+    deliverySite: {
+      address: 'Rue du Port 48, 1000 Brussels',
+      contact: '+32 2 555 01 48',
+      note: 'Dock 7 · Ring before entering',
+    },
+    payoutDate: '22 Oct',
+    payoutMethod: 'IBAN ••4821',
+    documents: [
+      { id: 'cmr', name: 'CMR consignment note', detail: 'Prefilled · Sign at pickup' },
+      { id: 'instructions', name: 'Loading instructions', detail: 'Rear loading · 18 pallets' },
+    ],
   },
   {
     id: 'belroute',
@@ -77,6 +108,22 @@ export const V2_LOADS: V2Load[] = [
     paidIn: 'Paid in 14 days',
     decideMin: 125,
     approvalsBy: '12:30',
+    pickupSite: {
+      address: 'Havenlaan 5, 9000 Ghent',
+      contact: '+32 9 210 44 55',
+      note: 'Gate A · Bay 2',
+    },
+    deliverySite: {
+      address: 'Kattendijkdok 21, 2000 Antwerp',
+      contact: '+32 3 540 78 90',
+      note: 'Dock 3 · Report at gate',
+    },
+    payoutDate: '29 Oct',
+    payoutMethod: 'IBAN ••4821',
+    documents: [
+      { id: 'cmr', name: 'CMR consignment note', detail: 'Prefilled · Sign at pickup' },
+      { id: 'instructions', name: 'Loading instructions', detail: 'Side loading · 14 pallets' },
+    ],
   },
   {
     id: 'calais-lille',
@@ -98,6 +145,22 @@ export const V2_LOADS: V2Load[] = [
     paidIn: 'Paid in 7 days',
     decideMin: 600,
     approvalsBy: 'tomorrow 06:00',
+    pickupSite: {
+      address: 'Zone Eurotunnel 8, 62100 Calais',
+      contact: '+33 3 21 46 78 90',
+      note: 'Gate C · Bay 1',
+    },
+    deliverySite: {
+      address: 'Rue des Champs 12, 59000 Lille',
+      contact: '+33 3 20 11 22 33',
+      note: 'Gate B · Bay 4',
+    },
+    payoutDate: '23 Oct',
+    payoutMethod: 'IBAN ••4821',
+    documents: [
+      { id: 'cmr', name: 'CMR consignment note', detail: 'Prefilled · Sign at pickup' },
+      { id: 'instructions', name: 'Loading instructions', detail: 'Rear loading · 16 pallets' },
+    ],
   },
   {
     id: 'paris-brussels',
@@ -119,6 +182,22 @@ export const V2_LOADS: V2Load[] = [
     paidIn: 'Paid in 7 days',
     decideMin: 90,
     approvalsBy: '09:00',
+    pickupSite: {
+      address: 'Rue de Bercy 77, 75012 Paris',
+      contact: '+33 1 44 20 55 66',
+      note: 'Gate D · Bay 6 · Call on arrival',
+    },
+    deliverySite: {
+      address: 'Rue du Port 48, 1000 Brussels',
+      contact: '+32 2 555 01 48',
+      note: 'Dock 7 · Ring before entering',
+    },
+    payoutDate: '22 Oct',
+    payoutMethod: 'IBAN ••4821',
+    documents: [
+      { id: 'cmr', name: 'CMR consignment note', detail: 'Prefilled · Sign at pickup' },
+      { id: 'instructions', name: 'Loading instructions', detail: 'Rear loading · 10 pallets' },
+    ],
   },
   {
     id: 'brussels-amsterdam',
@@ -140,6 +219,22 @@ export const V2_LOADS: V2Load[] = [
     paidIn: 'Paid in 14 days',
     decideMin: 300,
     approvalsBy: 'tomorrow 07:00',
+    pickupSite: {
+      address: 'Rue du Port 48, 1000 Brussels',
+      contact: '+32 2 555 01 48',
+      note: 'Dock 7 · Ring before entering',
+    },
+    deliverySite: {
+      address: 'Havenweg 30, 1041 Amsterdam',
+      contact: '+31 20 488 12 34',
+      note: 'Gate E · Bay 5',
+    },
+    payoutDate: '30 Oct',
+    payoutMethod: 'IBAN ••4821',
+    documents: [
+      { id: 'cmr', name: 'CMR consignment note', detail: 'Prefilled · Sign at pickup' },
+      { id: 'instructions', name: 'Loading instructions', detail: 'Side loading · 15 pallets' },
+    ],
   },
   {
     id: 'lille-paris',
@@ -161,5 +256,21 @@ export const V2_LOADS: V2Load[] = [
     paidIn: 'Paid in 7 days',
     decideMin: 60,
     approvalsBy: '16:00',
+    pickupSite: {
+      address: 'Rue des Champs 12, 59000 Lille',
+      contact: '+33 3 20 11 22 33',
+      note: 'Gate B · Bay 4',
+    },
+    deliverySite: {
+      address: 'Rue de Bercy 77, 75012 Paris',
+      contact: '+33 1 44 20 55 66',
+      note: 'Gate D · Bay 6 · Call on arrival',
+    },
+    payoutDate: '22 Oct',
+    payoutMethod: 'IBAN ••4821',
+    documents: [
+      { id: 'cmr', name: 'CMR consignment note', detail: 'Prefilled · Sign at pickup' },
+      { id: 'instructions', name: 'Loading instructions', detail: 'Rear loading · 6 pallets' },
+    ],
   },
 ];

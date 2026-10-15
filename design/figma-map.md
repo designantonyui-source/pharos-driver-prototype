@@ -107,7 +107,7 @@ No Figma node yet: these screens lead and go back to Figma afterwards. Source of
 |---|---|---|---|
 | `/v2` | Loads — unified List/Map home: filters, route-match markers, quick apply, live banner; direction header states the feed (`Direction: {label}, {N} loads`), empty state recovers via Clear filters + Change direction | V2Frame, SmartLoadList, QuickApplyModal, LoadSheet, ApplicationBanner, Sheet, DemoToggle, RouteSheet | prototype |
 | `/application/:id` | Unified application tracker (replaces Pending screens); `?scenario=approve` (default) / `?scenario=reject`; rejection reason, similar loads and appeal mock; cancel via `CancelApplicationSheet` + info `Toast` for demo stubs | ApplicationTracker, CancelApplicationSheet, Toast | prototype |
-| `/trip/:id` | Confirmed trip — pickup/delivery windows, price, customer rating, navigation/documents demos via info `Toast`; cancel via `CancelTripSheet` | TripDetails, CancelTripSheet, Toast | prototype |
+| `/trip/:id` | Confirmed trip — TRIP_ID + payout in summary, Trip progress stepper, Cargo, Route with site addresses/contacts + per-stop Navigate, Customer + Contact dispatcher, Documents via `TripDocumentsSheet`, handover + POD, cancel via `CancelTripSheet` | TripDetails, TripDocumentsSheet, CancelTripSheet, Toast | prototype |
 | `/v2/trips` | Trips (Applications + My day merged) | `screens/v2/Trips.tsx` — active hero + in-review + past, StatusBlock/empty states | prototype |
 | `/v2/account` | Account | placeholder `screens/v2/Soon.tsx` | todo |
 

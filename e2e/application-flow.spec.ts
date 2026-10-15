@@ -164,14 +164,16 @@ test('confirmed application opens trip details and demo actions', async ({ page 
   await expect(page.getByRole('list', { name: 'Route stops' })).toContainText('17:00–18:00');
   await expect(page.getByText('Customer rating: 4.8 / 5', { exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('€360');
+  await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('TR-nordcargo');
+  await expect(page.getByRole('region', { name: 'Cargo' })).toContainText('Curtainsider');
+  await expect(page.getByRole('region', { name: 'Trip progress' })).toContainText('Confirmed');
+  await expect(page.getByRole('button', { name: 'Contact dispatcher', exact: true })).toBeVisible();
 
-  for (const [button, message] of [
-    ['Navigation', 'Navigation is not connected in this demo.'],
-    ['Documents', 'Trip documents are not connected in this demo.'],
-  ]) {
-    await page.getByRole('button', { name: button, exact: true }).click();
-    await expect(page.getByRole('status')).toContainText(message);
-  }
+  await page.getByRole('button', { name: /Documents \(/, exact: false }).click();
+  const docs = page.getByRole('dialog', { name: /Documents for trip/ });
+  await expect(docs).toContainText('CMR consignment note');
+  await docs.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(docs).toHaveCount(0);
   await page.screenshot({ path: test.info().outputPath('trip-details.png') });
 });
 

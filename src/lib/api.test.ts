@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, dismissLoad, restoreLoad, submitApplication, submitProofOfDelivery } from './api';
+import { advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, dismissLoad, getTripDetails, restoreLoad, submitApplication, submitProofOfDelivery } from './api';
 import { ApplicationStatus } from './models';
 import { store } from './store';
 
@@ -53,7 +53,15 @@ describe('proof of delivery', () => {
 });
 
 describe('driver trip execution', () => {
-  beforeEach(() => store.reset());
+  beforeEach(() => {
+    store.reset();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    store.reset();
+    vi.useRealTimers();
+  });
 
   it('requires sequential driver confirmation', async () => {
     store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
@@ -73,6 +81,24 @@ describe('driver trip execution', () => {
     await vi.advanceTimersByTimeAsync(300);
     await cancelling;
     await expect(advanceTripStage('nordcargo', 'confirmed', 'at-pickup')).rejects.toThrow();
+  });
+
+  it('returns one trip view model with trip id, stage and site details', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    const pending = getTripDetails('nordcargo');
+    await vi.advanceTimersByTimeAsync(300);
+    const details = await pending;
+    expect(details?.tripId).toBe('TR-nordcargo');
+    expect(details?.tripStage).toBe('confirmed');
+    expect(details?.load.pickupSite.address).toContain('Lille');
+    expect(details?.load.documents.length).toBeGreaterThan(0);
+  });
+
+  it('returns null when the trip is not confirmed', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.SENT });
+    const pending = getTripDetails('nordcargo');
+    await vi.advanceTimersByTimeAsync(300);
+    await expect(pending).resolves.toBeNull();
   });
 });
 
