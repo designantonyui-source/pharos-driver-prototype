@@ -3,38 +3,6 @@ import type { LoadApplication } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
 import { Icon } from '../Icon';
 
-/**
- * Schematic route (delivery-app language): pickup dot → dashed leg → truck → pin.
- * Full-width with city labels; the solid mint leg grows with the stage.
- * Dark-card palette: dashed nav-text, progress match-bg, white truck badge.
- */
-function RouteArt({ progress }: { progress: number }) {
-  const x0 = 12;
-  const x1 = 188;
-  const y = 20;
-  const tx = x0 + Math.min(0.92, Math.max(0.14, progress)) * (x1 - x0);
-  return (
-    <svg viewBox="0 0 200 32" className="h-[32px] w-full" aria-hidden focusable="false">
-      <line x1={x0} y1={y} x2={x1} y2={y} stroke="var(--color-nav-text)" strokeOpacity="0.35" strokeWidth="2" strokeDasharray="5 5" strokeLinecap="round" />
-      <line x1={x0} y1={y} x2={Math.max(tx, x0)} y2={y} stroke="var(--color-status-match-bg)" strokeWidth="3" strokeLinecap="round" />
-      <circle cx={x0} cy={y} r="7" fill="none" stroke="var(--color-text-inverse)" strokeOpacity="0.35" strokeWidth="2" />
-      <circle cx={x0} cy={y} r="4" fill="var(--color-text-inverse)" />
-      <g transform={`translate(${x1 - 10} ${y - 24})`}>
-        <path d="M10 0C4.5 0 0 4.3 0 9.7 0 16.7 10 23.3 10 23.3s10-6.6 10-13.6C20 4.3 15.5 0 10 0z" fill="var(--color-status-match-bg)" />
-        <circle cx="10" cy="9" r="3.8" fill="var(--color-nav-bg)" />
-      </g>
-      <g>
-        <circle cx={tx} cy={y} r="12" fill="var(--color-text-inverse)" stroke="var(--color-border-default)" strokeWidth="1.5" />
-        <g transform={`translate(${tx - 7} ${y - 7})`} stroke="var(--color-action-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
-          <path d="M0.8 4.2h7.6v5.9H0.8zM8.4 6.8h3.4l2.5 2.5v.8H8.4z" />
-          <circle cx="3.8" cy="11.4" r="1.3" />
-          <circle cx="11.4" cy="11.4" r="1.3" />
-        </g>
-      </g>
-    </svg>
-  );
-}
-
 /** Banner copy per status (flow stories S6: one status, two waiting states). */
 export const STATUS_COPY: Record<ApplicationStatus, { title: string; step: number }> = {
   [ApplicationStatus.SENT]: { title: 'Application sent', step: 1 },
@@ -48,8 +16,8 @@ export const STATUS_COPY: Record<ApplicationStatus, { title: string; step: numbe
 /**
  * v2 · ApplicationBanner — live status under the filters after applying (flow stories S7). Tap opens the status sheet.
  * Applications read as a pale status banner. A confirmed trip is an active job,
- * so it renders as a dark hero (same language as the payout card): LIVE dot,
- * next action first, route + km second, trip step replaces the 4/4 bar.
+ * so it renders as a slim sticky mini-player (Uber/Glovo language): LIVE dot,
+ * truck badge, next action + km, hairline progress. Taps straight into the trip.
  * props: load, status, application, onOpen
  * tokens: color-nav-bg/text, color-status-info/warning-bg/text, radius-lg, shadow-card
  */
@@ -70,7 +38,6 @@ export function ApplicationBanner({
   const ended = status === ApplicationStatus.REJECTED || status === ApplicationStatus.CANCELLED;
 
   if (done) {
-    const tripId = application?.tripId ?? `TR-${load.id}`;
     const stage = application?.tripStage ?? 'confirmed';
     const enRoute = application?.enRouteTo;
     const where = enRoute === 'delivery' ? load.to : load.from;
@@ -105,30 +72,37 @@ export function ApplicationBanner({
       <button
         type="button"
         onClick={onOpen}
-        className="flex w-full flex-col gap-[6px] rounded-[var(--radius-lg)] bg-[var(--color-nav-bg)] p-[12px] text-left text-[var(--color-nav-text)] shadow-card"
+        className="sticky top-0 z-10 flex w-full flex-col overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-nav-bg)] text-left text-[var(--color-nav-text)] shadow-card"
       >
-        <span className="flex items-center justify-between gap-[8px]">
-          <span className="flex items-center gap-[6px] text-caption-10">
-            <span aria-hidden className="relative flex h-[8px] w-[8px]">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-status-success-bg)] opacity-60" />
-              <span className="relative inline-flex h-[8px] w-[8px] rounded-full bg-[var(--color-status-match-bg)]" />
-            </span>
-            ACTIVE TRIP · {tripId}
+        <span className="flex min-h-[48px] items-center gap-[10px] px-[12px] py-[6px]">
+          <span aria-hidden className="relative flex h-[8px] w-[8px] shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-status-success-bg)] opacity-60" />
+            <span className="relative inline-flex h-[8px] w-[8px] rounded-full bg-[var(--color-status-match-bg)]" />
           </span>
-          <span className="flex items-center gap-[2px] text-label-12 text-[var(--color-text-inverse)]">
-            Open trip
+          <span aria-hidden className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full bg-[var(--color-text-inverse)]">
+            <span className="block h-[16px] w-[16px] text-[var(--color-action-primary)]">
+              <svg viewBox="0 0 16 16" className="h-full w-full" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+                <path d="M1 5h9v7H1zM10 8h4l3 3v1h-7z" />
+                <circle cx="4.5" cy="13.5" r="1.4" />
+                <circle cx="13" cy="13.5" r="1.4" />
+              </svg>
+            </span>
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col leading-tight">
+            <span className="text-label-14 text-[var(--color-text-inverse)]">
+              {headline} · {next}
+            </span>
+            <span className="truncate text-caption-12 opacity-80">
+              {load.from} → {load.to} · {stepLabel}
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center gap-[2px] text-label-14 text-[var(--color-text-inverse)]">
+            Open
             <Icon name="chevron-right" size="sm" />
           </span>
         </span>
-        <span className="flex items-center justify-between gap-[8px]">
-          <span className="min-w-0 text-heading-14 text-[var(--color-text-inverse)]">
-            {headline} · {next}
-          </span>
-        </span>
-        <RouteArt progress={progress} />
-        <span className="flex items-center justify-between text-caption-10 opacity-80">
-          <span>{load.from} → {load.to} · €{load.rate}</span>
-          <span>{stepLabel}</span>
+        <span aria-hidden className="h-[3px] w-full bg-[var(--color-nav-text)] opacity-20">
+          <span className="block h-full rounded-r-full bg-[var(--color-status-match-bg)]" style={{ width: `${Math.round(progress * 100)}%` }} />
         </span>
       </button>
     );

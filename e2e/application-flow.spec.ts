@@ -189,11 +189,11 @@ test('confirmed application opens trip details and demo actions', async ({ page,
   await mapsPage?.close().catch(() => undefined);
   await expect(page.getByRole('region', { name: 'En route to pickup' })).toBeVisible();
   await expect(page.getByRole('button', { name: "I've arrived at pickup", exact: true })).toBeVisible();
-  // Exit to Loads — the banner mirrors the active leg and returns to the trip.
+  // Exit to Loads — the mini-player mirrors the active leg and returns to the trip.
   await page.goto('/#/v2');
-  const banner = page.getByRole('button', { name: /ACTIVE TRIP/ });
+  const banner = page.getByRole('button', { name: /En route to pickup/ });
   await expect(banner).toBeVisible();
-  await expect(banner).toContainText('Open trip');
+  await expect(banner).toContainText('Open');
   await page.screenshot({ path: test.info().outputPath('loads-active-trip-banner.png') });
   await banner.click();
   await expect(page).toHaveURL(/#\/trip\/nordcargo$/);
