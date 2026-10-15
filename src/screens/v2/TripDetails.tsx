@@ -242,9 +242,6 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
           </section>
         </main>
 
-        {!cancelled && <p role="status" className="text-body-14 text-[var(--color-text-secondary)]">
-          {tripStage === 'confirmed' ? 'Next: travel to pickup, then confirm arrival.' : tripStage === 'loaded' ? 'Next: travel to delivery, then confirm arrival.' : tripStage === 'at-pickup' ? 'Check the cargo and confirm loading.' : tripStage === 'at-delivery' ? 'Confirm unloading and handover before completing delivery.' : 'Delivery recorded. Document review and payment are separate.'}
-        </p>}
         {tripStage === 'at-delivery' && !cancelled && (
           <label className="flex items-start gap-[10px] py-[8px] text-body-14 text-[var(--color-text-primary)]">
             <input type="checkbox" checked={handoverConfirmed} onChange={(event) => setHandoverConfirmed(event.target.checked)} className="mt-[4px] h-[18px] w-[18px]" />
@@ -274,19 +271,11 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
               <p className="text-label-12 text-[var(--color-text-secondary)]">En route to {navigateTarget}</p>
               <p className="mt-[4px] text-body-14 text-[var(--color-text-primary)]">{navigateStop.site.address}</p>
               <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
-                {navigateTarget === 'pickup' ? `${load.pickupKm} km · ~${load.pickupMin} min` : `${load.km} km loaded`} · {navigateStop.site.note}
+                {navigateTarget === 'pickup' ? `${load.pickupKm} km · ~${load.pickupMin} min` : `${load.km} km loaded`}
               </p>
-              <div className="mt-[12px]">
-                <Button
-                  label="Re-open navigation"
-                  appearance="secondary"
-                  icon={<Icon name="map-pin" size="sm" />}
-                  onClick={() => { void goNavigate(navigateStop.key, navigateStop.mapsQuery); }}
-                />
-              </div>
             </section>
           )}
-          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && (
+          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && !enRouteActive && (
             <Button
               label={tripStage === 'confirmed' ? 'Navigate to pickup' : 'Navigate to delivery'}
               onClick={() => { void goNavigate(navigateStop.key, navigateStop.mapsQuery); }}
@@ -311,6 +300,13 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
               label="Cancel trip"
               full
               onClick={() => setCancelOpen(true)}
+            />
+          )}
+          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && enRouteActive && (
+            <ButtonLink
+              label="Re-open navigation"
+              full
+              onClick={() => { void goNavigate(navigateStop.key, navigateStop.mapsQuery); }}
             />
           )}
           {cancelled && (
