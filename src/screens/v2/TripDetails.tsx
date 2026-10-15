@@ -46,6 +46,72 @@ function PayoutRow({ load }: { load: V2Load }) {
  * tokens: color-bg-surface, color-bg-subtle, color-text-primary, color-text-secondary,
  *         color-action-primary, color-status-success-bg, color-status-success-text, radius-lg, shadow-card
  */
+/**
+ * Earnings block: Delivered → POD submitted → POD accepted → Awaiting payment → Available.
+ * Each state explains what happened, why money is not there yet, the expected date
+ * (when known) and the next action — or that no action is needed.
+ */
+function EarningsBlock({ load }: { load: V2Load }) {
+  const { state } = useStore();
+  const application = state.applications[load.id];
+  const podStatus = application?.pod?.status;
+  const tripEntry = state.ledger.find((e) => e.kind === 'trip' && e.loadId === load.id);
+  const available = tripEntry?.kind === 'trip' && tripEntry.status === 'available';
+  const copy: { title: string; what: string; why: string; expected: string; action: string } =
+    podStatus === 'rejected'
+      ? {
+        title: 'POD needs attention',
+        what: 'The customer rejected the delivery document.',
+        why: 'A rejected POD blocks the invoice — fix the document to restart review.',
+        expected: 'No payout date yet.',
+        action: 'Upload a corrected document below. No other action is needed.',
+      }
+      : podStatus === 'approved' && !available
+      ? {
+        title: 'Awaiting customer payment',
+        what: 'POD accepted. The invoice is with the customer.',
+        why: 'Money is not available yet — the customer has not paid the invoice.',
+        expected: `Expected by ${load.payoutDate}.`,
+        action: 'No action needed — we will notify you when the money is available.',
+      }
+      : available
+      ? {
+        title: 'Earnings available',
+        what: 'The customer paid the invoice.',
+        why: 'Money is now available for cash out.',
+        expected: `Paid ${tripEntry?.kind === 'trip' && tripEntry.paidAt ? new Date(tripEntry.paidAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : load.payoutDate}.`,
+        action: 'Cash out from Balance whenever you are ready.',
+      }
+      : podStatus === 'submitted'
+      ? {
+        title: 'POD under review',
+        what: 'Delivery document submitted and waiting for the customer.',
+        why: 'Money is not available yet — the invoice is issued only after POD approval.',
+        expected: 'Payout date appears after approval.',
+        action: 'No action needed — we will notify you of the decision.',
+      }
+      : {
+        title: 'Upload POD to unlock earnings',
+        what: 'Delivery confirmed. The invoice is not issued yet.',
+        why: 'Money is not available yet — the customer reviews the delivery document first.',
+        expected: `Expected payout ${load.payoutDate} after approval.`,
+        action: 'Upload the signed POD below. No other action is needed.',
+      };
+  return (
+    <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card" aria-label="Earnings">
+      <h2 className="text-heading-20 text-[var(--color-text-primary)]">Earnings</h2>
+      <p className="mt-[8px] text-body-14 font-medium text-[var(--color-text-primary)]">{copy.title}</p>
+      <p className="mt-[4px] text-body-14 text-[var(--color-text-primary)]">{copy.what}</p>
+      <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">{copy.why}</p>
+      <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">{copy.expected}</p>
+      <p className="mt-[8px] text-body-14 text-[var(--color-text-primary)]">{copy.action}</p>
+      {podStatus === 'rejected' && (
+        <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">Reason: unreadable signature — re-take the photo and upload again.</p>
+      )}
+    </section>
+  );
+}
+
 export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string }) {
   const navigate = useNavigate();
   const { state } = useStore();
@@ -287,6 +353,9 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
             <input type="checkbox" aria-label="Cargo handed over" checked={handoverConfirmed} onChange={(event) => setHandoverConfirmed(event.target.checked)} className="mt-[4px] h-[18px] w-[18px]" />
             Cargo has been unloaded and handed over to the recipient.
           </label>
+        )}
+        {!cancelled && tripStage === 'delivered' && (
+          <EarningsBlock load={load} />
         )}
         {!cancelled && tripStage === 'delivered' && (
           <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px]" aria-label="Proof of delivery">

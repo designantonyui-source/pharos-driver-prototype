@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, dismissLoad, getTripDetails, restoreLoad, setEnRoute, submitApplication, submitProofOfDelivery } from './api';
+import { acceptDemoPod, advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, customerPaysDemoTrip, dismissLoad, earningsStateFor, getTripDetails, rejectDemoPod, restoreLoad, setEnRoute, submitApplication, submitProofOfDelivery } from './api';
 import { ApplicationStatus } from './models';
 import { store } from './store';
 
@@ -132,6 +132,38 @@ describe('driver trip execution', () => {
     const trips = store.get().ledger.filter((entry) => entry.kind === 'trip' && entry.loadId === 'nordcargo');
     expect(trips).toHaveLength(1);
     expect(trips[0]).toMatchObject({ amount: 360, status: 'pending', company: 'NordCargo' });
+  });
+
+  it('walks the demo earnings pipeline without automatic timers', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    await advanceTripStage('nordcargo', 'confirmed', 'at-pickup');
+    await advanceTripStage('nordcargo', 'at-pickup', 'loaded');
+    await advanceTripStage('nordcargo', 'loaded', 'at-delivery');
+    await advanceTripStage('nordcargo', 'at-delivery', 'delivered', true);
+    expect(earningsStateFor('nordcargo')).toBe('delivered-no-pod');
+    const file = { filename: 'signed.pdf', mimeType: 'application/pdf', dataUrl: 'data:application/pdf;base64,AAAA' };
+    await submitProofOfDelivery('nordcargo', file);
+    expect(earningsStateFor('nordcargo')).toBe('pod-submitted');
+    await acceptDemoPod('nordcargo');
+    expect(earningsStateFor('nordcargo')).toBe('pod-accepted');
+    await customerPaysDemoTrip('nordcargo');
+    expect(earningsStateFor('nordcargo')).toBe('available');
+    expect((await import('./invoices')).getInvoiceForLoad('nordcargo'));
+  });
+
+  it('rejects a POD with a reason and reopens upload', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    await advanceTripStage('nordcargo', 'confirmed', 'at-pickup');
+    await advanceTripStage('nordcargo', 'at-pickup', 'loaded');
+    await advanceTripStage('nordcargo', 'loaded', 'at-delivery');
+    await advanceTripStage('nordcargo', 'at-delivery', 'delivered', true);
+    const file = { filename: 'signed.pdf', mimeType: 'application/pdf', dataUrl: 'data:application/pdf;base64,AAAA' };
+    await submitProofOfDelivery('nordcargo', file);
+    await expect(rejectDemoPod('nordcargo', '  ')).rejects.toThrow('reason');
+    await rejectDemoPod('nordcargo', 'Unreadable signature');
+    expect(store.getApplicationForLoad('nordcargo')?.pod?.status).toBe('rejected');
+    expect(earningsStateFor('nordcargo')).toBe('delivered-no-pod');
+    await expect(customerPaysDemoTrip('nordcargo')).rejects.toThrow('POD must be accepted');
   });
 });
 

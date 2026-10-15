@@ -568,6 +568,78 @@ export async function advanceTripStage(loadId: string, expected: TripStage, next
   return { loadId, tripStage: next };
 }
 
+/**
+ * Demo payout pipeline (prototype concept logic, NOT real payment rules):
+ * Delivered → POD submitted → POD accepted → Awaiting customer payment → Available.
+ * Delivery, document review, invoice payment and money availability are separate states.
+ * Transitions are driver- or demo-driven — never automatic timers.
+ */
+export type DemoEarningsState =
+  | 'delivered-no-pod'
+  | 'pod-submitted'
+  | 'pod-accepted'
+  | 'awaiting-payment'
+  | 'available';
+
+export function earningsStateFor(loadId: string): DemoEarningsState {
+  const application = store.getApplicationForLoad(loadId);
+  if (!application || application.status !== ApplicationStatus.CONFIRMED || application.cancelledAfterConfirm) {
+    return 'delivered-no-pod';
+  }
+  if ((application.tripStage ?? 'confirmed') !== 'delivered') return 'delivered-no-pod';
+  const podStatus = application.pod?.status;
+  if (podStatus === 'rejected') return 'delivered-no-pod';
+  if (podStatus === 'approved') {
+    const entry = store.get().ledger.find((e) => e.kind === 'trip' && e.loadId === loadId);
+    if (entry && entry.kind === 'trip' && entry.status === 'available') return 'available';
+    return 'pod-accepted';
+  }
+  if (podStatus === 'submitted') return 'pod-submitted';
+  return 'delivered-no-pod';
+}
+
+/** Demo control: customer accepts the POD → invoice moves toward payment. */
+export async function acceptDemoPod(loadId: string) {
+  const current = store.get();
+  const application = current.applications[loadId];
+  if (!application?.pod || application.pod.status !== 'submitted') {
+    throw new Error('No submitted POD to accept');
+  }
+  store.set({ applications: { [loadId]: { ...application, pod: { ...application.pod, status: 'approved' } } } });
+  return { loadId, status: 'approved' as const };
+}
+
+/** Demo control: customer rejects the POD with a reason → driver re-uploads. */
+export async function rejectDemoPod(loadId: string, reason: string) {
+  const current = store.get();
+  const application = current.applications[loadId];
+  if (!application?.pod || application.pod.status !== 'submitted') {
+    throw new Error('No submitted POD to reject');
+  }
+  if (!reason.trim()) throw new Error('Rejection needs a reason');
+  store.set({ applications: { [loadId]: { ...application, pod: { ...application.pod, status: 'rejected' } } } });
+  return { loadId, status: 'rejected' as const, reason };
+}
+
+/** Demo control: customer pays the invoice → trip becomes available + invoice paid. */
+export async function customerPaysDemoTrip(loadId: string) {
+  const current = store.get();
+  const application = current.applications[loadId];
+  if (!application || application.pod?.status !== 'approved') {
+    throw new Error('POD must be accepted before the customer pays');
+  }
+  const paidAt = new Date().toISOString();
+  const ledger = current.ledger.map((entry) =>
+    entry.kind === 'trip' && entry.loadId === loadId && entry.status === 'pending'
+      ? { ...entry, status: 'available' as const, paidAt }
+      : entry,
+  );
+  store.set({ ledger });
+  const { markDemoInvoicePaid } = await import('./invoices');
+  await markDemoInvoicePaid(loadId);
+  return { loadId, status: 'available' as const };
+}
+
 /** Local prototype attachment. A production app must upload to secure object storage. */
 export async function submitProofOfDelivery(loadId: string, file: { filename: string; mimeType: string; dataUrl: string }) {
   const current = store.get();
