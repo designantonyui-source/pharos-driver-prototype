@@ -3,6 +3,40 @@ import type { LoadApplication } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
 import { Icon } from '../Icon';
 
+/**
+ * Schematic route (delivery-app language): pickup dot → dashed leg → truck → pin.
+ * Full-width with city labels; the solid mint leg grows with the stage.
+ * Dark-card palette: dashed nav-text, progress match-bg, white truck badge.
+ */
+function RouteArt({ progress, from, to }: { progress: number; from: string; to: string }) {
+  const x0 = 16;
+  const x1 = 184;
+  const y = 22;
+  const tx = x0 + Math.min(0.92, Math.max(0.14, progress)) * (x1 - x0);
+  return (
+    <svg viewBox="0 0 200 52" className="h-[64px] w-full" aria-hidden focusable="false">
+      <line x1={x0} y1={y} x2={x1} y2={y} stroke="var(--color-nav-text)" strokeOpacity="0.35" strokeWidth="2" strokeDasharray="5 5" strokeLinecap="round" />
+      <line x1={x0} y1={y} x2={Math.max(tx, x0)} y2={y} stroke="var(--color-status-match-bg)" strokeWidth="3" strokeLinecap="round" />
+      <circle cx={x0} cy={y} r="9" fill="none" stroke="var(--color-text-inverse)" strokeOpacity="0.35" strokeWidth="2" />
+      <circle cx={x0} cy={y} r="5" fill="var(--color-text-inverse)" />
+      <g transform={`translate(${x1 - 12} ${y - 28})`}>
+        <path d="M12 0C5.4 0 0 5.2 0 11.6 0 20 12 28 12 28s12-8 12-16.4C24 5.2 18.6 0 12 0z" fill="var(--color-status-match-bg)" />
+        <circle cx="12" cy="11" r="4.5" fill="var(--color-nav-bg)" />
+      </g>
+      <g>
+        <circle cx={tx} cy={y} r="14" fill="var(--color-text-inverse)" stroke="var(--color-border-default)" strokeWidth="1.5" />
+        <g transform={`translate(${tx - 8} ${y - 8})`} stroke="var(--color-action-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none">
+          <path d="M1 5h9v7H1zM10 8h4l3 3v1h-7z" />
+          <circle cx="4.5" cy="13.5" r="1.6" />
+          <circle cx="13.5" cy="13.5" r="1.6" />
+        </g>
+      </g>
+      <text x={x0} y="48" textAnchor="start" fontSize="10" fill="var(--color-nav-text)" opacity="0.85">{from}</text>
+      <text x={x1} y="48" textAnchor="end" fontSize="10" fill="var(--color-nav-text)" opacity="0.85">{to}</text>
+    </svg>
+  );
+}
+
 /** Banner copy per status (flow stories S6: one status, two waiting states). */
 export const STATUS_COPY: Record<ApplicationStatus, { title: string; step: number }> = {
   [ApplicationStatus.SENT]: { title: 'Application sent', step: 1 },
@@ -63,6 +97,12 @@ export function ApplicationBanner({
       : stage === 'loaded' ? 'Step 3 of 5'
       : stage === 'at-pickup' ? 'Step 2 of 5'
       : 'Step 1 of 5';
+    const progress =
+      stage === 'delivered' ? 1
+      : stage === 'at-delivery' ? 0.85
+      : stage === 'loaded' || enRoute === 'delivery' ? 0.55
+      : stage === 'at-pickup' ? 0.2
+      : 0.05;
     return (
       <button
         type="button"
@@ -88,6 +128,7 @@ export function ApplicationBanner({
         <span className="text-body-14 opacity-80">
           {next}
         </span>
+        <RouteArt progress={progress} from={load.from} to={load.to} />
         <span className="flex items-center justify-between text-caption-12 opacity-80">
           <span>{load.from} → {load.to} · €{load.rate}</span>
           <span>{stepLabel}</span>
