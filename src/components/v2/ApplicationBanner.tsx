@@ -1,4 +1,5 @@
 import { ApplicationStatus } from '../../lib/models';
+import type { LoadApplication } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
 import { Icon } from '../Icon';
 
@@ -14,21 +15,55 @@ export const STATUS_COPY: Record<ApplicationStatus, { title: string; step: numbe
 
 /**
  * v2 · ApplicationBanner — live status under the filters after applying (flow stories S7). Tap opens the status sheet.
- * props: load, status, onOpen
+ * For a confirmed trip it mirrors the driver stage: en-route legs read as
+ * "En route to pickup · 18 km" with the trip step, so the driver sees the active
+ * trip without opening it.
+ * props: load, status, application, onOpen
  * tokens: color-status-info-bg/text, color-status-success-bg/text, radius-lg, shadow-card
  */
 export function ApplicationBanner({
   load,
   status,
+  application,
   onOpen,
 }: {
   load: V2Load;
   status: ApplicationStatus;
+  /** Per-load application: drives the confirmed-trip copy (stage + en-route). */
+  application?: LoadApplication | null;
   onOpen: () => void;
 }) {
-  const { title, step } = STATUS_COPY[status];
+  const { step } = STATUS_COPY[status];
   const done = status === ApplicationStatus.CONFIRMED;
   const ended = status === ApplicationStatus.REJECTED || status === ApplicationStatus.CANCELLED;
+
+  // Confirmed-trip copy follows the driver, not the dispatcher.
+  let title = STATUS_COPY[status].title;
+  let detail = `${load.from} → ${load.to} · €${load.rate}`;
+  if (done) {
+    const tripId = application?.tripId ?? `TR-${load.id}`;
+    const stage = application?.tripStage ?? 'confirmed';
+    const enRoute = application?.enRouteTo;
+    if (enRoute) {
+      const where = enRoute === 'pickup' ? load.from : load.to;
+      const km = enRoute === 'pickup' ? `${load.pickupKm} km` : `${load.km} km`;
+      title = `En route to ${enRoute} · ${where} · ${km}`;
+    } else if (stage === 'at-pickup') {
+      title = `At pickup · ${load.from}`;
+    } else if (stage === 'loaded') {
+      title = `Loaded · heading to ${load.to}`;
+    } else if (stage === 'at-delivery') {
+      title = `At delivery · ${load.to}`;
+    } else if (stage === 'delivered') {
+      title = `Delivered · ${load.payoutDate} payout`;
+    } else {
+      title = `Confirmed · Trip ${tripId}`;
+    }
+    detail = `${load.from} → ${load.to} · €${load.rate}`;
+  } else if (!done) {
+    detail = `${load.from} → ${load.to} · €${load.rate} · by ${load.approvalsBy}`;
+  }
+
   return (
     <button
       type="button"
@@ -46,11 +81,10 @@ export function ApplicationBanner({
           <Icon name={done ? 'circle-check' : ended ? 'circle-x' : 'clock'} size="sm" />
           {title}
         </span>
-        <span className="text-label-12">{done ? 'View' : `Step ${step} of 4`}</span>
+        <span className="text-label-12">{done ? 'Open trip' : `Step ${step} of 4`}</span>
       </span>
       <span className="text-body-14">
-        {load.from} → {load.to} · €{load.rate}
-        {done ? '' : ` · by ${load.approvalsBy}`}
+        {detail}
       </span>
       <span className="flex gap-[4px]" aria-hidden>
         {[1, 2, 3, 4].map((i) => (

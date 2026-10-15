@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { dismissLoad, getLoads, restoreLoad } from '../../lib/api';
+import { ApplicationStatus } from '../../lib/models';
 import { store, useStore } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
 import { Icon } from '../../components/Icon';
@@ -112,7 +113,7 @@ export function Home() {
           </span>
         </button>
 
-        {applied && status && <ApplicationBanner load={applied} status={status} onOpen={() => navigate(`/application/${applied.id}${scenarioSearch}`)} />}
+        {applied && status && <ApplicationBanner load={applied} status={status} application={state.applications[applied.id]} onOpen={() => navigate(status === ApplicationStatus.CONFIRMED ? `/trip/${applied.id}` : `/application/${applied.id}${scenarioSearch}`)} />}
 
         {loadError ? (
           <div role="alert" className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] text-body-14 text-[var(--color-text-primary)]">
