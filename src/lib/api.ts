@@ -454,6 +454,24 @@ export function cancellationPenalty(application: LoadApplication, pickupTime?: s
  * less than 24 h before pickup → 'warning' (reliability impact, reason recorded).
  * Prototype policy only; no approved time-limited rebooking rule is implemented.
  */
+export type TripStage = NonNullable<LoadApplication['tripStage']>;
+const TRIP_STAGE_ORDER: TripStage[] = ['confirmed', 'at-pickup', 'loaded', 'at-delivery', 'delivered'];
+
+/** Driver explicitly confirms each operational milestone. No demo timers or payment changes. */
+export async function advanceTripStage(loadId: string, expected: TripStage, next: TripStage) {
+  const current = store.get();
+  const application = current.applications[loadId];
+  if (!application || application.status !== ApplicationStatus.CONFIRMED || application.cancelledAfterConfirm) {
+    throw new Error('This trip is not active');
+  }
+  const actual = application.tripStage ?? 'confirmed';
+  if (actual !== expected || TRIP_STAGE_ORDER.indexOf(next) !== TRIP_STAGE_ORDER.indexOf(actual) + 1) {
+    throw new Error('Trip stage changed. Refresh and try again.');
+  }
+  store.set({ applications: { [loadId]: { ...application, tripStage: next } } });
+  return { loadId, tripStage: next };
+}
+
 export async function cancelTrip(loadId: string, reason: NonNullable<LoadApplication['cancelReason']>) {
   await wait(300);
   const current = store.get();
