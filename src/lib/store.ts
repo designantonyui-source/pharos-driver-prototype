@@ -11,6 +11,8 @@ export type LoadApplication = {
   tripId?: string;
   /** Driver-controlled operational milestone, separate from dispatcher approval and payment. */
   tripStage?: 'confirmed' | 'at-pickup' | 'loaded' | 'at-delivery' | 'delivered';
+  deliveryProofConfirmed?: boolean;
+  deliveryCompletedAt?: string;
   /** Dismissed from the feed (decline before apply) — free, reversible, never touches the score. */
   dismissed?: boolean;
   /** Cancel reason after confirm (Uber Freight ladder input) — feeds the future reliability score. */
