@@ -6,7 +6,7 @@ import { V2BackBar, useV2Back } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { CancelTripSheet } from '../../components/v2/CancelTripSheet';
 import { Toast, useToast } from '../../components/v2/Toast';
-import { advanceTripStage, cancelTrip, cancellationPenalty, getLoads, type TripStage } from '../../lib/api';
+import { advanceTripStage, cancelTrip, cancellationPenalty, getLoads, submitProofOfDelivery, type TripStage } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore, type LoadApplication } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
@@ -47,6 +47,27 @@ export function TripDetailsView({ load }: { load: V2Load }) {
   const [updatingStage, setUpdatingStage] = useState(false);
   const [stageError, setStageError] = useState<string | null>(null);
   const [handoverConfirmed, setHandoverConfirmed] = useState(false);
+  const [uploadingPod, setUploadingPod] = useState(false);
+  const [podError, setPodError] = useState<string | null>(null);
+  async function uploadPod(file: File | undefined) {
+    if (!file) return;
+    setPodError(null);
+    if (!['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 2_000_000) {
+      setPodError('Choose a PDF or image smaller than 2 MB.');
+      return;
+    }
+    setUploadingPod(true);
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error('Could not read file'));
+        reader.readAsDataURL(file);
+      });
+      await submitProofOfDelivery(load.id, { filename: file.name, mimeType: file.type, dataUrl });
+    } catch { setPodError('Could not save the document. Please try again.'); }
+    finally { setUploadingPod(false); }
+  }
   const nextStage: Partial<Record<TripStage, { stage: TripStage; label: string }>> = {
     confirmed: { stage: 'at-pickup', label: "I've arrived at pickup" },
     'at-pickup': { stage: 'loaded', label: 'Confirm loading complete' },
@@ -150,6 +171,22 @@ export function TripDetailsView({ load }: { load: V2Load }) {
             <input type="checkbox" checked={handoverConfirmed} onChange={(event) => setHandoverConfirmed(event.target.checked)} className="mt-[4px] h-[18px] w-[18px]" />
             Cargo has been unloaded and handed over to the recipient.
           </label>
+        )}
+        {!cancelled && tripStage === 'delivered' && (
+          <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px]" aria-label="Proof of delivery">
+            <h2 className="text-heading-20 text-[var(--color-text-primary)]">Proof of delivery</h2>
+            <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
+              {state.applications[load.id]?.pod?.status === 'submitted'
+                ? 'Document submitted · Awaiting review. Payment is tracked separately.'
+                : 'Upload a signed delivery document. This does not automatically approve payment.'}
+            </p>
+            {state.applications[load.id]?.pod && <p className="mt-[8px] text-body-14">{state.applications[load.id].pod?.filename}</p>}
+            <label className="mt-[8px] block text-body-14 text-[var(--color-text-primary)]">
+              {uploadingPod ? 'Saving document…' : state.applications[load.id]?.pod ? 'Replace document' : 'Upload POD (PDF or image, max 2 MB)'}
+              <input type="file" accept=".pdf,image/jpeg,image/png,image/webp" disabled={uploadingPod} onChange={(event) => { void uploadPod(event.target.files?.[0]); event.target.value = ''; }} className="mt-[8px] block w-full text-body-14" />
+            </label>
+            {podError && <p role="alert" className="mt-[8px] text-body-14">{podError}</p>}
+          </section>
         )}
         {stageError && <p role="alert" className="text-body-14 text-[var(--color-text-secondary)]">{stageError}</p>}
         <div className="flex shrink-0 flex-col gap-[8px] py-[8px]">
