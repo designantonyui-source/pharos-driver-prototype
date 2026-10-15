@@ -16,8 +16,10 @@ export const STATUS_COPY: Record<ApplicationStatus, { title: string; step: numbe
 /**
  * v2 · ApplicationBanner — live status under the filters after applying (flow stories S7). Tap opens the status sheet.
  * Applications read as a pale status banner. A confirmed trip is an active job,
- * so it renders as a slim sticky mini-player (Uber/Glovo language): LIVE dot,
- * truck badge, next action + km, hairline progress. Taps straight into the trip.
+ * so it renders as a slim sticky mini-player (Uber ETA-floater language):
+ * ETA-first (km to go), status second, truck badge, hairline progress.
+ * The route itself is NOT duplicated — the load card below already shows it.
+ * Taps straight into the trip.
  * props: load, status, application, onOpen
  * tokens: color-nav-bg/text, color-status-info/warning-bg/text, radius-lg, shadow-card
  */
@@ -40,28 +42,17 @@ export function ApplicationBanner({
   if (done) {
     const stage = application?.tripStage ?? 'confirmed';
     const enRoute = application?.enRouteTo;
-    const where = enRoute === 'delivery' ? load.to : load.from;
-    const km = enRoute === 'delivery' ? `${load.km} km` : `${load.pickupKm} km`;
-    const headline = enRoute
-      ? `En route to ${enRoute}`
-      : stage === 'at-pickup' ? 'At pickup'
-      : stage === 'loaded' ? 'Loaded · heading out'
-      : stage === 'at-delivery' ? 'At delivery'
-      : stage === 'delivered' ? 'Delivered'
-      : 'Confirmed · ready to roll';
-    const next = enRoute
-      ? `${where} · ${km} to go`
-      : stage === 'at-pickup' ? `${load.from} · confirm loading`
-      : stage === 'loaded' ? `${load.to} · ${load.km} km loaded`
-      : stage === 'at-delivery' ? `${load.to} · hand over cargo`
-      : stage === 'delivered' ? `${load.payoutDate} payout`
-      : `${load.from} · navigate to pickup`;
-    const stepLabel =
-      stage === 'delivered' ? 'Step 5 of 5'
-      : stage === 'at-delivery' ? 'Step 4 of 5'
-      : stage === 'loaded' ? 'Step 3 of 5'
-      : stage === 'at-pickup' ? 'Step 2 of 5'
-      : 'Step 1 of 5';
+    // ETA-first (Uber floater): the one number the driver needs. Route is NOT
+    // duplicated — the load card below already shows from → to.
+    const eta = enRoute === 'delivery' ? `${load.km} km to go`
+      : `${load.pickupKm} km to go`;
+    const sub = enRoute
+      ? `En route to ${enRoute} · ${stage === 'delivered' ? 'Step 5 of 5' : enRoute === 'delivery' ? 'Step 3 of 5' : 'Step 1 of 5'}`
+      : stage === 'at-pickup' ? 'At pickup · Step 2 of 5'
+      : stage === 'loaded' ? 'Loaded · Step 3 of 5'
+      : stage === 'at-delivery' ? 'At delivery · Step 4 of 5'
+      : stage === 'delivered' ? 'Delivered · Step 5 of 5'
+      : 'Confirmed · Step 1 of 5';
     const progress =
       stage === 'delivered' ? 1
       : stage === 'at-delivery' ? 0.85
@@ -89,11 +80,11 @@ export function ApplicationBanner({
             </span>
           </span>
           <span className="flex min-w-0 flex-1 flex-col leading-tight">
-            <span className="text-label-14 text-[var(--color-text-inverse)]">
-              {headline} · {next}
+            <span className="text-heading-20 text-[var(--color-text-inverse)]">
+              {eta}
             </span>
             <span className="truncate text-caption-12 opacity-80">
-              {load.from} → {load.to} · {stepLabel}
+              {sub}
             </span>
           </span>
           <span className="flex shrink-0 items-center gap-[2px] text-label-14 text-[var(--color-text-inverse)]">
