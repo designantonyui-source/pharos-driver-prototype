@@ -458,7 +458,7 @@ export type TripStage = NonNullable<LoadApplication['tripStage']>;
 const TRIP_STAGE_ORDER: TripStage[] = ['confirmed', 'at-pickup', 'loaded', 'at-delivery', 'delivered'];
 
 /** Driver explicitly confirms each operational milestone. No demo timers or payment changes. */
-export async function advanceTripStage(loadId: string, expected: TripStage, next: TripStage) {
+export async function advanceTripStage(loadId: string, expected: TripStage, next: TripStage, handoverConfirmed = false) {
   const current = store.get();
   const application = current.applications[loadId];
   if (!application || application.status !== ApplicationStatus.CONFIRMED || application.cancelledAfterConfirm) {
@@ -468,7 +468,8 @@ export async function advanceTripStage(loadId: string, expected: TripStage, next
   if (actual !== expected || TRIP_STAGE_ORDER.indexOf(next) !== TRIP_STAGE_ORDER.indexOf(actual) + 1) {
     throw new Error('Trip stage changed. Refresh and try again.');
   }
-  store.set({ applications: { [loadId]: { ...application, tripStage: next } } });
+  if (next === 'delivered' && !handoverConfirmed) throw new Error('Confirm cargo handover before completing delivery');
+  store.set({ applications: { [loadId]: { ...application, tripStage: next, ...(next === 'delivered' ? { deliveryProofConfirmed: true, deliveryCompletedAt: new Date().toISOString() } : {}) } } });
   return { loadId, tripStage: next };
 }
 
