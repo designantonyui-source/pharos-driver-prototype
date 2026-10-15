@@ -13,6 +13,8 @@ export type LoadApplication = {
   tripStage?: 'confirmed' | 'at-pickup' | 'loaded' | 'at-delivery' | 'delivered';
   deliveryProofConfirmed?: boolean;
   deliveryCompletedAt?: string;
+  /** POD is a separate review process, not proof of payment. */
+  pod?: { filename: string; mimeType: string; dataUrl: string; uploadedAt: string; status: 'submitted' | 'approved' | 'rejected' };
   /** Dismissed from the feed (decline before apply) — free, reversible, never touches the score. */
   dismissed?: boolean;
   /** Cancel reason after confirm (Uber Freight ladder input) — feeds the future reliability score. */
