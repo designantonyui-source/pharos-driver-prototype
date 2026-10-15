@@ -174,12 +174,17 @@ export function TripDetails() {
   const { id = '' } = useParams();
   const { state } = useStore();
   const [loads, setLoads] = useState<V2Load[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
-    getLoads().then((items) => { if (active) setLoads(items); });
+    setLoadError(false);
+    setLoads(null);
+    getLoads().then((items) => { if (active) setLoads(items); })
+      .catch(() => { if (active) setLoadError(true); });
     return () => { active = false; };
-  }, []);
+  }, [loadAttempt]);
 
   const emptyBack = useV2Back('/v2');
   const load = loads?.find((item) => item.id === id);
@@ -193,7 +198,8 @@ export function TripDetails() {
       </div>
       <main className="absolute inset-x-0 top-[var(--nav-bar-back-h)] px-[16px]">
         <h1 className="sr-only">Trip details</h1>
-        <p role="status" className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] text-body-14 text-[var(--color-text-secondary)]">{loads === null ? 'Loading trip…' : 'No confirmed trip is available for this load.'}</p>
+        <p role="status" className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] text-body-14 text-[var(--color-text-secondary)]">{loadError ? 'Could not load trip details. Check your connection and try again.' : loads === null ? 'Loading trip…' : 'No confirmed trip is available for this load.'}</p>
+        {loadError && <div className="mt-[16px]"><Button label="Retry" onClick={() => setLoadAttempt((n) => n + 1)} /></div>}
         <div className="mt-[16px]"><Button label="Back to loads" appearance="secondary" onClick={emptyBack} /></div>
       </main>
     </V2Frame>
