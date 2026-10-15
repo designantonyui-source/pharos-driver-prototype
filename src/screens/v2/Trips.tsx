@@ -130,7 +130,7 @@ export function Trips() {
   }
   const byId = new Map(loads.map(l => [l.id, l]));
   const entries: TripEntry[] = Object.values(state.applications)
-    .filter(a => !a.dismissed && byId.has(a.loadId))
+    .filter(a => byId.has(a.loadId) && (!a.dismissed || a.cancelledAfterConfirm || (a.submittedAt !== null && (a.status === ApplicationStatus.CANCELLED || a.status === ApplicationStatus.REJECTED))))
     .map(a => ({ load: byId.get(a.loadId)!, application: a }));
   const active = entries.filter(e => e.application.status === ApplicationStatus.CONFIRMED && !e.application.cancelledAfterConfirm);
   const review = entries.filter(e => REVIEW.has(e.application.status));
