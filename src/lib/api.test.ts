@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, dismissLoad, restoreLoad, submitApplication } from './api';
+import { advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, dismissLoad, restoreLoad, submitApplication, submitProofOfDelivery } from './api';
 import { ApplicationStatus } from './models';
 import { store } from './store';
 
@@ -31,6 +31,24 @@ describe('cancel trip preview consequences', () => {
     expect(cancellationPenalty({
       loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED, submittedAt: null,
     }, undefined, now)).toBe('warning');
+  });
+});
+
+describe('proof of delivery', () => {
+  beforeEach(() => store.reset());
+  it('requires a delivered trip and keeps review separate', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    const file = { filename: 'signed.pdf', mimeType: 'application/pdf', dataUrl: 'data:application/pdf;base64,AAAA' };
+    await expect(submitProofOfDelivery('nordcargo', file)).rejects.toThrow();
+    store.set({ applications: { nordcargo: { ...store.get().applications.nordcargo, tripStage: 'delivered' } } });
+    await submitProofOfDelivery('nordcargo', file);
+    expect(store.getApplicationForLoad('nordcargo')?.pod?.status).toBe('submitted');
+    expect(store.getApplicationForLoad('nordcargo')?.status).toBe(ApplicationStatus.CONFIRMED);
+  });
+  it('rejects unsupported files', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    store.set({ applications: { nordcargo: { ...store.get().applications.nordcargo, tripStage: 'delivered' } } });
+    await expect(submitProofOfDelivery('nordcargo', { filename: 'bad.svg', mimeType: 'image/svg+xml', dataUrl: 'data:image/svg+xml;base64,AAAA' })).rejects.toThrow();
   });
 });
 
