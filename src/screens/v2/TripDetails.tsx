@@ -6,7 +6,7 @@ import { V2BackBar, useV2Back } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { CancelTripSheet } from '../../components/v2/CancelTripSheet';
 import { Toast, useToast } from '../../components/v2/Toast';
-import { cancelTrip, getLoads } from '../../lib/api';
+import { cancelTrip, cancellationPenalty, getLoads } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore, type LoadApplication } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
@@ -159,7 +159,7 @@ export function TripDetailsView({ load }: { load: V2Load }) {
       <CancelTripSheet
         open={cancelOpen}
         load={load}
-        penalty="warning"
+        penalty={cancellationPenalty(state.applications[load.id], load.pickupTime)}
         cancelling={cancelling}
         error={error}
         onConfirm={confirmCancel}
