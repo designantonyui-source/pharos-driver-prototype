@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button, ButtonLink } from '../../components/Button';
 import { Icon } from '../../components/Icon';
 import { ProgressStep, type ProgressState } from '../../components/ProgressStep';
@@ -148,7 +148,10 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
               €{load.rate}
             </p>
             <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
-              {load.km} km loaded · €{load.perKm.toFixed(2)}/km · {load.payoutDate} → {load.payoutMethod}
+              {load.km} km loaded · €{load.perKm.toFixed(2)}/km ·{' '}
+              <Link to="/v2/account/balance" className="text-[var(--color-action-primary)] underline">
+                {load.payoutDate} → {load.payoutMethod}
+              </Link>
             </p>
           </section>
 
@@ -244,7 +247,7 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
 
         {tripStage === 'at-delivery' && !cancelled && (
           <label className="flex items-start gap-[10px] py-[8px] text-body-14 text-[var(--color-text-primary)]">
-            <input type="checkbox" checked={handoverConfirmed} onChange={(event) => setHandoverConfirmed(event.target.checked)} className="mt-[4px] h-[18px] w-[18px]" />
+            <input type="checkbox" aria-label="Cargo handed over" checked={handoverConfirmed} onChange={(event) => setHandoverConfirmed(event.target.checked)} className="mt-[4px] h-[18px] w-[18px]" />
             Cargo has been unloaded and handed over to the recipient.
           </label>
         )}

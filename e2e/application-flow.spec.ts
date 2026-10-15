@@ -191,6 +191,46 @@ test('confirmed application opens trip details and demo actions', async ({ page,
   await page.screenshot({ path: test.info().outputPath('trip-details.png') });
 });
 
+test('portfolio happy path: apply to payout', async ({ page, context }) => {
+  // Loads → Apply → Confirmed → Trip → Delivered → Balance (pending payout).
+  await page.goto('/#/v2');
+  await page.getByRole('button', { name: 'Apply for €360', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Send application', exact: true }).click();
+  await expect(page.getByText('Load confirmed', { exact: true }).first()).toBeVisible({ timeout: 15000 });
+  await page.getByRole('button', { name: 'View trip', exact: true }).click();
+  await expect(page).toHaveURL(/#\/trip\/nordcargo$/);
+
+  // En-route to pickup, then arrive.
+  const navigate = page.getByRole('button', { name: 'Navigate to pickup', exact: true }).nth(1);
+  const [mapsPage] = await Promise.all([
+    context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
+    navigate.click(),
+  ]);
+  await mapsPage?.close().catch(() => undefined);
+  await page.getByRole('button', { name: "I've arrived at pickup", exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('At pickup');
+
+  // Loading complete, en-route to delivery, arrive, hand over, complete.
+  await page.getByRole('button', { name: 'Confirm loading complete', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('Loaded');
+  const navigateDelivery = page.getByRole('button', { name: 'Navigate to delivery', exact: true }).nth(1);
+  const [mapsDelivery] = await Promise.all([
+    context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
+    navigateDelivery.click(),
+  ]);
+  await mapsDelivery?.close().catch(() => undefined);
+  await page.getByRole('button', { name: "I've arrived at delivery", exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('At delivery');
+  await page.getByRole('checkbox', { name: 'Cargo handed over' }).check();
+  await page.getByRole('button', { name: 'Complete delivery', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('Delivered');
+
+  // Delivered work lands in Balance as pending payout.
+  await page.getByRole('link', { name: /22 Oct/ }).click();
+  await expect(page).toHaveURL(/#\/v2\/account\/balance$/);
+  await page.screenshot({ path: test.info().outputPath('portfolio-balance.png') });
+});
+
 
 test('reject scenario shows the reason, appeal and return to loads', async ({ page }) => {
   await page.goto('/#/v2?scenario=reject');

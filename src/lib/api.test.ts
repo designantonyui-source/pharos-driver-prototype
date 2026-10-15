@@ -122,6 +122,17 @@ describe('driver trip execution', () => {
     await vi.advanceTimersByTimeAsync(150);
     await assertion;
   });
+
+  it('posts a pending ledger entry on delivery without duplicates', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    await advanceTripStage('nordcargo', 'confirmed', 'at-pickup');
+    await advanceTripStage('nordcargo', 'at-pickup', 'loaded');
+    await advanceTripStage('nordcargo', 'loaded', 'at-delivery');
+    await advanceTripStage('nordcargo', 'at-delivery', 'delivered', true);
+    const trips = store.get().ledger.filter((entry) => entry.kind === 'trip' && entry.loadId === 'nordcargo');
+    expect(trips).toHaveLength(1);
+    expect(trips[0]).toMatchObject({ amount: 360, status: 'pending', company: 'NordCargo' });
+  });
 });
 
 describe('application lifecycle', () => {

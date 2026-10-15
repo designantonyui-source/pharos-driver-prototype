@@ -509,8 +509,34 @@ export async function advanceTripStage(loadId: string, expected: TripStage, next
     throw new Error('Trip stage changed. Refresh and try again.');
   }
   if (next === 'delivered' && !handoverConfirmed) throw new Error('Confirm cargo handover before completing delivery');
+  const deliveredAt = new Date().toISOString();
   // Arriving at a stop ends the en-route leg — the next Navigate starts a fresh one.
-  store.set({ applications: { [loadId]: { ...application, tripStage: next, enRouteTo: undefined, ...(next === 'delivered' ? { deliveryProofConfirmed: true, deliveryCompletedAt: new Date().toISOString() } : {}) } } });
+  const patch: Partial<typeof application> = { tripStage: next, enRouteTo: undefined };
+  let ledger = current.ledger;
+  if (next === 'delivered') {
+    patch.deliveryProofConfirmed = true;
+    patch.deliveryCompletedAt = deliveredAt;
+    // Delivered work becomes pending payout (net-7 style) — the Balance story starts here.
+    const load = getLoad(loadId);
+    if (load && !current.ledger.some((entry) => entry.kind === 'trip' && entry.loadId === loadId)) {
+      ledger = [
+        ...current.ledger,
+        {
+          kind: 'trip' as const,
+          id: `trip-${loadId}-${Date.parse(deliveredAt)}`,
+          loadId,
+          company: load.company,
+          from: load.from,
+          to: load.to,
+          amount: load.rate,
+          status: 'pending' as const,
+          paidAt: null,
+          day: new Date(deliveredAt).toLocaleDateString('en-GB', { weekday: 'short' }),
+        },
+      ];
+    }
+  }
+  store.set({ ledger, applications: { [loadId]: { ...application, ...patch } } });
   return { loadId, tripStage: next };
 }
 
