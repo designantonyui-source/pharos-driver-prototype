@@ -69,6 +69,7 @@ export function ApplicationTrackerView({
   onSimilarLoads,
   listPath = '/v2',
   cancelling = false,
+  cancelError = null,
 }: {
   status: ApplicationStatus;
   load: V2Load;
@@ -77,6 +78,7 @@ export function ApplicationTrackerView({
   onSimilarLoads: () => void;
   listPath?: string;
   cancelling?: boolean;
+  cancelError?: string | null;
 }) {
   const view = STATUS_VIEW[status];
   const waiting = CANCELLABLE.has(status);
@@ -154,7 +156,8 @@ export function ApplicationTrackerView({
         open={cancelOpen}
         load={load}
         cancelling={cancelling}
-        onConfirm={() => { setCancelOpen(false); onCancel(); }}
+        error={cancelError}
+        onConfirm={onCancel}
         onClose={closeCancel}
       />
       <Toast toast={toast} onClose={dismiss} />
@@ -171,6 +174,7 @@ export function ApplicationTracker() {
   const { state } = useStore();
   const [loads, setLoads] = useState<V2Load[] | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   useEffect(() => {
     getLoads().then(setLoads);
@@ -200,17 +204,21 @@ export function ApplicationTracker() {
   }, [id, state.loadId, status, scenario]);
 
   async function handleCancel() {
+    if (cancelling) return;
+    setCancelError(null);
     setCancelling(true);
     try {
       await cancelApplication(id);
       navigate(listPath);
+    } catch {
+      setCancelError('Could not cancel this application. Please try again.');
     } finally {
       setCancelling(false);
     }
   }
 
   if (status && load) {
-    return <ApplicationTrackerView status={status} load={load} onCancel={handleCancel} listPath={listPath} onSimilarLoads={() => navigate(listPath)} onViewTrip={() => navigate(`/trip/${id}`)} cancelling={cancelling} />;
+    return <ApplicationTrackerView status={status} load={load} onCancel={handleCancel} cancelError={cancelError} listPath={listPath} onSimilarLoads={() => navigate(listPath)} onViewTrip={() => navigate(`/trip/${id}`)} cancelling={cancelling} />;
   }
 
   return (
