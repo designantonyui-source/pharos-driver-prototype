@@ -39,6 +39,8 @@ export function Home() {
   const scenarioSearch = scenario === 'reject' || scenario === 'approve' ? `?scenario=${scenario}` : '';
   const { state } = useStore();
   const [loads, setLoads] = useState<V2Load[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [on, setOn] = useState<string[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -46,8 +48,14 @@ export function Home() {
   const { toast, show, dismiss } = useToast();
 
   useEffect(() => {
-    getLoads().then(setLoads);
-  }, []);
+    let active = true;
+    setLoadError(false);
+    setLoads(null);
+    getLoads()
+      .then((items) => { if (active) setLoads(items); })
+      .catch(() => { if (active) setLoadError(true); });
+    return () => { active = false; };
+  }, [loadAttempt]);
 
   const countFor = (ids: string[]) =>
     (loads ?? []).filter((l) => FILTERS.every((f) => !ids.includes(f.id) || FILTER_TESTS[f.id](l))).length;
@@ -106,7 +114,12 @@ export function Home() {
 
         {applied && status && <ApplicationBanner load={applied} status={status} onOpen={() => navigate(`/application/${applied.id}${scenarioSearch}`)} />}
 
-        <SmartLoadList
+        {loadError ? (
+          <div role="alert" className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] text-body-14 text-[var(--color-text-primary)]">
+            <p>Could not load available loads. Check your connection and try again.</p>
+            <button type="button" onClick={() => setLoadAttempt((n) => n + 1)} className="mt-[12px] min-h-[44px] rounded-[var(--radius-md)] bg-[var(--color-action-primary)] px-[16px] text-[var(--color-action-text-inverse)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]">Retry</button>
+          </div>
+        ) : <SmartLoadList
           loads={visible}
           loading={loads === null}
           currentRoute={{ from: state.route.from, to: destination }}
@@ -124,7 +137,7 @@ export function Home() {
               className="shrink-0"
             />
           }
-        />
+        />}
       </div>
 
       <FiltersSheet
