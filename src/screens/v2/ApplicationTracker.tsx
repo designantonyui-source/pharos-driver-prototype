@@ -175,12 +175,18 @@ export function ApplicationTracker() {
   const listPath = searchParams.has('scenario') ? `/v2?scenario=${scenario}` : '/v2';
   const { state } = useStore();
   const [loads, setLoads] = useState<V2Load[] | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
   useEffect(() => {
-    getLoads().then(setLoads);
-  }, []);
+    let active = true;
+    setLoadError(false);
+    getLoads().then((items) => { if (active) setLoads(items); })
+      .catch(() => { if (active) setLoadError(true); });
+    return () => { active = false; };
+  }, [loadAttempt]);
 
   const status = state.applications[id]?.status ?? (state.loadId === id ? state.status : null);
   const load = loads?.find((item) => item.id === id);
@@ -231,8 +237,9 @@ export function ApplicationTracker() {
       <div className="absolute inset-x-0 top-[var(--nav-bar-back-h)] px-[16px]">
         <h1 className="sr-only">Application status</h1>
         <p className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] text-body-14 text-[var(--color-text-secondary)]" role="status">
-          {loads === null ? 'Loading application…' : 'This application is no longer available.'}
+          {loadError ? 'Could not load application details. Check your connection and try again.' : loads === null ? 'Loading application…' : 'This application is no longer available.'}
         </p>
+        {loadError && <div className="mt-[16px]"><Button label="Retry" onClick={() => setLoadAttempt((n) => n + 1)} /></div>}
         <div className="mt-[16px]"><Button label="Back to loads" appearance="secondary" onClick={() => navigate(listPath)} /></div>
       </div>
     </V2Frame>
