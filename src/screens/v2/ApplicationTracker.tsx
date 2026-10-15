@@ -70,6 +70,7 @@ export function ApplicationTrackerView({
   listPath = '/v2',
   cancelling = false,
   cancelError = null,
+  canCancel = true,
 }: {
   status: ApplicationStatus;
   load: V2Load;
@@ -79,6 +80,7 @@ export function ApplicationTrackerView({
   listPath?: string;
   cancelling?: boolean;
   cancelError?: string | null;
+  canCancel?: boolean;
 }) {
   const view = STATUS_VIEW[status];
   const waiting = CANCELLABLE.has(status);
@@ -138,7 +140,7 @@ export function ApplicationTrackerView({
             icon={<Icon name="user-round" size="sm" />}
             onClick={() => show({ tone: 'info', title: 'Dispatcher chat is not connected in this demo.' })}
           />
-          {CANCELLABLE.has(status) ? (
+          {canCancel && CANCELLABLE.has(status) ? (
             <Button
               label="Cancel application"
               appearance="secondary"
@@ -180,7 +182,7 @@ export function ApplicationTracker() {
     getLoads().then(setLoads);
   }, []);
 
-  const status = state.loadId === id ? state.status : null;
+  const status = state.applications[id]?.status ?? (state.loadId === id ? state.status : null);
   const load = loads?.find((item) => item.id === id);
 
   useEffect(() => {
@@ -218,7 +220,7 @@ export function ApplicationTracker() {
   }
 
   if (status && load) {
-    return <ApplicationTrackerView status={status} load={load} onCancel={handleCancel} cancelError={cancelError} listPath={listPath} onSimilarLoads={() => navigate(listPath)} onViewTrip={() => navigate(`/trip/${id}`)} cancelling={cancelling} />;
+    return <ApplicationTrackerView status={status} load={load} onCancel={handleCancel} cancelError={cancelError} canCancel={state.loadId === id} listPath={listPath} onSimilarLoads={() => navigate(listPath)} onViewTrip={() => navigate(`/trip/${id}`)} cancelling={cancelling} />;
   }
 
   return (
