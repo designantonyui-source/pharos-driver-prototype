@@ -45,6 +45,36 @@ describe('application lifecycle', () => {
     expect(store.getApplicationForLoad('nordcargo')?.dismissed).toBe(true);
   });
 
+  it('preserves a cancelled trip through dismiss and restore', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    const cancelling = cancelTrip('nordcargo', 'breakdown');
+    await vi.advanceTimersByTimeAsync(300);
+    await cancelling;
+    const before = store.getApplicationForLoad('nordcargo');
+    expect(before).toMatchObject({ cancelledAfterConfirm: true, cancelReason: 'breakdown' });
+
+    await dismissLoad('nordcargo');
+    expect(store.getApplicationForLoad('nordcargo')).toMatchObject({
+      cancelledAfterConfirm: true, cancelReason: 'breakdown', dismissed: true,
+    });
+
+    await restoreLoad('nordcargo');
+    expect(store.getApplicationForLoad('nordcargo')).toMatchObject({
+      cancelledAfterConfirm: true, cancelReason: 'breakdown', dismissed: false,
+      tripId: before?.tripId,
+    });
+  });
+
+  it('preserves a rejected application after hide and restore', async () => {
+    const submittedAt = '2026-10-14T10:00:00.000Z';
+    store.set({ loadId: 'belroute', status: ApplicationStatus.REJECTED, submittedAt });
+    await dismissLoad('belroute');
+    await restoreLoad('belroute');
+    expect(store.getApplicationForLoad('belroute')).toMatchObject({
+      status: ApplicationStatus.REJECTED, submittedAt, dismissed: false,
+    });
+  });
+
   it('does not erase a confirmed trip when restoring or dismissing it', async () => {
     store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
     await expect(dismissLoad('nordcargo')).rejects.toThrow('cannot be dismissed');
