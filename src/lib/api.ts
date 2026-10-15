@@ -460,7 +460,20 @@ export async function getTripDetails(loadId: string) {
     tripId: application.tripId ?? `TR-${loadId}`,
     tripStage: (application.tripStage ?? 'confirmed') as TripStage,
     cancelled: application.cancelledAfterConfirm === true,
+    enRouteTo: application.enRouteTo ?? null,
   };
+}
+
+/** Driver tapped Navigate — mark the trip en route so the arrival action appears in time. */
+export async function setEnRoute(loadId: string, destination: 'pickup' | 'delivery') {
+  await wait(150);
+  const current = store.get();
+  const application = current.applications[loadId];
+  if (!application || application.status !== ApplicationStatus.CONFIRMED || application.cancelledAfterConfirm) {
+    throw new Error('This trip is not active');
+  }
+  store.set({ applications: { [loadId]: { ...application, enRouteTo: destination } } });
+  return { loadId, enRouteTo: destination };
 }
 
 /** Preview-only cancellation consequence calculation, shared by confirmation UI and action. */
@@ -496,7 +509,8 @@ export async function advanceTripStage(loadId: string, expected: TripStage, next
     throw new Error('Trip stage changed. Refresh and try again.');
   }
   if (next === 'delivered' && !handoverConfirmed) throw new Error('Confirm cargo handover before completing delivery');
-  store.set({ applications: { [loadId]: { ...application, tripStage: next, ...(next === 'delivered' ? { deliveryProofConfirmed: true, deliveryCompletedAt: new Date().toISOString() } : {}) } } });
+  // Arriving at a stop ends the en-route leg — the next Navigate starts a fresh one.
+  store.set({ applications: { [loadId]: { ...application, tripStage: next, enRouteTo: undefined, ...(next === 'delivered' ? { deliveryProofConfirmed: true, deliveryCompletedAt: new Date().toISOString() } : {}) } } });
   return { loadId, tripStage: next };
 }
 

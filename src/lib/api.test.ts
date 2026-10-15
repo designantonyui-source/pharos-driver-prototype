@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, dismissLoad, getTripDetails, restoreLoad, submitApplication, submitProofOfDelivery } from './api';
+import { advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, dismissLoad, getTripDetails, restoreLoad, setEnRoute, submitApplication, submitProofOfDelivery } from './api';
 import { ApplicationStatus } from './models';
 import { store } from './store';
 
@@ -99,6 +99,28 @@ describe('driver trip execution', () => {
     const pending = getTripDetails('nordcargo');
     await vi.advanceTimersByTimeAsync(300);
     await expect(pending).resolves.toBeNull();
+  });
+
+  it('marks the trip en route and clears the flag on arrival', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    const marking = setEnRoute('nordcargo', 'pickup');
+    await vi.advanceTimersByTimeAsync(150);
+    await expect(marking).resolves.toMatchObject({ loadId: 'nordcargo', enRouteTo: 'pickup' });
+    const pending = getTripDetails('nordcargo');
+    await vi.advanceTimersByTimeAsync(300);
+    await expect(pending).resolves.toMatchObject({ enRouteTo: 'pickup' });
+    await advanceTripStage('nordcargo', 'confirmed', 'at-pickup');
+    const after = getTripDetails('nordcargo');
+    await vi.advanceTimersByTimeAsync(300);
+    await expect(after).resolves.toMatchObject({ enRouteTo: null, tripStage: 'at-pickup' });
+  });
+
+  it('rejects en route for a non-confirmed trip', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.SENT });
+    const marking = setEnRoute('nordcargo', 'pickup');
+    const assertion = expect(marking).rejects.toThrow('This trip is not active');
+    await vi.advanceTimersByTimeAsync(150);
+    await assertion;
   });
 });
 

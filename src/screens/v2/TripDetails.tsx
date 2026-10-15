@@ -8,7 +8,7 @@ import { V2Frame } from '../../components/v2/V2Frame';
 import { CancelTripSheet } from '../../components/v2/CancelTripSheet';
 import { TripDocumentsSheet } from '../../components/v2/TripDocumentsSheet';
 import { Toast, useToast } from '../../components/v2/Toast';
-import { TRIP_STAGE_STEPS, advanceTripStage, cancelTrip, cancellationPenalty, getTripDetails, submitProofOfDelivery, type TripStage } from '../../lib/api';
+import { TRIP_STAGE_STEPS, advanceTripStage, cancelTrip, cancellationPenalty, getTripDetails, setEnRoute, submitProofOfDelivery, type TripStage } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore, type LoadApplication } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
@@ -47,6 +47,7 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
 
   const cancelled = state.applications[load.id]?.cancelledAfterConfirm === true;
   const tripStage: TripStage = state.applications[load.id]?.tripStage ?? 'confirmed';
+  const enRouteTo = state.applications[load.id]?.enRouteTo ?? null;
   const [updatingStage, setUpdatingStage] = useState(false);
   const [stageError, setStageError] = useState<string | null>(null);
   const [handoverConfirmed, setHandoverConfirmed] = useState(false);
@@ -87,10 +88,22 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
     finally { setUpdatingStage(false); }
   }
 
+  /** Navigate leg: mark en route first (survives the Maps switch), then open Google Maps. */
+  async function goNavigate(destination: 'pickup' | 'delivery', query: string) {
+    try { await setEnRoute(load.id, destination); }
+    catch { /* Offline or stale trip — still let the driver navigate. */ }
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}&travelmode=driving`, '_blank', 'noopener,noreferrer');
+  }
+
   const stops = [
-    { label: 'Pickup', city: load.from, day: load.day, window: load.window, site: load.pickupSite, mapsQuery: `${load.pickupSite.address}` },
-    { label: 'Delivery', city: load.to, day: load.deliveryDay, window: load.deliveryWindow, site: load.deliverySite, mapsQuery: `${load.deliverySite.address}` },
+    { key: 'pickup' as const, label: 'Pickup', city: load.from, day: load.day, window: load.window, site: load.pickupSite, mapsQuery: `${load.pickupSite.address}` },
+    { key: 'delivery' as const, label: 'Delivery', city: load.to, day: load.deliveryDay, window: load.deliveryWindow, site: load.deliverySite, mapsQuery: `${load.deliverySite.address}` },
   ];
+  const navigateTarget: 'pickup' | 'delivery' = tripStage === 'confirmed' || tripStage === 'at-pickup' ? 'pickup' : 'delivery';
+  const navigateStop = stops.find((stop) => stop.key === navigateTarget) ?? stops[0];
+  const arrivalAction = (navigateTarget === 'pickup' ? nextStage.confirmed : nextStage.loaded) ?? null;
+  const enRouteActive = !cancelled && enRouteTo === navigateTarget
+    && (navigateTarget === 'pickup' ? tripStage === 'confirmed' : tripStage === 'loaded');
 
   const stageIndex = TRIP_STAGE_STEPS.findIndex((step) => step.id === tripStage);
   const stepStates: ProgressState[] = TRIP_STAGE_STEPS.map((_, i) =>
@@ -145,7 +158,14 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
               <h2 className="text-heading-20 text-[var(--color-text-primary)]">Trip progress</h2>
               <ol className="mt-[12px] flex flex-col" aria-label={`Step ${stageIndex + 1} of ${TRIP_STAGE_STEPS.length}`}>
                 {TRIP_STAGE_STEPS.map((step, i) => (
-                  <ProgressStep key={step.id} state={stepStates[i]} number={i + 1} label={step.label} />
+                  <ProgressStep
+                    key={step.id}
+                    state={stepStates[i]}
+                    number={stepStates[i] === 'done' ? '✓' : i + 1}
+                    label={step.label}
+                    showConnector={i < TRIP_STAGE_STEPS.length - 1}
+                    lineTone={i < stageIndex ? 'bg-[var(--color-status-success-text)]' : 'bg-[var(--color-border-default)]'}
+                  />
                 ))}
               </ol>
             </section>
@@ -190,9 +210,7 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
                     </p>
                     <ButtonLink
                       label={`Navigate to ${stop.label.toLowerCase()}`}
-                      onClick={() => {
-                        window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(stop.mapsQuery)}&travelmode=driving`, '_blank', 'noopener,noreferrer');
-                      }}
+                      onClick={() => { void goNavigate(stop.key, stop.mapsQuery); }}
                     />
                   </div>
                 </li>
@@ -251,14 +269,34 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
         )}
         {stageError && <p role="alert" className="text-body-14 text-[var(--color-text-secondary)]">{stageError}</p>}
         <div className="flex shrink-0 flex-col gap-[8px] py-[8px]">
-          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && (
-            <Button label={tripStage === 'confirmed' ? 'Navigate to pickup' : 'Navigate to delivery'} onClick={() => {
-              const destination = tripStage === 'confirmed' ? load.from : load.to;
-              window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`, '_blank', 'noopener,noreferrer');
-            }} />
+          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && enRouteActive && arrivalAction && (
+            <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card" aria-label={`En route to ${navigateTarget}`}>
+              <p className="text-label-12 text-[var(--color-text-secondary)]">En route to {navigateTarget}</p>
+              <p className="mt-[4px] text-body-14 text-[var(--color-text-primary)]">{navigateStop.site.address}</p>
+              <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
+                {navigateTarget === 'pickup' ? `${load.pickupKm} km · ~${load.pickupMin} min` : `${load.km} km loaded`} · {navigateStop.site.note}
+              </p>
+              <div className="mt-[12px]">
+                <Button
+                  label="Re-open navigation"
+                  appearance="secondary"
+                  icon={<Icon name="map-pin" size="sm" />}
+                  onClick={() => { void goNavigate(navigateStop.key, navigateStop.mapsQuery); }}
+                />
+              </div>
+            </section>
           )}
-          {!cancelled && nextAction && (
-            <Button label={nextAction.label} appearance={tripStage === 'confirmed' || tripStage === 'loaded' ? 'secondary' : 'primary'} disabled={updatingStage || (tripStage === 'at-delivery' && !handoverConfirmed)} loading={updatingStage} onClick={() => { void confirmMilestone(); }} />
+          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && (
+            <Button
+              label={tripStage === 'confirmed' ? 'Navigate to pickup' : 'Navigate to delivery'}
+              onClick={() => { void goNavigate(navigateStop.key, navigateStop.mapsQuery); }}
+            />
+          )}
+          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && enRouteActive && arrivalAction && (
+            <Button label={arrivalAction.label} appearance="primary" disabled={updatingStage} loading={updatingStage} onClick={() => { void confirmMilestone(); }} />
+          )}
+          {!cancelled && nextAction && tripStage !== 'confirmed' && tripStage !== 'loaded' && (
+            <Button label={nextAction.label} appearance="primary" disabled={updatingStage || (tripStage === 'at-delivery' && !handoverConfirmed)} loading={updatingStage} onClick={() => { void confirmMilestone(); }} />
           )}
           {!cancelled && (
             <Button

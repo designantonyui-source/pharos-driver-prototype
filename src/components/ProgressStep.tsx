@@ -57,6 +57,8 @@ export function ProgressStep({
   number,
   label,
   status,
+  showConnector = false,
+  lineTone = 'bg-[var(--color-border-default)]',
 }: {
   state: ProgressState;
   /** Figma text property `Number` — the 1-based position in the list. */
@@ -65,18 +67,30 @@ export function ProgressStep({
   label: string;
   /** Figma text property `Status`. Defaults to the master text of the variant ("Done"/"Current"/"Next"). */
   status?: string;
+  /** Vertical connector to the next row (stepper lists only). */
+  showConnector?: boolean;
+  /** Connector colour (token class). */
+  lineTone?: string;
 }) {
   return (
-    <div className="flex h-[var(--spacing-24)] w-full shrink-0 items-center gap-[var(--spacing-12)]">
+    <li className="relative flex w-full shrink-0 items-start gap-[var(--spacing-12)] pb-[var(--spacing-12)] last:pb-0">
+      {showConnector && (
+        <span
+          aria-hidden
+          className={`absolute left-[11px] top-[var(--spacing-24)] h-[calc(100%-var(--spacing-24))] w-[2px] ${lineTone}`}
+        />
+      )}
       <span
-        className={`flex h-[var(--spacing-24)] w-[var(--spacing-24)] shrink-0 items-center justify-center rounded-[var(--radius-pill)] text-label-12 ${FRAME[state]}`}
+        className={`relative z-[1] flex h-[var(--spacing-24)] w-[var(--spacing-24)] shrink-0 items-center justify-center rounded-[var(--radius-pill)] text-label-12 ${FRAME[state]}`}
       >
         {number}
       </span>
-      <span className={`min-w-0 flex-1 ${TITLE[state]}`}>{label}</span>
-      <span className={`shrink-0 whitespace-nowrap text-label-12 ${STATUS[state]}`}>
+      <span className="flex min-h-[var(--spacing-24)] min-w-0 flex-1 flex-col justify-center">
+        <span className={`${TITLE[state]}`}>{label}</span>
+      </span>
+      <span className={`flex min-h-[var(--spacing-24)] shrink-0 items-center whitespace-nowrap text-label-12 ${STATUS[state]}`}>
         {status ?? MASTER_STATUS[state]}
       </span>
-    </div>
+    </li>
   );
 }

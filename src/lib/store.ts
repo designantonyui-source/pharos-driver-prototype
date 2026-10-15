@@ -21,6 +21,8 @@ export type LoadApplication = {
   cancelReason?: 'breakdown' | 'delay' | 'better-load' | 'other';
   /** Confirmed trip cancelled by the driver (vs application withdrawn before confirm). */
   cancelledAfterConfirm?: boolean;
+  /** Driver tapped Navigate and is en route to a stop (survives reload while Maps is open). */
+  enRouteTo?: 'pickup' | 'delivery';
 };
 
 export type AppState = {

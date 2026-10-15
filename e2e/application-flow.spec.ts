@@ -149,7 +149,7 @@ test('driver submits, sees a status update and cancels an application', async ({
   });
 });
 
-test('confirmed application opens trip details and demo actions', async ({ page }) => {
+test('confirmed application opens trip details and demo actions', async ({ page, context }) => {
   await page.goto('/#/v2');
   await page.getByRole('button', { name: 'Apply for €360', exact: true }).first().click();
   await page.getByRole('button', { name: 'Send application', exact: true }).click();
@@ -168,12 +168,25 @@ test('confirmed application opens trip details and demo actions', async ({ page 
   await expect(page.getByRole('region', { name: 'Cargo' })).toContainText('Curtainsider');
   await expect(page.getByRole('region', { name: 'Trip progress' })).toContainText('Confirmed');
   await expect(page.getByRole('button', { name: 'Contact dispatcher', exact: true })).toBeVisible();
+  // Arrival is not offered before navigation — the driver has not left yet.
+  await expect(page.getByRole('button', { name: "I've arrived at pickup", exact: true })).toHaveCount(0);
 
   await page.getByRole('button', { name: /Documents \(/, exact: false }).click();
   const docs = page.getByRole('dialog', { name: /Documents for trip/ });
   await expect(docs).toContainText('CMR consignment note');
   await docs.getByRole('button', { name: 'Close', exact: true }).click();
   await expect(docs).toHaveCount(0);
+
+  // Navigate opens Google Maps in a new tab and switches the trip to en-route.
+  // Two "Navigate to pickup" buttons exist (per-stop link in Route + primary CTA) — take the primary one.
+  const navigate = page.getByRole('button', { name: 'Navigate to pickup', exact: true }).nth(1);
+  const [mapsPage] = await Promise.all([
+    context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
+    navigate.click(),
+  ]);
+  await mapsPage?.close().catch(() => undefined);
+  await expect(page.getByRole('region', { name: 'En route to pickup' })).toBeVisible();
+  await expect(page.getByRole('button', { name: "I've arrived at pickup", exact: true })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath('trip-details.png') });
 });
 
