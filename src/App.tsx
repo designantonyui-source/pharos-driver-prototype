@@ -7,7 +7,7 @@ import { TripDetails } from './screens/v2/TripDetails';
 import { DemoToggle } from './components/v2/DemoToggle';
 import { Account, EditContact } from './screens/v2/Account';
 import { DismissedLoads } from './screens/v2/DismissedLoads';
-import { Balance, BalanceHistory, CashOut, PayoutMethodScreen } from './screens/v2/Balance';
+import { Balance, BalanceHistory, CashOut, PayoutMethodScreen, WithdrawalDetails } from './screens/v2/Balance';
 import { InvoiceDetails, InvoiceList } from './screens/v2/Invoices';
 import { Schedules } from './screens/v2/Schedules';
 import { Trips } from './screens/v2/Trips';
@@ -48,6 +48,7 @@ export default function App() {
       <Route path="/v2/account/balance" element={<Balance />} />
       <Route path="/v2/account/balance/method" element={<PayoutMethodScreen />} />
       <Route path="/v2/account/balance/cashout" element={<CashOut />} />
+      <Route path="/v2/account/balance/withdrawals/:id" element={<WithdrawalDetails />} />
       <Route path="/v2/account/balance/history" element={<BalanceHistory />} />
       <Route path="/v2/account/balance/invoices" element={<InvoiceList />} />
       <Route path="/v2/account/balance/invoices/:id" element={<InvoiceDetails />} />

@@ -333,9 +333,15 @@ export class PayoutError extends Error {
   }
 }
 
+/** Max cash-out for a method: amount + fee must fit the available balance. */
+export function maxWithdrawalFor(available: number, fee: number): number {
+  return Math.max(0, Math.floor((available - fee) * 100) / 100);
+}
+
 /** Prototype withdrawal through the PSP adapter: validates amount vs available
  *  balance + EUR 10 minimum + verified method, quotes fee/ETA per rail,
  *  executes via the provider, appends a `processing` ledger line.
+ *  The fee counts toward the balance: amount + fee must fit available.
  *  No real money moves — the mock returns `mock_sepa_*` / `mock_card_*` refs. */
 export async function requestWithdrawal(amount: number, methodId?: string) {
   const rounded = Math.round(amount * 100) / 100;
@@ -345,10 +351,11 @@ export async function requestWithdrawal(amount: number, methodId?: string) {
   if (!method) throw new PayoutError('NO_METHOD', 'Add a payout method first.');
   if (!method.verified) throw new PayoutError('NO_METHOD', 'Your payout method is still verifying — try again shortly.');
   if (rounded < PAYOUT_POLICY.minWithdrawal) throw new PayoutError('BELOW_MINIMUM', `Minimum withdrawal is EUR ${PAYOUT_POLICY.minWithdrawal}.`);
-  const { available } = await getBalance();
-  if (rounded > available) throw new PayoutError('INSUFFICIENT', 'Amount exceeds your available balance.');
   const quote = quoteFor(method, rounded);
+  const { available } = await getBalance();
+  if (rounded + quote.fee > available) throw new PayoutError('INSUFFICIENT', 'Amount plus fee exceeds your available balance.');
   const result = await payoutProvider.execute(quote.rail, rounded, methodDestination(method));
+  const now = new Date();
   const entry: LedgerEntry = {
     kind: 'withdrawal',
     id: result.providerRef,
@@ -357,10 +364,19 @@ export async function requestWithdrawal(amount: number, methodId?: string) {
     methodLabel: method.label || methodLabel(method),
     rail: quote.rail,
     status: 'processing',
-    createdAt: new Date().toISOString(),
+    createdAt: now.toISOString(),
+    expectedAt: quote.arrives,
+    idempotencyKey: `${result.providerRef}`,
   };
   store.set({ ledger: [...store.get().ledger, entry] });
   return { entry, eta: quote.eta };
+}
+
+/** One withdrawal by id — powers the permanent operation screen. */
+export async function getWithdrawal(id: string) {
+  await wait(150);
+  const entry = store.get().ledger.find((e) => e.kind === 'withdrawal' && e.id === id);
+  return entry?.kind === 'withdrawal' ? entry : null;
 }
 
 /** Matches existing DriverProfile defaults; prototype identity is read-only. */

@@ -17,7 +17,7 @@
  * empty = icon + headline + one-sentence explainer, never a bare row.
  */
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Alert } from '../../components/Alert';
 import { Button } from '../../components/Button';
 import { Icon, type IconName } from '../../components/Icon';
@@ -28,8 +28,8 @@ import { V2Frame } from '../../components/v2/V2Frame';
 import { Sheet } from '../../components/v2/Sheet';
 import {
   PAYOUT_POLICY, addCardMethod, addIbanMethod, adjustmentLabel, detectCardBrand, evaluateSchedule, formatCardExpiry,
-  formatCardNumber, getBalance, getLedger, getPayoutMethods, maskCard,
-  maskIban, methodLabel, payoutProvider, quoteFor, removeMethod, requestWithdrawal,
+  formatCardNumber, getBalance, getLedger, getPayoutMethods, getWithdrawal, maskCard,
+  maskIban, maxWithdrawalFor, methodLabel, payoutProvider, quoteFor, removeMethod, requestWithdrawal,
   setDefaultMethod, tokeniseCard, validateCardCvc, validateCardExpiry,
   validateCardNumber, validateIban,
   type BalanceSummary, type LedgerEntry, type PayoutMethod,
@@ -385,13 +385,15 @@ export function CashOut() {
   const parsed = Number(amount.replace(',', '.'));
   const validNumber = Number.isFinite(parsed) && parsed > 0;
   const belowMin = validNumber && parsed < PAYOUT_POLICY.minWithdrawal;
-  const overBalance = validNumber && parsed > summary.available;
+  // Amount + fee must fit the balance — the fee is part of the debit, not on top.
+  const overBalance = validNumber && parsed + quote.fee > summary.available;
   const showError = touched && (!validNumber || belowMin || overBalance);
   const net = validNumber && !belowMin && !overBalance ? parsed : 0;
+  const maxForMethod = maxWithdrawalFor(summary.available, quote.fee);
   const hint = !touched ? `Available ${formatEuro(summary.available)} - minimum ${formatEuro(PAYOUT_POLICY.minWithdrawal)}.`
     : !validNumber ? 'Enter an amount greater than 0.'
     : belowMin ? `Minimum withdrawal is ${formatEuro(PAYOUT_POLICY.minWithdrawal)}.`
-    : overBalance ? 'Amount exceeds your available balance.'
+    : overBalance ? 'Amount plus fee exceeds your available balance.'
     : quote.fee > 0 ? `Fee ${formatEuro(quote.fee)} - arrives ${quote.eta}.` : `${formatEuro(summary.available - parsed)} will remain available.`;
   function openConfirm() {
     setTouched(true);
@@ -405,10 +407,15 @@ export function CashOut() {
     try {
       const result = await requestWithdrawal(parsed, method.id);
       setConfirmOpen(false);
-      show({ tone: 'success', title: `${formatEuro(Math.round(parsed * 100) / 100)} is on its way`, detail: `Arrives ${result.eta}.` });
       setSummary(await getBalance());
       setAmount('');
       setTouched(false);
+      show({ tone: 'success', title: `${formatEuro(Math.round(parsed * 100) / 100)} is on its way`, detail: `Arrives ${result.eta}.` });
+      try {
+        navigate(`/v2/account/balance/withdrawals/${encodeURIComponent(result.entry.id)}`);
+      } catch {
+        // Unit tests render CashOut without the withdrawals route — the toast confirms it.
+      }
     } catch (e) {
       setConfirmOpen(false);
       setFailure(e instanceof Error ? e.message : 'Could not request the withdrawal.');
@@ -436,15 +443,41 @@ export function CashOut() {
     <form onSubmit={e => { e.preventDefault(); openConfirm(); }} noValidate className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-12)]">
       <Input label="Amount (EUR)" value={amount} placeholder="100.00" state={showError ? 'error' : amount ? 'filled' : 'empty'} icon={false} hint={hint} onChange={v => { setAmount(v.replace(/[^\d.,]/g, '')); setTouched(true); setFailure(null); }} />
       <div className="flex gap-[var(--spacing-8)]" role="group" aria-label="Quick amounts">
-        {[50, 100, 200].filter(v => v <= summary.available).map(v => <button key={v} type="button" onClick={() => quick(v)} className="h-[var(--size-control-mobile)] flex-1 rounded-[var(--radius-sm)] border border-[var(--color-action-border)] text-label-14 text-[var(--color-action-text)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]">EUR {v}</button>)}
-        <button type="button" onClick={() => quick(Math.floor(summary.available * 100) / 100)} disabled={summary.available < PAYOUT_POLICY.minWithdrawal} className="h-[var(--size-control-mobile)] flex-1 rounded-[var(--radius-sm)] border border-[var(--color-action-border)] text-label-14 text-[var(--color-action-text)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] disabled:opacity-50">Max</button>
+        {[50, 100, 200].filter(v => v <= maxForMethod).map(v => <button key={v} type="button" onClick={() => quick(v)} className="h-[var(--size-control-mobile)] flex-1 rounded-[var(--radius-sm)] border border-[var(--color-action-border)] text-label-14 text-[var(--color-action-text)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]">EUR {v}</button>)}
+        <button type="button" onClick={() => quick(maxForMethod)} disabled={maxForMethod < PAYOUT_POLICY.minWithdrawal} className="h-[var(--size-control-mobile)] flex-1 rounded-[var(--radius-sm)] border border-[var(--color-action-border)] text-label-14 text-[var(--color-action-text)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] disabled:opacity-50">Max</button>
       </div>
       <Button label={sending ? 'Sending...' : `Cash out ${net ? formatEuro(net) : ''}`.trim()} disabled={!validNumber || belowMin || overBalance || sending} loading={sending} onClick={openConfirm} />
     </form>
     {failure && <div className="mt-[var(--spacing-16)]" role="alert"><Alert type="error" title="Could not request the withdrawal">{failure}</Alert></div>}
     <Sheet open={confirmOpen} label="Confirm cash out" onClose={() => { if (!sending) setConfirmOpen(false); }}>
       <h2 className="text-heading-20 text-[var(--color-text-primary)]">Cash out {validNumber ? formatEuro(parsed) : ''}?</h2>
-      <p className="mt-[var(--spacing-8)] text-body-14 text-[var(--color-text-secondary)]">To {method.label || methodLabel(method)} via {method.kind === 'card' ? 'instant card payout' : 'SEPA transfer'}. {quote.fee > 0 ? `Fee ${formatEuro(quote.fee)}. ` : 'No fee. '}Arrives {quote.eta}. Prototype only - no real money moves.</p>
+      <dl className="mt-[var(--spacing-12)] flex flex-col gap-[var(--spacing-8)] text-body-14">
+        <div className="flex items-baseline justify-between gap-[var(--spacing-12)]">
+          <dt className="text-[var(--color-text-secondary)]">To</dt>
+          <dd className="text-right text-[var(--color-text-primary)]">{method.label || methodLabel(method)} via {method.kind === 'card' ? 'instant card payout' : 'SEPA transfer'}</dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-[var(--spacing-12)]">
+          <dt className="text-[var(--color-text-secondary)]">You receive</dt>
+          <dd className="text-right font-medium text-[var(--color-text-primary)]">{validNumber ? formatEuro(parsed) : '—'}</dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-[var(--spacing-12)]">
+          <dt className="text-[var(--color-text-secondary)]">Fee</dt>
+          <dd className="text-right text-[var(--color-text-primary)]">{quote.fee > 0 ? formatEuro(quote.fee) : 'No fee'}</dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-[var(--spacing-12)]">
+          <dt className="text-[var(--color-text-secondary)]">Total debit</dt>
+          <dd className="text-right text-[var(--color-text-primary)]">{validNumber ? formatEuro(Math.round((parsed + quote.fee) * 100) / 100) : '—'}</dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-[var(--spacing-12)]">
+          <dt className="text-[var(--color-text-secondary)]">Remaining</dt>
+          <dd className="text-right text-[var(--color-text-primary)]">{validNumber ? formatEuro(Math.max(0, Math.round((summary.available - parsed - quote.fee) * 100) / 100)) : formatEuro(summary.available)}</dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-[var(--spacing-12)]">
+          <dt className="text-[var(--color-text-secondary)]">Expected arrival</dt>
+          <dd className="text-right text-[var(--color-text-primary)]">{quote.eta}</dd>
+        </div>
+      </dl>
+      <p className="mt-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Prototype only - no real money moves.</p>
       <div className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-8)]">
         <Button label={sending ? 'Sending...' : `Confirm - ${validNumber ? formatEuro(parsed) : ''}`.trim()} loading={sending} onClick={() => void confirm()} />
         <Button label="Keep editing" appearance="secondary" disabled={sending} onClick={() => setConfirmOpen(false)} />
@@ -484,5 +517,84 @@ export function BalanceHistory() {
       {ledger.map((entry, i) => <LedgerLine key={entry.id} entry={entry} last={i === ledger.length - 1} invoiceId={entry.kind === 'trip' ? invoiceByLoad[entry.loadId] ?? null : null} />)}
     </Section>}
     <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Prototype ledger - stored on this device only.</p>
+  </BalanceFrame>;
+}
+
+/**
+ * figma: prototype-led · WithdrawalDetails — permanent operation screen; route /v2/account/balance/withdrawals/:id
+ * props: none (route id + api.getWithdrawal)
+ * tokens: color-bg-*, color-text-*, radius-md, text-metric-28, text-heading-20, text-body-14
+ *
+ * "Request accepted" is not "money arrived": the screen shows the operation number,
+ * amount + fee, destination, creation time, live status, expected arrival and a history link.
+ */
+export function WithdrawalDetails() {
+  const { id = '' } = useParams();
+  const withdrawalId = decodeURIComponent(id);
+  const [entry, setEntry] = useState<LedgerEntry | null | undefined>(undefined);
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const navigate = useNavigate();
+  useEffect(() => {
+    let live = true;
+    setError(false);
+    setEntry(undefined);
+    getWithdrawal(withdrawalId).then((w) => { if (live) setEntry(w); }).catch(() => { if (live) setError(true); });
+    return () => { live = false; };
+  }, [withdrawalId, attempt]);
+  if (error || entry === undefined) {
+    return <BalanceFrame title="Cash out" backTo="/v2/account/balance/history"><StatusBlock error={error} retry={() => setAttempt(v => v + 1)} label="withdrawal" /></BalanceFrame>;
+  }
+  if (entry === null || entry.kind !== 'withdrawal') {
+    return <BalanceFrame title="Cash out" backTo="/v2/account/balance/history">
+      <div className="mt-[var(--spacing-16)]"><Alert type="error" title="Withdrawal not found">This operation does not exist on this device.</Alert></div>
+    </BalanceFrame>;
+  }
+  const statusCopy: Record<string, { title: string; detail: string }> = {
+    processing: { title: 'Request accepted', detail: 'The payout provider accepted the request. Money has not arrived yet.' },
+    delayed: { title: 'Delayed', detail: 'The provider needs more time. No new withdrawal is needed.' },
+    done: { title: 'Money arrived', detail: 'The provider confirms the payout reached your account.' },
+    failed: { title: 'Failed', detail: entry.failReason ?? 'The provider could not complete the payout.' },
+    returned: { title: 'Funds returned', detail: 'The amount was returned to your available balance.' },
+  };
+  const status = statusCopy[entry.status] ?? statusCopy.processing;
+  return <BalanceFrame title="Cash out" backTo="/v2/account/balance/history" toast={undefined}>
+    <div className="mt-[var(--spacing-8)] rounded-[var(--radius-md)] bg-[var(--color-nav-bg)] p-[var(--spacing-16)] text-[var(--color-nav-text)]">
+      <p className="text-caption-12 uppercase tracking-wide opacity-80">Withdrawal {entry.id}</p>
+      <p className="mt-[var(--spacing-8)] text-metric-28 text-[var(--color-text-inverse)]">{formatEuro(entry.amount)}</p>
+      <p className="mt-[var(--spacing-8)] text-body-14 opacity-90">{status.title} — {status.detail}</p>
+    </div>
+    <Section label="Operation">
+      <div className="flex flex-col gap-[var(--spacing-8)] p-[var(--spacing-12)] text-body-14">
+        <div className="flex items-baseline justify-between gap-[var(--spacing-12)]">
+          <span className="text-[var(--color-text-secondary)]">To</span>
+          <span className="text-right text-[var(--color-text-primary)]">{entry.methodLabel} via {entry.rail === 'instant-card' ? 'instant card payout' : 'SEPA transfer'}</span>
+        </div>
+        <div className="flex items-baseline justify-between gap-[var(--spacing-12)]">
+          <span className="text-[var(--color-text-secondary)]">Fee</span>
+          <span className="text-right text-[var(--color-text-primary)]">{entry.fee > 0 ? formatEuro(entry.fee) : 'No fee'}</span>
+        </div>
+        <div className="flex items-baseline justify-between gap-[var(--spacing-12)]">
+          <span className="text-[var(--color-text-secondary)]">Total debit</span>
+          <span className="text-right text-[var(--color-text-primary)]">{formatEuro(Math.round((entry.amount + entry.fee) * 100) / 100)}</span>
+        </div>
+        <div className="flex items-baseline justify-between gap-[var(--spacing-12)]">
+          <span className="text-[var(--color-text-secondary)]">Created</span>
+          <span className="text-right text-[var(--color-text-primary)]">{new Date(entry.createdAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        <div className="flex items-baseline justify-between gap-[var(--spacing-12)]">
+          <span className="text-[var(--color-text-secondary)]">Expected arrival</span>
+          <span className="text-right text-[var(--color-text-primary)]">{entry.expectedAt ? new Date(entry.expectedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}</span>
+        </div>
+        <div className="flex items-baseline justify-between gap-[var(--spacing-12)]">
+          <span className="text-[var(--color-text-secondary)]">Status</span>
+          <span className="text-right text-[var(--color-text-primary)]">{entry.status}</span>
+        </div>
+      </div>
+    </Section>
+    <div className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-8)]">
+      <Button label="View in history" appearance="secondary" onClick={() => navigate('/v2/account/balance/history')} />
+      <Button label="Back to Balance" appearance="secondary" onClick={() => navigate('/v2/account/balance')} />
+    </div>
   </BalanceFrame>;
 }

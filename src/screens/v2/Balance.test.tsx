@@ -1,11 +1,11 @@
 /** figma: new Balance proposal Wave 1, not measured; tokens: inherited from Balance */
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import * as api from '../../lib/api';
 import { store } from '../../lib/store';
 import { ApplicationStatus } from '../../lib/models';
-import { Balance, BalanceHistory, CashOut, PayoutMethodScreen } from './Balance';
+import { Balance, BalanceHistory, CashOut, PayoutMethodScreen, WithdrawalDetails } from './Balance';
 
 let router: ReturnType<typeof createMemoryRouter>;
 const VALID_IBAN = 'DE89370400440532013000';
@@ -18,6 +18,7 @@ function setup(path: string) {
     { path: '/v2/account/balance/method', element: <PayoutMethodScreen /> },
     { path: '/v2/account/balance/cashout', element: <CashOut /> },
     { path: '/v2/account/balance/history', element: <BalanceHistory /> },
+    { path: '/v2/account/balance/withdrawals/:id', element: <WithdrawalDetails /> },
     { path: '*', element: <p>Destination</p> },
   ], { initialEntries: [path] });
   render(<RouterProvider router={router} />);
@@ -98,34 +99,62 @@ it('blocks cash out without method and completes SEPA withdrawal', async () => {
   fireEvent.change(screen.getByLabelText(/IBAN/, { exact: false }), { target: { value: VALID_IBAN } });
   fireEvent.click(screen.getByRole('button', { name: 'Add bank account' }));
   await screen.findByText(/1 saved/);
+  await waitFor(async () => {
+    expect((await api.getPayoutMethods())[0]?.verified).toBe(true);
+  });
   await router.navigate('/v2/account/balance/cashout');
   const amount = await screen.findByLabelText(/Amount/, { exact: false });
   fireEvent.change(amount, { target: { value: '5' } });
   expect(screen.getByText(/Minimum withdrawal is/)).toBeTruthy();
   fireEvent.change(amount, { target: { value: '99999' } });
-  expect(screen.getByText(/exceeds your available balance/)).toBeTruthy();
+  expect(screen.getByText(/plus fee exceeds/)).toBeTruthy();
   fireEvent.change(amount, { target: { value: '100' } });
   await screen.findByText(/will remain available/);
   fireEvent.click(screen.getByRole('button', { name: /Cash out/ }));
   await screen.findByRole('dialog');
+  expect(screen.getByText('Total debit')).toBeTruthy();
+  expect(screen.getByText('Remaining')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: /Confirm/ }));
-  await screen.findByText(/is on its way/);
+  await waitFor(async () => {
+    const ledger = await api.getLedger();
+    expect(ledger.filter((e) => e.kind === 'withdrawal')).toHaveLength(1);
+  }, { timeout: 8000 });
   expect((await api.getBalance()).available).toBeCloseTo(400, 2);
+  const withdrawals = (await api.getLedger()).filter((e) => e.kind === 'withdrawal');
+  expect(withdrawals).toHaveLength(1);
+  expect(withdrawals[0]).toMatchObject({ amount: 100, status: 'processing' });
+  const details = await api.getWithdrawal(withdrawals[0].id);
+  expect(details?.status).toBe('processing');
 });
 
 it('quotes the card fee and executes via the mock provider ref', async () => {
+  store.reset();
   await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank' });
   const tok = (await import('../../lib/profile')).tokeniseCard(VALID_CARD);
   const card = await api.addCardMethod({ ...tok, label: 'Fuel' });
   const quote = api.quoteFor(card, 100);
   expect(quote.rail).toBe('instant-card');
   expect(quote.fee).toBe(1.5);
+  expect(api.maxWithdrawalFor(500, 1.5)).toBeCloseTo(498.5, 2);
   const { entry } = await api.requestWithdrawal(100, card.id);
   expect(entry.id).toMatch(/^mock_card_/);
   expect(entry.fee).toBe(1.5);
   expect(entry.methodLabel).toBe('Fuel');
   // Card rail deducts amount + EUR 1.50 prototype fee from available.
   expect((await api.getBalance()).available).toBeCloseTo(398.5, 2);
+  // Amount + fee must fit: 499 + 1.50 over a 500 balance is rejected.
+  await expect(api.requestWithdrawal(499, card.id)).rejects.toThrow('plus fee');
+});
+
+it('opens a permanent withdrawal screen after confirm', async () => {
+  store.reset();
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business' });
+  const { entry } = await api.requestWithdrawal(80);
+  setup(`/v2/account/balance/withdrawals/${encodeURIComponent(entry.id)}`);
+  await screen.findByText(/Request accepted/);
+  expect(screen.getByText('Total debit')).toBeTruthy();
+  expect(screen.getByText('Expected arrival')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'View in history' })).toBeTruthy();
 });
 
 it('lists trips and withdrawals in history with rail notes', async () => {
