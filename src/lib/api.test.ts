@@ -44,7 +44,8 @@ describe('driver trip execution', () => {
     expect(store.getApplicationForLoad('nordcargo')?.tripStage).toBe('at-pickup');
     await advanceTripStage('nordcargo', 'at-pickup', 'loaded');
     await advanceTripStage('nordcargo', 'loaded', 'at-delivery');
-    await advanceTripStage('nordcargo', 'at-delivery', 'delivered');
+    await expect(advanceTripStage('nordcargo', 'at-delivery', 'delivered')).rejects.toThrow('Confirm cargo handover');
+    await advanceTripStage('nordcargo', 'at-delivery', 'delivered', true);
     expect(store.getApplicationForLoad('nordcargo')?.tripStage).toBe('delivered');
   });
 
