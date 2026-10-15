@@ -37,7 +37,7 @@ describe('Trips hub', () => {
     expect(await screen.findByText('Active trip')).toBeTruthy();
     expect(screen.getAllByText('In review').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('Past')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Open trip' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open trip TR–LILLE–BRUSSELS' })).toBeTruthy();
     expect(screen.getByText('Declined')).toBeTruthy();
   });
 
