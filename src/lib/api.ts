@@ -473,6 +473,20 @@ export async function advanceTripStage(loadId: string, expected: TripStage, next
   return { loadId, tripStage: next };
 }
 
+/** Local prototype attachment. A production app must upload to secure object storage. */
+export async function submitProofOfDelivery(loadId: string, file: { filename: string; mimeType: string; dataUrl: string }) {
+  const current = store.get();
+  const application = current.applications[loadId];
+  if (!application || application.status !== ApplicationStatus.CONFIRMED || application.tripStage !== 'delivered' || application.cancelledAfterConfirm) {
+    throw new Error('Complete delivery before submitting POD');
+  }
+  if (!/^data:(image\/(jpeg|png|webp)|application\/pdf);base64,/.test(file.dataUrl)) throw new Error('Unsupported document format');
+  if (file.dataUrl.length > 3_000_000) throw new Error('Document is too large for this prototype');
+  const pod = { ...file, uploadedAt: new Date().toISOString(), status: 'submitted' as const };
+  store.set({ applications: { [loadId]: { ...application, pod } } });
+  return { loadId, status: pod.status };
+}
+
 export async function cancelTrip(loadId: string, reason: NonNullable<LoadApplication['cancelReason']>) {
   await wait(300);
   const current = store.get();
