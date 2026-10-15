@@ -464,8 +464,8 @@ export async function cancelTrip(loadId: string, reason: NonNullable<LoadApplica
   const load = getLoad(loadId);
   const penalty = cancellationPenalty(application, load?.pickupTime);
   store.set({
-    loadId,
-    status: ApplicationStatus.CANCELLED,
+    // Keep the most recently active application untouched when cancelling a different trip.
+    ...(current.loadId === loadId ? { status: ApplicationStatus.CANCELLED } : {}),
     applications: {
       [loadId]: {
         ...application,
