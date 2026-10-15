@@ -26,7 +26,8 @@ import { BlProfile } from './screens/bl/Profile';
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Index />} />
+      <Route path="/" element={<Navigate to="/v2" replace />} />
+      <Route path="/prototype-index" element={<Index />} />
       <Route path="/search" element={<Search />} />
       <Route
         path="/v2"
