@@ -76,6 +76,18 @@ describe('application lifecycle', () => {
     expect(store.getApplicationForLoad('nordcargo')?.dismissed).toBe(true);
   });
 
+  it('does not replace a newer application when cancelling an older confirmed trip', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    store.set({ loadId: 'belroute', status: ApplicationStatus.SENT });
+    const cancelling = cancelTrip('nordcargo', 'delay');
+    await vi.advanceTimersByTimeAsync(300);
+    await cancelling;
+    expect(store.get()).toMatchObject({ loadId: 'belroute', status: ApplicationStatus.SENT });
+    expect(store.getApplicationForLoad('nordcargo')).toMatchObject({
+      status: ApplicationStatus.CANCELLED, cancelledAfterConfirm: true, cancelReason: 'delay',
+    });
+  });
+
   it('preserves a cancelled trip through dismiss and restore', async () => {
     store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
     const cancelling = cancelTrip('nordcargo', 'breakdown');
