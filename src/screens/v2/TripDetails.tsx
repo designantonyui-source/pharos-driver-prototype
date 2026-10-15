@@ -120,9 +120,9 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
         <h1 className="sr-only">Trip details</h1>
 
         <main className="flex min-h-0 flex-1 flex-col gap-[12px] overflow-y-auto pb-[12px]">
-          {/* Summary */}
+          {/* Summary — payout hero: dark money card, rate first, payout as an action */}
           <section
-            className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card"
+            className="rounded-[var(--radius-lg)] bg-[var(--color-nav-bg)] p-[16px] text-[var(--color-nav-text)] shadow-card"
             aria-label="Trip summary"
           >
             <div className="flex items-center justify-between gap-[8px]">
@@ -135,24 +135,30 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
               >
                 {cancelled ? 'Cancelled by you' : tripStage === 'delivered' ? 'Delivered' : tripStage === 'confirmed' ? 'Confirmed' : tripStage === 'at-pickup' ? 'At pickup' : tripStage === 'loaded' ? 'Loaded · In transit' : 'At delivery'}
               </span>
-              <span className="text-caption-12 text-[var(--color-text-secondary)]">{tripId}</span>
+              <span className="text-caption-12 opacity-80">{tripId}</span>
             </div>
 
             {cancelled && (
-              <p className="mt-[8px] text-body-14 text-[var(--color-text-secondary)]">
+              <p className="mt-[8px] text-body-14 opacity-80">
                 This trip is no longer active.
               </p>
             )}
 
-            <p className="mt-[12px] text-heading-32 text-[var(--color-text-primary)]">
+            <p className="mt-[12px] text-metric-28 text-[var(--color-text-inverse)]">
               €{load.rate}
             </p>
-            <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
-              {load.km} km loaded · €{load.perKm.toFixed(2)}/km ·{' '}
-              <Link to="/v2/account/balance" className="text-[var(--color-action-primary)] underline">
-                {load.payoutDate} → {load.payoutMethod}
-              </Link>
+            <p className="mt-[4px] text-body-14 opacity-90">
+              {load.km} km loaded · €{load.perKm.toFixed(2)}/km
             </p>
+            <Link
+              to="/v2/account/balance"
+              className="mt-[12px] flex min-h-[var(--size-control-mobile)] items-center gap-[8px] rounded-[var(--radius-md)] bg-[var(--color-nav-active)] px-[12px] text-body-14 text-[var(--color-text-inverse)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+              aria-label={`Payout ${load.payoutDate} to ${load.payoutMethod}. Open Balance.`}
+            >
+              <span className="shrink-0" aria-hidden><Icon name="wallet" size="sm" /></span>
+              <span className="min-w-0 flex-1">{load.payoutDate} → {load.payoutMethod}</span>
+              <span className="shrink-0" aria-hidden><Icon name="chevron-right" size="sm" /></span>
+            </Link>
           </section>
 
           {/* Progress */}
@@ -188,33 +194,45 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
             )}
           </section>
 
-          {/* Route */}
-          <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card">
-            <h2 className="text-heading-20 text-[var(--color-text-primary)]">Route</h2>
-            <ol className="mt-[16px] flex flex-col gap-[16px]" aria-label="Route stops">
-              {stops.map((stop) => (
-                <li key={stop.label} className="flex items-start gap-[12px]">
-                  <span className="mt-[4px] text-[var(--color-action-primary)]">
-                    <Icon name="map-pin" />
+          {/* Route — compact timeline: address + window + gate per stop, actions as icons */}
+          <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card" aria-label="Route">
+            <div className="flex items-baseline justify-between gap-[8px]">
+              <h2 className="text-heading-20 text-[var(--color-text-primary)]">Route</h2>
+              <span className="shrink-0 text-caption-12 text-[var(--color-text-secondary)]">{load.km} km loaded</span>
+            </div>
+            <ol className="mt-[12px] flex flex-col" aria-label="Route stops">
+              {stops.map((stop, i) => (
+                <li key={stop.label} className="relative flex gap-[12px] pb-[12px] last:pb-0">
+                  {i < stops.length - 1 && (
+                    <span aria-hidden className="absolute left-[11px] top-[24px] h-[calc(100%-24px)] w-[2px] bg-[var(--color-border-default)]" />
+                  )}
+                  <span className="relative z-[1] flex h-[24px] w-[24px] shrink-0 items-center justify-center" aria-hidden>
+                    <span className={`h-[10px] w-[10px] rounded-full ${i === 0 ? 'bg-[var(--color-action-primary)]' : 'bg-[var(--color-border-strong)]'}`} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-label-12 text-[var(--color-text-secondary)]">{stop.label}</p>
-                    <p className="mt-[4px] text-heading-20 text-[var(--color-text-primary)]">
-                      {stop.city}
-                    </p>
-                    <p className="mt-[4px] text-body-14 text-[var(--color-text-primary)]">
+                    <p className="text-body-14 text-[var(--color-text-primary)]">
                       {stop.site.address}
                     </p>
-                    <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
-                      {stop.day === 'today' ? 'Today' : 'Tomorrow'} · {stop.window}
+                    <p className="mt-[2px] text-caption-12 text-[var(--color-text-secondary)]">
+                      {stop.day === 'today' ? 'Today' : 'Tomorrow'} · {stop.window} · {stop.site.note}
                     </p>
-                    <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
-                      {stop.site.note} · {stop.site.contact}
-                    </p>
-                    <ButtonLink
-                      label={`Navigate to ${stop.label.toLowerCase()}`}
+                  </div>
+                  <div className="flex shrink-0 items-start gap-[4px]">
+                    <a
+                      href={`tel:${stop.site.contact.replace(/[^+\d]/g, '')}`}
+                      aria-label={`Call ${stop.label.toLowerCase()} ${stop.site.contact}`}
+                      className="flex h-[44px] w-[44px] items-center justify-center rounded-[var(--radius-md)] text-[var(--color-action-primary)] hover:bg-[var(--color-action-secondary-hover)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+                    >
+                      <Icon name="phone" size="sm" />
+                    </a>
+                    <button
+                      type="button"
                       onClick={() => { void goNavigate(stop.key, stop.mapsQuery); }}
-                    />
+                      aria-label={`Open ${stop.label.toLowerCase()} in Maps`}
+                      className="flex h-[44px] w-[44px] items-center justify-center rounded-[var(--radius-md)] text-[var(--color-action-primary)] hover:bg-[var(--color-action-secondary-hover)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+                    >
+                      <Icon name="map-pin" size="sm" />
+                    </button>
                   </div>
                 </li>
               ))}

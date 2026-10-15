@@ -159,10 +159,12 @@ test('confirmed application opens trip details and demo actions', async ({ page,
   await page.getByRole('button', { name: 'View trip', exact: true }).click();
   await expect(page).toHaveURL(/#\/trip\/nordcargo$/);
   await expect(page.getByRole('button', { name: 'Back', exact: true })).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Route stops' })).toContainText('Pickup');
-  await expect(page.getByRole('list', { name: 'Route stops' })).toContainText('Lille');
-  await expect(page.getByRole('list', { name: 'Route stops' })).toContainText('Brussels');
-  await expect(page.getByRole('list', { name: 'Route stops' })).toContainText('17:00–18:00');
+  const stops = page.getByRole('list', { name: 'Route stops' });
+  await expect(stops).toContainText('Rue des Champs 12, 59000 Lille');
+  await expect(stops).toContainText('Rue du Port 48, 1000 Brussels');
+  await expect(stops).toContainText('17:00–18:00');
+  await expect(stops.getByRole('button', { name: 'Open pickup in Maps' })).toBeVisible();
+  await expect(stops.getByRole('link', { name: /Call pickup/ })).toHaveAttribute('href', 'tel:+33320112233');
   await expect(page.getByText('Customer rating: 4.8 / 5', { exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('€360');
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('TR-nordcargo');
@@ -179,8 +181,7 @@ test('confirmed application opens trip details and demo actions', async ({ page,
   await expect(docs).toHaveCount(0);
 
   // Navigate opens Google Maps in a new tab and switches the trip to en-route.
-  // Two "Navigate to pickup" buttons exist (per-stop link in Route + primary CTA) — take the primary one.
-  const navigate = page.getByRole('button', { name: 'Navigate to pickup', exact: true }).nth(1);
+  const navigate = page.getByRole('button', { name: 'Navigate to pickup', exact: true });
   const [mapsPage] = await Promise.all([
     context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
     navigate.click(),
@@ -201,7 +202,7 @@ test('portfolio happy path: apply to payout', async ({ page, context }) => {
   await expect(page).toHaveURL(/#\/trip\/nordcargo$/);
 
   // En-route to pickup, then arrive.
-  const navigate = page.getByRole('button', { name: 'Navigate to pickup', exact: true }).nth(1);
+  const navigate = page.getByRole('button', { name: 'Navigate to pickup', exact: true });
   const [mapsPage] = await Promise.all([
     context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
     navigate.click(),
@@ -213,7 +214,7 @@ test('portfolio happy path: apply to payout', async ({ page, context }) => {
   // Loading complete, en-route to delivery, arrive, hand over, complete.
   await page.getByRole('button', { name: 'Confirm loading complete', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('Loaded');
-  const navigateDelivery = page.getByRole('button', { name: 'Navigate to delivery', exact: true }).nth(1);
+  const navigateDelivery = page.getByRole('button', { name: 'Navigate to delivery', exact: true });
   const [mapsDelivery] = await Promise.all([
     context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
     navigateDelivery.click(),
@@ -226,7 +227,7 @@ test('portfolio happy path: apply to payout', async ({ page, context }) => {
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('Delivered');
 
   // Delivered work lands in Balance as pending payout.
-  await page.getByRole('link', { name: /22 Oct/ }).click();
+  await page.getByRole('link', { name: /Payout 22 Oct/ }).click();
   await expect(page).toHaveURL(/#\/v2\/account\/balance$/);
   await page.screenshot({ path: test.info().outputPath('portfolio-balance.png') });
 });
