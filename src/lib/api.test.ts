@@ -1,7 +1,38 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { advanceStatus, cancelApplication, cancelTrip, dismissLoad, restoreLoad, submitApplication } from './api';
+import { advanceStatus, cancelApplication, cancelTrip, cancellationPenalty, dismissLoad, restoreLoad, submitApplication } from './api';
 import { ApplicationStatus } from './models';
 import { store } from './store';
+
+describe('cancel trip preview consequences', () => {
+  const now = Date.parse('2026-10-15T12:00:00Z');
+
+  it('has no expected impact within 15 minutes of confirmation', () => {
+    expect(cancellationPenalty({
+      loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED,
+      submittedAt: new Date(now - 10 * 60_000).toISOString(),
+    }, new Date(now + 60 * 60_000).toISOString(), now)).toBe('none');
+  });
+
+  it('warns close to pickup when confirmed more than 15 minutes ago', () => {
+    expect(cancellationPenalty({
+      loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED,
+      submittedAt: new Date(now - 20 * 60_000).toISOString(),
+    }, new Date(now + 2 * 3_600_000).toISOString(), now)).toBe('warning');
+  });
+
+  it('has no expected impact at least 24 hours before pickup', () => {
+    expect(cancellationPenalty({
+      loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED,
+      submittedAt: new Date(now - 20 * 60_000).toISOString(),
+    }, new Date(now + 24 * 3_600_000).toISOString(), now)).toBe('none');
+  });
+
+  it('does not assume free cancellation when timestamps are missing', () => {
+    expect(cancellationPenalty({
+      loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED, submittedAt: null,
+    }, undefined, now)).toBe('warning');
+  });
+});
 
 describe('application lifecycle', () => {
   it('preserves cancellation metadata through updates and persistence', async () => {
