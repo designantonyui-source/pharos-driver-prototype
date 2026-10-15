@@ -552,12 +552,14 @@ export function WithdrawalDetails() {
   }
   const statusCopy: Record<string, { title: string; detail: string }> = {
     processing: { title: 'Request accepted', detail: 'The payout provider accepted the request. Money has not arrived yet.' },
-    delayed: { title: 'Delayed', detail: 'The provider needs more time. No new withdrawal is needed.' },
+    delayed: { title: 'Delayed', detail: 'The provider needs more time. Do not start a new withdrawal until this one resolves.' },
     done: { title: 'Money arrived', detail: 'The provider confirms the payout reached your account.' },
     failed: { title: 'Failed', detail: entry.failReason ?? 'The provider could not complete the payout.' },
-    returned: { title: 'Funds returned', detail: 'The amount was returned to your available balance.' },
+    returned: { title: 'Funds returned', detail: entry.feeRefunded ? 'Amount and fee are back on your available balance.' : 'Amount is back on your available balance. The fee stays debited.' },
   };
   const status = statusCopy[entry.status] ?? statusCopy.processing;
+  const pendingOutcome = entry.status === 'processing' || entry.status === 'delayed';
+  const needsFix = entry.status === 'failed' || entry.status === 'returned';
   return <BalanceFrame title="Cash out" backTo="/v2/account/balance/history" toast={undefined}>
     <div className="mt-[var(--spacing-8)] rounded-[var(--radius-md)] bg-[var(--color-nav-bg)] p-[var(--spacing-16)] text-[var(--color-nav-text)]">
       <p className="text-caption-12 uppercase tracking-wide opacity-80">Withdrawal {entry.id}</p>
@@ -593,6 +595,17 @@ export function WithdrawalDetails() {
       </div>
     </Section>
     <div className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-8)]">
+      {pendingOutcome && (
+        <p className="rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] p-[var(--spacing-12)] text-body-14 text-[var(--color-text-secondary)]" role="note">
+          Outcome unknown — wait for this operation before starting a new withdrawal.
+        </p>
+      )}
+      {needsFix && (
+        <>
+          <Button label="Fix payout details" onClick={() => navigate('/v2/account/balance/method')} />
+          <Button label="Retry as a new withdrawal" appearance="secondary" onClick={() => navigate('/v2/account/balance/cashout')} />
+        </>
+      )}
       <Button label="View in history" appearance="secondary" onClick={() => navigate('/v2/account/balance/history')} />
       <Button label="Back to Balance" appearance="secondary" onClick={() => navigate('/v2/account/balance')} />
     </div>

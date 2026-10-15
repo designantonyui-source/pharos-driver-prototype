@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { acceptDemoPod, advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, customerPaysDemoTrip, dismissLoad, earningsStateFor, getTripDetails, rejectDemoPod, restoreLoad, setEnRoute, submitApplication, submitProofOfDelivery } from './api';
+import { acceptDemoPod, advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, customerPaysDemoTrip, dismissLoad, earningsStateFor, getTripDetails, markWithdrawalDelayed, markWithdrawalFailed, markWithdrawalPaid, rejectDemoPod, requestWithdrawal, restoreLoad, returnWithdrawalFunds, setEnRoute, submitApplication, submitProofOfDelivery } from './api';
 import { ApplicationStatus } from './models';
 import { store } from './store';
 
@@ -164,6 +164,64 @@ describe('driver trip execution', () => {
     expect(store.getApplicationForLoad('nordcargo')?.pod?.status).toBe('rejected');
     expect(earningsStateFor('nordcargo')).toBe('delivered-no-pod');
     await expect(customerPaysDemoTrip('nordcargo')).rejects.toThrow('POD must be accepted');
+  });
+});
+
+describe('payout recovery', () => {
+  const IBAN = 'DE89370400440532013000';
+  beforeEach(() => store.reset());
+  afterEach(() => store.reset());
+
+  async function fundedWithdrawal(amount = 100) {
+    const { addIbanMethod } = await import('./api');
+    const method = await addIbanMethod({ iban: IBAN, label: 'Bank' });
+    const { entry } = await requestWithdrawal(amount, method.id);
+    return entry;
+  }
+
+  it('walks Processing → Delayed → Paid without a second withdrawal', async () => {
+    const entry = await fundedWithdrawal();
+    expect(entry.status).toBe('processing');
+    const delayed = await markWithdrawalDelayed(entry.id);
+    expect(delayed.status).toBe('delayed');
+    // Replay is a no-op, not a second debit.
+    const replayed = await markWithdrawalDelayed(entry.id);
+    expect(replayed.status).toBe('delayed');
+    const paid = await markWithdrawalPaid(entry.id);
+    expect(paid.status).toBe('done');
+    const withdrawals = store.get().ledger.filter((e) => e.kind === 'withdrawal');
+    expect(withdrawals).toHaveLength(1);
+  });
+
+  it('walks Processing → Failed → Returned with the fee rule', async () => {
+    const entry = await fundedWithdrawal();
+    await expect(markWithdrawalFailed(entry.id, '  ')).rejects.toThrow('reason');
+    const failed = await markWithdrawalFailed(entry.id, 'Wrong IBAN digits');
+    expect(failed.status).toBe('failed');
+    // Failed payouts do not debit while the outcome is recorded.
+    const { getBalance } = await import('./api');
+    expect((await getBalance()).available).toBeCloseTo(500, 2);
+    // Repeat failure calls are no-ops.
+    const again = await markWithdrawalFailed(entry.id, 'Other reason');
+    expect(again.status).toBe('failed');
+    expect(again.failReason).toBe('Wrong IBAN digits');
+    // Return without fee refund: amount back, fee stays debited.
+    const returned = await returnWithdrawalFunds(entry.id, false);
+    expect(returned.status).toBe('returned');
+    expect((await getBalance()).available).toBeCloseTo(500, 2);
+    // Double return never refunds twice.
+    const replayed = await returnWithdrawalFunds(entry.id, true);
+    expect(replayed.status).toBe('returned');
+    expect(replayed.feeRefunded).toBe(false);
+    expect((await getBalance()).available).toBeCloseTo(500, 2);
+  });
+
+  it('refuses arrival for terminal states', async () => {
+    const entry = await fundedWithdrawal();
+    await markWithdrawalFailed(entry.id, 'Bank rejected the transfer');
+    await expect(markWithdrawalPaid(entry.id)).rejects.toThrow('pending payout');
+    const returned = await returnWithdrawalFunds(entry.id, true);
+    expect(returned.feeRefunded).toBe(true);
   });
 });
 

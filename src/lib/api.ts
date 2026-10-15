@@ -83,7 +83,8 @@ function ensureLedger(): LedgerEntry[] {
 
 export type BalanceSummary = { available: number; pending: number; currency: 'EUR' };
 
-/** Available = settled trips ± adjustments minus withdrawals; pending = unsettled trips. */
+/** Available = settled trips ± adjustments minus active withdrawals.
+ * Returned payouts give the amount back; the fee stays debited unless feeRefunded. */
 export async function getBalance(): Promise<BalanceSummary> {
   await wait(250);
   const ledger = ensureLedger();
@@ -94,7 +95,11 @@ export async function getBalance(): Promise<BalanceSummary> {
       if (entry.status === 'available') available += entry.amount;
       else pending += entry.amount;
     } else if (entry.kind === 'withdrawal') {
-      available -= entry.amount + entry.fee;
+      if (entry.status === 'returned') {
+        available -= entry.feeRefunded ? 0 : entry.fee;
+      } else if (entry.status !== 'failed') {
+        available -= entry.amount + entry.fee;
+      }
     } else if (entry.kind === 'adjustment') {
       available += entry.amount;
     }
@@ -370,6 +375,64 @@ export async function requestWithdrawal(amount: number, methodId?: string) {
   };
   store.set({ ledger: [...store.get().ledger, entry] });
   return { entry, eta: quote.eta };
+}
+
+/**
+ * Demo payout recovery (prototype concept logic, NOT real provider behaviour):
+ * A. Processing → Delayed → Paid: the provider needs more time; no new withdrawal
+ *    while the first outcome is unknown.
+ * B. Processing → Failed → Funds returned: the reason is shown, amount + fee rule
+ *    applied, driver fixes details and retries as a SEPARATE operation.
+ * Idempotency: every transition is guarded by status + idempotencyKey — replays,
+ * reloads and double clicks never debit or refund twice.
+ */
+export async function markWithdrawalDelayed(id: string, note = 'Provider needs more time') {
+  const current = store.get();
+  const entry = current.ledger.find((e) => e.kind === 'withdrawal' && e.id === id);
+  if (!entry || entry.kind !== 'withdrawal') throw new Error('Withdrawal not found');
+  if (entry.status !== 'processing') return entry;
+  const next = { ...entry, status: 'delayed' as const, failReason: note };
+  store.set({ ledger: current.ledger.map((e) => e.id === id ? next : e) });
+  return next;
+}
+
+export async function markWithdrawalPaid(id: string) {
+  const current = store.get();
+  const entry = current.ledger.find((e) => e.kind === 'withdrawal' && e.id === id);
+  if (!entry || entry.kind !== 'withdrawal') throw new Error('Withdrawal not found');
+  if (entry.status === 'done') return entry;
+  if (entry.status !== 'processing' && entry.status !== 'delayed') throw new Error('Only a pending payout can arrive');
+  const next = { ...entry, status: 'done' as const };
+  store.set({ ledger: current.ledger.map((e) => e.id === id ? next : e) });
+  return next;
+}
+
+export async function markWithdrawalFailed(id: string, reason: string) {
+  const current = store.get();
+  const entry = current.ledger.find((e) => e.kind === 'withdrawal' && e.id === id);
+  if (!entry || entry.kind !== 'withdrawal') throw new Error('Withdrawal not found');
+  if (entry.status === 'failed' || entry.status === 'returned') return entry;
+  if (entry.status !== 'processing' && entry.status !== 'delayed') throw new Error('Only a pending payout can fail');
+  if (!reason.trim()) throw new Error('A failure needs a reason');
+  const next = { ...entry, status: 'failed' as const, failReason: reason };
+  store.set({ ledger: current.ledger.map((e) => e.id === id ? next : e) });
+  return next;
+}
+
+/**
+ * Funds-return rule (demo): the full amount returns to available; the fee is
+ * refunded only when the failure is ours (wrong provider rail), never when the
+ * destination details were wrong. Replays return the same entry — no double refund.
+ */
+export async function returnWithdrawalFunds(id: string, feeRefunded: boolean) {
+  const current = store.get();
+  const entry = current.ledger.find((e) => e.kind === 'withdrawal' && e.id === id);
+  if (!entry || entry.kind !== 'withdrawal') throw new Error('Withdrawal not found');
+  if (entry.status === 'returned') return entry;
+  if (entry.status !== 'failed') throw new Error('Only a failed payout can be returned');
+  const next = { ...entry, status: 'returned' as const, feeRefunded };
+  store.set({ ledger: current.ledger.map((e) => e.id === id ? next : e) });
+  return next;
 }
 
 /** One withdrawal by id — powers the permanent operation screen. */
