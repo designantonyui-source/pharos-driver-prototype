@@ -22,14 +22,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Alert } from '../../components/Alert';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/Icon';
-import { ActiveTripCard } from '../../components/v2/ActiveTripCard';
 import { NavigationBar } from '../../components/layout/NavigationBar';
 import { Toast, useToast } from '../../components/v2/Toast';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { getLoads } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore, type LoadApplication } from '../../lib/store';
-import type { V2Load } from '../../lib/v2/loads';
+import { pickupTimestamp, type V2Load } from '../../lib/v2/loads';
 
 function TripsFrame({ toast, children }: { toast?: ReactNode; children: ReactNode }) {
   return <V2Frame active="Trips">
@@ -153,12 +152,12 @@ export function Trips() {
   return <TripsFrame toast={<Toast toast={toast} onClose={dismiss} />}>
     {active.length > 0 && <div className="mt-[var(--spacing-8)] flex flex-col gap-[var(--spacing-12)]">
       <p className="px-[var(--spacing-12)] text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">Active trip{active.length > 1 ? 's' : ''}</p>
-      {active.map(({ load, application }) => <ActiveTripCard
-        key={load.id}
-        load={load}
-        application={application}
-        onOpen={() => navigate(`/trip/${load.id}`)}
-      />)}
+      {active.map(({ load }) => <div key={load.id} className="rounded-[var(--radius-md)] bg-[var(--color-nav-bg)] p-[var(--spacing-16)] text-[var(--color-nav-text)]">
+        <p className="text-metric-28 text-[var(--color-text-inverse)]">EUR {load.rate.toFixed(2)}</p>
+        <p className="mt-[var(--spacing-4)] text-body-14 opacity-90">{load.from} to {load.to} · {tripWindow(load)}</p>
+        <p className="mt-[var(--spacing-4)] text-caption-12 opacity-80">Pickup at {pickupTimestamp(load.day, load.window)}</p>
+        <div className="mt-[var(--spacing-16)]"><Button label="Open trip" onClick={() => navigate(`/trip/${load.id}`)} /></div>
+      </div>)}
     </div>}
     {review.length > 0 && <Section label={review.length === 1 ? 'In review' : `${review.length} in review`}>
       {review.map(({ load, application }, i) => <TripRow key={load.id} to={`/application/${load.id}`} icon="clock" tone="pending" chip="In review"
