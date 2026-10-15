@@ -225,6 +225,35 @@ describe('payout recovery', () => {
   });
 });
 
+describe('demo scenario controls', () => {
+  beforeEach(() => store.reset());
+  afterEach(() => store.reset());
+
+  it('resets each scenario from a clean state', async () => {
+    const { resetDemoScenario, DEMO_LOAD_ID } = await import('./api');
+    const book = await resetDemoScenario('book');
+    expect(book).toMatchObject({ scenario: 'book', loadId: DEMO_LOAD_ID });
+    expect(store.get().loadId).toBeNull();
+    const deliver = await resetDemoScenario('deliver');
+    expect(deliver.scenario).toBe('deliver');
+    expect(store.get().loadId).toBe(DEMO_LOAD_ID);
+    const { getInvoiceForLoad } = await import('./invoices');
+    expect(await getInvoiceForLoad(DEMO_LOAD_ID)).toBeNull();
+  });
+
+  it('drives dispatcher → confirm → delivered without timers', async () => {
+    const { resetDemoScenario, demoDispatcherApprove, demoCustomerConfirm, demoTripToDelivered, DEMO_LOAD_ID } = await import('./api');
+    await resetDemoScenario('book');
+    store.set({ loadId: DEMO_LOAD_ID, status: ApplicationStatus.SENT });
+    await demoDispatcherApprove();
+    expect(store.get().status).toBe(ApplicationStatus.CUSTOMER_REVIEW);
+    await demoCustomerConfirm();
+    expect(store.get().status).toBe(ApplicationStatus.CONFIRMED);
+    await demoTripToDelivered();
+    expect(store.getApplicationForLoad(DEMO_LOAD_ID)?.tripStage).toBe('delivered');
+  });
+});
+
 describe('application lifecycle', () => {
   it('preserves cancellation metadata through updates and persistence', async () => {
     store.reset();

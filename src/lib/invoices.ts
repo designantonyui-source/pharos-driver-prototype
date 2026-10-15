@@ -157,6 +157,11 @@ export async function getInvoiceForLoad(loadId: string): Promise<Invoice | null>
   return all.find(i => i.loadId === loadId) ?? null;
 }
 
+/** Demo reset: drop scenario-created invoices so each run starts clean. */
+export function resetDemoInvoices() {
+  cache = null;
+}
+
 /** Monthly CSV for the accountant: number,date,customer,lane,net,vat,total,status. */
 export function invoicesToCsv(invoices: Invoice[]): string {
   const head = 'number,issued,customer,lane,net_eur,vat_eur,total_eur,status';

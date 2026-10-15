@@ -784,6 +784,51 @@ export async function advanceStatus(status: Status, loadId?: string, expectedSta
   return { status, updated: true };
 }
 
+/**
+ * Demo scenario controls (prototype only): managed external events + clean reset.
+ * Every scenario replays from a clean state and persists through reloads (localStorage).
+ * No automatic timers — the presenter drives each transition explicitly.
+ */
+export type DemoScenarioId = 'book' | 'deliver' | 'cashout' | 'issue';
+
+export async function resetDemoScenario(scenario: DemoScenarioId) {
+  store.reset();
+  const { resetDemoInvoices } = await import('./invoices');
+  resetDemoInvoices();
+  if (scenario === 'deliver' || scenario === 'cashout' || scenario === 'issue') {
+    store.set({ loadId: DEMO_LOAD_ID, status: ApplicationStatus.CONFIRMED });
+  }
+  return { scenario, loadId: DEMO_LOAD_ID };
+}
+
+export async function demoDispatcherApprove(loadId: string = DEMO_LOAD_ID) {
+  const current = store.get();
+  if (!current.loadId || current.loadId !== loadId) {
+    store.set({ loadId, status: ApplicationStatus.SENT });
+  }
+  await advanceStatus(ApplicationStatus.DISPATCHER_REVIEW, loadId);
+  await advanceStatus(ApplicationStatus.CUSTOMER_REVIEW, loadId);
+  return { loadId, status: ApplicationStatus.CUSTOMER_REVIEW };
+}
+
+export async function demoCustomerConfirm(loadId: string = DEMO_LOAD_ID) {
+  await advanceStatus(ApplicationStatus.CONFIRMED, loadId);
+  return { loadId, status: ApplicationStatus.CONFIRMED };
+}
+
+export async function demoTripToDelivered(loadId: string = DEMO_LOAD_ID) {
+  const order: Array<[string, string]> = [
+    ['confirmed', 'at-pickup'],
+    ['at-pickup', 'loaded'],
+    ['loaded', 'at-delivery'],
+  ];
+  for (const [from, to] of order) {
+    await advanceTripStage(loadId, from as TripStage, to as TripStage);
+  }
+  await advanceTripStage(loadId, 'at-delivery', 'delivered', true);
+  return { loadId, tripStage: 'delivered' as const };
+}
+
 /** Backload (PL): zlecenia po drodze. Mock data only; the screen applies the rules in `./bl/logic`. */
 export async function getBlOrders(): Promise<BlOrder[]> {
   await wait(300);
