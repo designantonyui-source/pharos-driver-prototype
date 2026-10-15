@@ -404,22 +404,32 @@ export async function dismissLoad(loadId: string) {
   if (existing && !existing.dismissed && existing.status !== ApplicationStatus.CANCELLED && existing.status !== ApplicationStatus.REJECTED) {
     throw new Error("An applied load cannot be dismissed");
   }
-  // A cancelled trip can leave the feed too - the record stays in the Trips hub past section.
+  // Preserve historical cancellation/rejection metadata when hiding an old load.
+  // A never-applied load only needs a disposable dismissed placeholder.
   store.set({
     applications: {
-      [loadId]: { loadId, status: ApplicationStatus.CANCELLED, submittedAt: null, dismissed: true },
+      [loadId]: existing
+        ? { ...existing, dismissed: true }
+        : { loadId, status: ApplicationStatus.CANCELLED, submittedAt: null, dismissed: true },
     },
   });
   return { loadId, dismissed: true };
 }
 
-/** Bring a dismissed load back into the feed. */
+/** Bring a dismissed load back into the feed without deleting historical application records. */
 export async function restoreLoad(loadId: string) {
   const current = store.get();
-  if (current.applications[loadId]?.dismissed) {
-    store.set(current.loadId === loadId
-      ? { loadId: null, status: null, submittedAt: null }
-      : {}, [loadId]);
+  const existing = current.applications[loadId];
+  if (existing?.dismissed) {
+    const isPlaceholder = existing.status === ApplicationStatus.CANCELLED
+      && existing.submittedAt === null && !existing.cancelledAfterConfirm && !existing.cancelReason;
+    if (isPlaceholder) {
+      store.set(current.loadId === loadId
+        ? { loadId: null, status: null, submittedAt: null }
+        : {}, [loadId]);
+    } else {
+      store.set({ applications: { [loadId]: { ...existing, dismissed: false } } });
+    }
   }
   return { loadId, dismissed: false };
 }
