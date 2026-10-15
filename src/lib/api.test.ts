@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { advanceStatus, cancelApplication, cancelTrip, cancellationPenalty, dismissLoad, restoreLoad, submitApplication } from './api';
+import { advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, dismissLoad, restoreLoad, submitApplication } from './api';
 import { ApplicationStatus } from './models';
 import { store } from './store';
 
@@ -31,6 +31,29 @@ describe('cancel trip preview consequences', () => {
     expect(cancellationPenalty({
       loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED, submittedAt: null,
     }, undefined, now)).toBe('warning');
+  });
+});
+
+describe('driver trip execution', () => {
+  beforeEach(() => store.reset());
+
+  it('requires sequential driver confirmation', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    await expect(advanceTripStage('nordcargo', 'confirmed', 'loaded')).rejects.toThrow();
+    await advanceTripStage('nordcargo', 'confirmed', 'at-pickup');
+    expect(store.getApplicationForLoad('nordcargo')?.tripStage).toBe('at-pickup');
+    await advanceTripStage('nordcargo', 'at-pickup', 'loaded');
+    await advanceTripStage('nordcargo', 'loaded', 'at-delivery');
+    await advanceTripStage('nordcargo', 'at-delivery', 'delivered');
+    expect(store.getApplicationForLoad('nordcargo')?.tripStage).toBe('delivered');
+  });
+
+  it('blocks milestones after cancellation', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED });
+    const cancelling = cancelTrip('nordcargo', 'delay');
+    await vi.advanceTimersByTimeAsync(300);
+    await cancelling;
+    await expect(advanceTripStage('nordcargo', 'confirmed', 'at-pickup')).rejects.toThrow();
   });
 });
 
