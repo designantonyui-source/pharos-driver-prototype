@@ -46,18 +46,19 @@ export function TripDetailsView({ load }: { load: V2Load }) {
   const tripStage: TripStage = state.applications[load.id]?.tripStage ?? 'confirmed';
   const [updatingStage, setUpdatingStage] = useState(false);
   const [stageError, setStageError] = useState<string | null>(null);
+  const [handoverConfirmed, setHandoverConfirmed] = useState(false);
   const nextStage: Partial<Record<TripStage, { stage: TripStage; label: string }>> = {
-    confirmed: { stage: 'at-pickup', label: 'Confirm arrival at pickup' },
+    confirmed: { stage: 'at-pickup', label: "I've arrived at pickup" },
     'at-pickup': { stage: 'loaded', label: 'Confirm loading complete' },
-    loaded: { stage: 'at-delivery', label: 'Confirm arrival at delivery' },
-    'at-delivery': { stage: 'delivered', label: 'Confirm delivery complete' },
+    loaded: { stage: 'at-delivery', label: "I've arrived at delivery" },
+    'at-delivery': { stage: 'delivered', label: 'Complete delivery' },
   };
   const nextAction = nextStage[tripStage];
   async function confirmMilestone() {
     if (!nextAction || updatingStage) return;
     setUpdatingStage(true);
     setStageError(null);
-    try { await advanceTripStage(load.id, tripStage, nextAction.stage); }
+    try { await advanceTripStage(load.id, tripStage, nextAction.stage, handoverConfirmed); }
     catch { setStageError('Could not update the trip. Please try again.'); }
     finally { setUpdatingStage(false); }
   }
@@ -142,20 +143,24 @@ export function TripDetailsView({ load }: { load: V2Load }) {
         </main>
 
         {!cancelled && <p role="status" className="text-body-14 text-[var(--color-text-secondary)]">
-          {tripStage === 'delivered' ? 'Delivery recorded. Documents and payment are handled separately.' : 'Confirm each milestone when it actually happens.'}
+          {tripStage === 'confirmed' ? 'Next: travel to pickup, then confirm arrival.' : tripStage === 'loaded' ? 'Next: travel to delivery, then confirm arrival.' : tripStage === 'at-pickup' ? 'Check the cargo and confirm loading.' : tripStage === 'at-delivery' ? 'Confirm unloading and handover before completing delivery.' : 'Delivery recorded. Document review and payment are separate.'}
         </p>}
+        {tripStage === 'at-delivery' && !cancelled && (
+          <label className="flex items-start gap-[10px] py-[8px] text-body-14 text-[var(--color-text-primary)]">
+            <input type="checkbox" checked={handoverConfirmed} onChange={(event) => setHandoverConfirmed(event.target.checked)} className="mt-[4px] h-[18px] w-[18px]" />
+            Cargo has been unloaded and handed over to the recipient.
+          </label>
+        )}
         {stageError && <p role="alert" className="text-body-14 text-[var(--color-text-secondary)]">{stageError}</p>}
-        {/* Actions */}
         <div className="flex shrink-0 flex-col gap-[8px] py-[8px]">
-          {!cancelled && nextAction && <Button label={nextAction.label} disabled={updatingStage} onClick={() => { void confirmMilestone(); }} />}
-          {!cancelled && tripStage !== 'delivered' && (
-            <Button
-              label="Navigation"
-              icon={<Icon name="map-pin" />}
-              onClick={() =>
-                show({ tone: 'info', title: 'Navigation is not connected in this demo.' })
-              }
-            />
+          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && (
+            <Button label={tripStage === 'confirmed' ? 'Navigate to pickup' : 'Navigate to delivery'} onClick={() => {
+              const destination = tripStage === 'confirmed' ? load.from : load.to;
+              window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`, '_blank', 'noopener,noreferrer');
+            }} />
+          )}
+          {!cancelled && nextAction && (
+            <Button label={nextAction.label} appearance={tripStage === 'confirmed' || tripStage === 'loaded' ? 'secondary' : 'primary'} disabled={updatingStage || (tripStage === 'at-delivery' && !handoverConfirmed)} loading={updatingStage} onClick={() => { void confirmMilestone(); }} />
           )}
           {!cancelled && (
             <Button
