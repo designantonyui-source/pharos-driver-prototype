@@ -57,7 +57,7 @@ export function RouteSheet({
             value={fromDraft}
             onChange={(event) => setFromDraft(event.target.value)}
             onFocus={() => setFocused('from')}
-            placeholder="Lille"
+            placeholder="Anywhere"
             autoComplete="off"
             className="mt-[8px] flex min-h-[44px] w-full items-center rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-[12px] text-body-16 text-[var(--color-text-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
           />
@@ -75,19 +75,17 @@ export function RouteSheet({
           />
         </label>
       </div>
-      <p className="mt-[12px] text-caption-12 text-[var(--color-text-secondary)]">
-        Empty origin shows loads from anywhere — use it to browse a destination you are not at yet.
-      </p>
       {cities.length > 0 && (
         <div className="mt-[12px]">
           <p id="route-cities-label" className="text-label-14 text-[var(--color-text-secondary)]">
             {focused === 'from' ? 'From' : 'To'} — {focused === 'from' ? fromDraft || 'pick an origin' : toDraft || 'pick a destination'}
           </p>
-          <div className="mt-[8px] flex flex-wrap gap-[8px]" role="group" aria-labelledby="route-cities-label">
+          <div className="mt-[8px] flex gap-[8px] overflow-x-auto pb-[4px]" role="group" aria-labelledby="route-cities-label">
             {cities.map((city) => {
               const selected = (focused === 'from' ? fromDraft : toDraft).trim().toLocaleLowerCase() === city.trim().toLocaleLowerCase();
               const matches = countForChip(city);
               const dead = matches === 0;
+              if (dead && !selected) return null;
               const side = focused === 'from' ? 'origin' : 'destination';
               return (
                 <button
@@ -97,7 +95,7 @@ export function RouteSheet({
                   disabled={dead}
                   aria-pressed={selected}
                   aria-label={dead ? `${city} — no loads as ${side}` : selected ? `${city}, ${matches} ${matches === 1 ? 'load' : 'loads'} as ${side}, selected. Activate to keep it.` : `Use ${city} as ${side}, ${matches} ${matches === 1 ? 'load' : 'loads'}`}
-                  className={`min-h-[44px] rounded-[var(--radius-pill)] border px-[14px] text-label-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
+                  className={`min-h-[44px] shrink-0 rounded-[var(--radius-pill)] border px-[14px] text-label-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
                     dead
                       ? 'cursor-not-allowed border-[var(--color-border-default)] bg-[var(--color-bg-surface)] text-[var(--color-text-disabled)] opacity-60'
                       : selected

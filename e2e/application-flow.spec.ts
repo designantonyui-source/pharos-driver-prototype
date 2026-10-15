@@ -71,10 +71,10 @@ test('route chips count live and the dead end recovers', async ({ page }) => {
   await page.getByRole('button', { name: 'Direction: Brussels, 2 loads. Activate to change.' }).click();
   const sheet = page.getByRole('dialog', { name: 'Change direction' });
   await expect(sheet).toBeVisible();
-  // Focus lands on destination: a dead-end city is disabled with a zero count,
-  // a live one shows its count — the chip never promises an empty feed.
+  // Focus lands on destination: dead-end cities stay hidden, a live one shows
+  // its count — the chip never promises an empty feed.
   // (Empty origin browses anywhere, so Brussels is selected with its 2 loads.)
-  await expect(sheet.getByRole('button', { name: 'Calais — no loads as destination' })).toBeDisabled();
+  await expect(sheet.getByRole('button', { name: 'Calais — no loads as destination' })).toHaveCount(0);
   const brussels = sheet.getByRole('button', { name: 'Brussels, 2 loads as destination, selected. Activate to keep it.' });
   await expect(brussels).toBeEnabled();
   await expect(brussels).toHaveAttribute('aria-pressed', 'true');

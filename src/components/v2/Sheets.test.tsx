@@ -56,7 +56,7 @@ describe('RouteSheet draft semantics', () => {
   it('city chips fill the focused field and move focus on', () => {
     const onApply = vi.fn();
     // Origin Paris leaves only paris-brussels for Brussels: every destination chip
-    // except Brussels reads 0 and goes disabled — a chip never promises an empty feed.
+    // except Brussels reads 0 and is hidden — a chip never promises an empty feed.
     const countFor = (route: { from: string; to: string }) =>
       route.from.trim().toLocaleLowerCase() === 'paris' && route.to.trim().toLocaleLowerCase() === 'brussels' ? 1 : 0;
     render(
@@ -64,9 +64,9 @@ describe('RouteSheet draft semantics', () => {
         <RouteSheet open value={{ from: 'Paris', to: '' }} countFor={countFor} onApply={onApply} onClose={() => undefined} cities={['Paris', 'Brussels', 'Lille']} />
       </MemoryRouter>,
     );
-    // Focus lands on destination on open: Brussels counts 1, Lille counts 0.
+    // Focus lands on destination on open: Brussels counts 1, Lille counts 0 and stays hidden.
     expect(screen.getByRole('button', { name: 'Use Brussels as destination, 1 load' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Lille — no loads as destination' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Lille — no loads as destination' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Use Brussels as destination, 1 load' }));
     expect(screen.getByLabelText('Destination city')).toHaveValue('Brussels');
     // The tap moved focus to origin: the group label follows it.
