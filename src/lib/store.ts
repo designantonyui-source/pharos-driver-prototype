@@ -23,6 +23,10 @@ export type LoadApplication = {
   cancelledAfterConfirm?: boolean;
   /** Driver tapped Navigate and is en route to a stop (survives reload while Maps is open). */
   enRouteTo?: 'pickup' | 'delivery';
+  /** When the driver confirmed the current tripStage — powers "time at facility". */
+  stageAt?: string;
+  /** Driver-reported delay (prototype: recorded on the trip, not pushed to a dispatcher). */
+  delayReport?: { minutes: number; reason: string; at: string };
 };
 
 export type AppState = {

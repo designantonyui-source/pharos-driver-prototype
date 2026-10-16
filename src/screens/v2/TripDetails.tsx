@@ -1,15 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button, ButtonLink } from '../../components/Button';
 import { Icon } from '../../components/Icon';
+import { StatusPill, type Tone } from '../../components/StatusPill';
 import { type ProgressState } from '../../components/ProgressStep';
 import { V2BackBar, useV2Back } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { CancelTripSheet } from '../../components/v2/CancelTripSheet';
+import { Sheet } from '../../components/v2/Sheet';
 import { RoutePreview } from '../../components/v2/RoutePreview';
 import { TripDocumentsSheet } from '../../components/v2/TripDocumentsSheet';
 import { Toast, useToast } from '../../components/v2/Toast';
-import { TRIP_STAGE_STEPS, advanceTripStage, cancelTrip, cancellationPenalty, getDefaultMethod, getTripDetails, methodLabel, setEnRoute, submitProofOfDelivery, type PayoutMethod, type TripStage } from '../../lib/api';
+import { TRIP_STAGE_STEPS, advanceTripStage, cancelTrip, cancellationPenalty, getDefaultMethod, getTripDetails, methodLabel, minutesSince, reportDelay, setEnRoute, submitProofOfDelivery, type PayoutMethod, type TripStage } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore, type LoadApplication } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
@@ -48,6 +50,8 @@ function PayoutRow({ load, compact = false }: { load: V2Load; compact?: boolean 
 function TripStepper({ steps }: { steps: { done: boolean; current: boolean; label: string }[] }) {
   const currentIdx = steps.findIndex((s) => s.current);
   const current = steps[currentIdx]?.label ?? '';
+  // A progress bar says where the driver is; naming the next step says what to do next.
+  const next = steps[currentIdx + 1]?.label;
   return (
     <div>
       <div className="flex items-center gap-[6px]" role="img" aria-label={`Trip progress: ${current}`}>
@@ -59,7 +63,9 @@ function TripStepper({ steps }: { steps: { done: boolean; current: boolean; labe
           />
         ))}
       </div>
-      <p className="mt-[6px] text-caption-12 text-[var(--color-text-secondary)]">{current} · step {currentIdx + 1} of {steps.length}</p>
+      <p className="mt-[6px] text-caption-12 text-[var(--color-text-secondary)]">
+        {current} · step {currentIdx + 1} of {steps.length}{next ? ` · Next: ${next}` : ''}
+      </p>
     </div>
   );
 }
@@ -121,16 +127,20 @@ function EarningsBlock({ load }: { load: V2Load }) {
         expected: `Expected payout ${load.payoutDate} after approval.`,
         action: 'Upload the signed POD below. No other action is needed.',
       };
+  // One semantic tone per money state, reusing the measured color-status-* pairs.
+  const tone: Tone = podStatus === 'rejected' ? 'danger'
+    : available ? 'success'
+    : podStatus === 'submitted' || podStatus === 'approved' ? 'info'
+    : 'warning';
   return (
     <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card" aria-label="Earnings">
       <h2 className="text-heading-20 text-[var(--color-text-primary)]">Earnings</h2>
-      <p className="mt-[8px] text-body-14 font-medium text-[var(--color-text-primary)]">{copy.title}</p>
-      <p className="mt-[4px] text-body-14 text-[var(--color-text-primary)]">{copy.what}</p>
-      <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">{copy.why}</p>
-      <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">{copy.expected}</p>
+      <div className="mt-[8px]"><StatusPill label={copy.title} tone={tone} /></div>
+      <p className="mt-[8px] text-body-14 text-[var(--color-text-primary)]">€{load.rate} · {copy.expected}</p>
+      <p className="mt-[4px] text-caption-12 text-[var(--color-text-secondary)]">{copy.why}</p>
       <p className="mt-[8px] text-body-14 text-[var(--color-text-primary)]">{copy.action}</p>
       {podStatus === 'rejected' && (
-        <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">Reason: unreadable signature — re-take the photo and upload again.</p>
+        <p className="mt-[4px] text-caption-12 text-[var(--color-text-secondary)]">Reason: unreadable signature — re-take the photo and upload again.</p>
       )}
     </section>
   );
@@ -236,11 +246,50 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
     current: stepStates[i] === 'current',
   }));
 
+  // "Where am I?" — the current leg is the pickup until loading is done, delivery after.
+  const currentStopIndex = tripStage === 'confirmed' || tripStage === 'at-pickup' ? 0 : 1;
+  // "How long have I been here?" — stamped when the driver confirms at-pickup / at-delivery.
+  const stageAt = state.applications[load.id]?.stageAt;
+  const facilityIndex = tripStage === 'at-pickup' ? 0 : tripStage === 'at-delivery' ? 1 : -1;
+  const minutesHere = minutesSince(stageAt);
+  const delayReport = state.applications[load.id]?.delayReport;
+
+  const podInputRef = useRef<HTMLInputElement>(null);
+  const [delayOpen, setDelayOpen] = useState(false);
+  const [delayMinutes, setDelayMinutes] = useState('15');
+  const [delayReason, setDelayReason] = useState('Traffic');
+  const [savingDelay, setSavingDelay] = useState(false);
+  const [delayError, setDelayError] = useState<string | null>(null);
+  async function submitDelay() {
+    if (savingDelay) return;
+    setSavingDelay(true);
+    setDelayError(null);
+    try {
+      await reportDelay(load.id, Number(delayMinutes), delayReason);
+      setDelayOpen(false);
+      show({ tone: 'success', title: 'Delay reported', detail: 'Your dispatcher will see the updated ETA.' });
+    } catch (e) {
+      setDelayError(e instanceof Error ? e.message : 'Could not report the delay.');
+    } finally { setSavingDelay(false); }
+  }
+
+  // The sticky bar is never empty while the trip is active: it always names the
+  // immediate physical deed. Before the driver has left, that is "navigate" — the
+  // arrival milestone still only appears once en route (see `arrivalAction`).
+  const notLeftYet = (tripStage === 'confirmed' || tripStage === 'loaded') && !enRouteActive;
+  const stickyPrimary: { label: string; onClick: () => void; disabled?: boolean; loading?: boolean; icon?: ReactNode } | null =
+    cancelled ? null
+      : notLeftYet ? { label: `Navigate to ${navigateTarget}`, icon: <Icon name="map-pin" size="sm" />, onClick: () => { void goNavigate(navigateStop.key, navigateStop.mapsQuery); } }
+      : tripStage === 'delivered' ? { label: uploadingPod ? 'Saving document…' : 'Upload POD', disabled: uploadingPod, loading: uploadingPod, onClick: () => podInputRef.current?.click() }
+      : enRouteActive && arrivalAction ? { label: arrivalAction.label, disabled: updatingStage, loading: updatingStage, onClick: () => { void confirmMilestone(); } }
+      : nextAction ? { label: nextAction.label, disabled: updatingStage || (tripStage === 'at-delivery' && !handoverConfirmed), loading: updatingStage, onClick: () => { void confirmMilestone(); } }
+      : null;
+
   return (
     <V2Frame active="Trips">
-      <div className="absolute inset-x-0 top-0 bottom-[117px] z-20 flex flex-col">
+      <div className="absolute inset-x-0 top-0 bottom-[117px] z-10 flex flex-col">
         <V2BackBar title={`Trip ${tripId}`} fallback="/v2/trips" />
-        <div className="flex min-h-0 flex-1 flex-col gap-[12px] overflow-y-auto px-[16px] pb-[12px] pt-[12px]">
+        <div className="flex min-h-0 flex-1 flex-col gap-[12px] overflow-y-auto bg-[var(--color-bg-canvas)] px-[16px] pb-[12px] pt-[12px] [&>*]:shrink-0">
         <h1 className="sr-only">Trip details</h1>
 
         {/* Summary — route map + compact payout hero (Postmates-style: map on top, sheet below) */}
@@ -273,7 +322,7 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
                 €{load.rate}
               </p>
               <p className="text-caption-12 opacity-90">
-                {load.km} km loaded · €{load.perKm.toFixed(2)}/km · {load.vehicle}
+                {load.km} km loaded · €{load.perKm.toFixed(2)}/km
               </p>
               <PayoutRow load={load} compact />
             </section>
@@ -307,21 +356,35 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
               <span className="shrink-0 text-caption-12 text-[var(--color-text-secondary)]">{load.km} km loaded</span>
             </div>
             <ol className="mt-[12px] flex flex-col" aria-label="Route stops">
-              {stops.map((stop, i) => (
+              {stops.map((stop, i) => {
+                const isCurrent = !cancelled && i === currentStopIndex;
+                const isHere = !cancelled && i === facilityIndex;
+                return (
                 <li key={stop.label} className="relative flex gap-[12px] pb-[12px] last:pb-0">
                   {i < stops.length - 1 && (
                     <span aria-hidden className="absolute left-[11px] top-[24px] h-[calc(100%-24px)] w-[2px] bg-[var(--color-border-default)]" />
                   )}
-                  <span className="relative z-[1] flex h-[24px] w-[24px] shrink-0 items-center justify-center" aria-hidden>
-                    <span className={`h-[10px] w-[10px] rounded-full ${i === 0 ? 'bg-[var(--color-action-primary)]' : 'bg-[var(--color-border-strong)]'}`} />
+                  <span
+                    className={`relative z-[1] flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full text-label-12 ${isCurrent ? 'bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]' : 'border border-[var(--color-border-strong)] text-[var(--color-text-secondary)]'}`}
+                    aria-hidden
+                  >
+                    {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-body-14 text-[var(--color-text-primary)]">
+                    <p className={`text-caption-12 uppercase tracking-wide ${isCurrent ? 'text-[var(--color-action-primary)]' : 'text-[var(--color-text-tertiary)]'}`}>
+                      {isCurrent ? 'Now' : 'Then'} · {stop.label} · {stop.city}
+                    </p>
+                    <p className={`mt-[2px] text-body-14 ${isCurrent ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'}`}>
                       {stop.site.address}
                     </p>
                     <p className="mt-[2px] text-caption-12 text-[var(--color-text-secondary)]">
                       {stop.day === 'today' ? 'Today' : 'Tomorrow'} · {stop.window} · {stop.site.note}
                     </p>
+                    {isHere && (
+                      <p className="mt-[4px] text-caption-12 text-[var(--color-action-primary)]" role="status">
+                        Arrived {new Date(stageAt ?? '').toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} · {minutesHere} min here
+                      </p>
+                    )}
                   </div>
                   <div className="flex shrink-0 items-start gap-[4px]">
                     <a
@@ -341,7 +404,8 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
                     </button>
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ol>
           </section>
 
@@ -389,7 +453,7 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
             {state.applications[load.id]?.pod && <p className="mt-[8px] text-body-14">{state.applications[load.id].pod?.filename}</p>}
             <label className="mt-[8px] block text-body-14 text-[var(--color-text-primary)]">
               {uploadingPod ? 'Saving document…' : state.applications[load.id]?.pod ? 'Replace document' : 'Upload POD (PDF or image, max 2 MB)'}
-              <input type="file" accept=".pdf,image/jpeg,image/png,image/webp" disabled={uploadingPod} onChange={(event) => { void uploadPod(event.target.files?.[0]); event.target.value = ''; }} className="mt-[8px] block w-full text-body-14" />
+              <input ref={podInputRef} type="file" accept=".pdf,image/jpeg,image/png,image/webp" disabled={uploadingPod} onChange={(event) => { void uploadPod(event.target.files?.[0]); event.target.value = ''; }} className="mt-[8px] block w-full text-body-14" />
             </label>
             {podError && <p role="alert" className="mt-[8px] text-body-14">{podError}</p>}
           </section>
@@ -413,19 +477,12 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
               onClick={() => setDocsOpen(true)}
             />
           )}
-          {!cancelled && tripStage === 'confirmed' && (
-            <ButtonLink
-              label="Cancel trip"
-              full
-              onClick={() => setCancelOpen(true)}
-            />
-          )}
-          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && !enRouteActive && (
+          {!cancelled && tripStage !== 'delivered' && (
             <Button
-              label="Navigate in Google Maps"
+              label={delayReport ? `Delay reported · ${delayReport.minutes} min` : 'Report a delay'}
               appearance="secondary"
-              icon={<Icon name="map-pin" size="sm" />}
-              onClick={() => { void goNavigate(navigateStop.key, navigateStop.mapsQuery); }}
+              icon={<Icon name="clock" size="sm" />}
+              onClick={() => { setDelayError(null); setDelayOpen(true); }}
             />
           )}
           {!cancelled && enRouteActive && (
@@ -438,22 +495,63 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
           {cancelled && (
             <Button label="Back to loads" onClick={() => navigate('/v2')} />
           )}
+          {/* Destructive action goes last: it is not a peer of the primary. */}
+          {!cancelled && tripStage === 'confirmed' && (
+            <ButtonLink
+              label="Cancel trip"
+              full
+              onClick={() => setCancelOpen(true)}
+            />
+          )}
         </div>
       </div>
 
-      {/* Sticky primary action above the tab bar (Postmates-style sheet CTA).
-          Arrival milestones live ONLY here (no inline duplicate): before Navigate
-          arrivalAction is null, so nothing renders; other stages keep nextAction. */}
-      {!cancelled && ((tripStage === 'confirmed' || tripStage === 'loaded') ? arrivalAction : nextAction) && (
+      {/* Sticky primary action above the tab bar. It is never empty while the trip is
+          active: before the driver leaves it carries Navigate, once en route it carries
+          the arrival milestone, and after delivery it carries the POD capture. */}
+      {stickyPrimary && (
         <div className="absolute inset-x-0 bottom-[117px] z-20 border-t border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-[16px] pb-[12px] pt-[8px]">
-          {(tripStage === 'confirmed' || tripStage === 'loaded') && arrivalAction ? (
-            <Button label={arrivalAction.label} appearance="primary" disabled={updatingStage} loading={updatingStage} onClick={() => { void confirmMilestone(); }} />
-          ) : nextAction && tripStage !== 'confirmed' && tripStage !== 'loaded' ? (
-            <Button label={nextAction.label} appearance="primary" disabled={updatingStage || (tripStage === 'at-delivery' && !handoverConfirmed)} loading={updatingStage} onClick={() => { void confirmMilestone(); }} />
-          ) : null}
+          <Button label={stickyPrimary.label} appearance="primary" icon={stickyPrimary.icon} disabled={stickyPrimary.disabled} loading={stickyPrimary.loading} onClick={stickyPrimary.onClick} />
         </div>
       )}
 
+      <Sheet open={delayOpen} label="Report a delay" onClose={() => { if (!savingDelay) setDelayOpen(false); }}>
+        <h2 className="text-heading-20 text-[var(--color-text-primary)]">Report a delay</h2>
+        <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">How many minutes are you delayed?</p>
+        <div className="mt-[12px] flex gap-[8px]" role="group" aria-label="Delay minutes">
+          {[10, 15, 30, 60].map((m) => (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={delayMinutes === String(m)}
+              onClick={() => setDelayMinutes(String(m))}
+              className={`h-[var(--size-control-mobile)] flex-1 rounded-[var(--radius-sm)] border text-label-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${delayMinutes === String(m) ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]' : 'border-[var(--color-action-border)] text-[var(--color-action-text)]'}`}
+            >
+              {m} min
+            </button>
+          ))}
+        </div>
+        <p className="mt-[12px] text-caption-12 text-[var(--color-text-secondary)]">Reason</p>
+        <div className="mt-[4px] flex flex-wrap gap-[8px]" role="group" aria-label="Delay reason">
+          {['Traffic', 'Loading', 'Breakdown', 'Other'].map((r) => (
+            <button
+              key={r}
+              type="button"
+              aria-pressed={delayReason === r}
+              onClick={() => setDelayReason(r)}
+              className={`rounded-[var(--radius-pill)] border px-[12px] py-[6px] text-label-12 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${delayReason === r ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]' : 'border-[var(--color-action-border)] text-[var(--color-action-text)]'}`}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+        {delayError && <p role="alert" className="mt-[12px] text-body-14 text-[var(--color-text-danger)]">{delayError}</p>}
+        <p className="mt-[12px] text-caption-12 text-[var(--color-text-secondary)]">Prototype only — no dispatcher is actually notified.</p>
+        <div className="mt-[16px] flex flex-col gap-[8px]">
+          <Button label={savingDelay ? 'Sending…' : 'Send to dispatcher'} loading={savingDelay} onClick={() => { void submitDelay(); }} />
+          <Button label="Keep driving" appearance="secondary" disabled={savingDelay} onClick={() => setDelayOpen(false)} />
+        </div>
+      </Sheet>
       <CancelTripSheet
         open={cancelOpen}
         load={load}
@@ -471,14 +569,18 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
 
 export function TripDetails() {
   const { id = '' } = useParams();
-  const [details, setDetails] = useState<Awaited<ReturnType<typeof getTripDetails>> | null>(null);
+  // `undefined` = still loading, `null` = no confirmed trip for this load.
+  // They must stay distinct: `getTripDetails` returns `null` for "not found", so using
+  // `null` as the loading sentinel rendered the not-found case as an endless spinner.
+  // Same convention as InvoiceDetails (`src/screens/v2/Invoices.tsx`).
+  const [details, setDetails] = useState<Awaited<ReturnType<typeof getTripDetails>> | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
     setLoadError(false);
-    setDetails(null);
+    setDetails(undefined);
     getTripDetails(id).then((item) => { if (active) setDetails(item); })
       .catch(() => { if (active) setLoadError(true); });
     return () => { active = false; };
@@ -500,7 +602,13 @@ export function TripDetails() {
       </div>
       <main className="absolute inset-x-0 top-[var(--nav-bar-back-h)] px-[16px]">
         <h1 className="sr-only">Trip details</h1>
-        <p role="status" className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] text-body-14 text-[var(--color-text-secondary)]">{loadError ? 'Could not load trip details. Check your connection and try again.' : details === null ? 'Loading trip…' : 'No confirmed trip is available for this load.'}</p>
+        {!loadError && details === undefined && <p role="status" className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] text-body-14 text-[var(--color-text-secondary)]">Loading trip…</p>}
+        {loadError && <p role="alert" className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] text-body-14 text-[var(--color-text-secondary)]">Could not load trip details. Check your connection and try again.</p>}
+        {!loadError && details === null && <div className="mt-[var(--spacing-16)] flex flex-col items-center gap-[var(--spacing-8)] rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] px-[var(--spacing-16)] py-[var(--spacing-24)] text-center">
+          <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="truck" size="md" /></span>
+          <p className="text-heading-14 text-[var(--color-text-primary)]">No confirmed trip for this load</p>
+          <p className="text-body-14 text-[var(--color-text-secondary)]">Book a load first — the itinerary appears here once the customer confirms.</p>
+        </div>}
         {loadError && <div className="mt-[16px]"><Button label="Retry" onClick={() => setLoadAttempt((n) => n + 1)} /></div>}
         <div className="mt-[16px]"><Button label="Back to loads" appearance="secondary" onClick={emptyBack} /></div>
       </main>

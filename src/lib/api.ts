@@ -613,7 +613,7 @@ export async function advanceTripStage(loadId: string, expected: TripStage, next
   if (next === 'delivered' && !handoverConfirmed) throw new Error('Confirm cargo handover before completing delivery');
   const deliveredAt = new Date().toISOString();
   // Arriving at a stop ends the en-route leg — the next Navigate starts a fresh one.
-  const patch: Partial<typeof application> = { tripStage: next, enRouteTo: undefined };
+  const patch: Partial<typeof application> = { tripStage: next, enRouteTo: undefined, stageAt: deliveredAt };
   // Build on ensureLedger(): delivering on a fresh store must keep the seeded
   // €500 history — appending to the raw (empty) array would drop it.
   let ledger = ensureLedger();
@@ -647,6 +647,32 @@ export async function advanceTripStage(loadId: string, expected: TripStage, next
   }
   store.set({ ledger, applications: { [loadId]: { ...application, ...patch } } });
   return { loadId, tripStage: next };
+}
+
+/** Minutes elapsed since an ISO timestamp (0 when unknown) — powers "time at facility". */
+export function minutesSince(iso: string | undefined, now = Date.now()): number {
+  if (!iso) return 0;
+  const at = Date.parse(iso);
+  if (!Number.isFinite(at)) return 0;
+  return Math.max(0, Math.floor((now - at) / 60_000));
+}
+
+/**
+ * Driver reports a delay so the dispatcher can be told.
+ * Prototype: recorded on the trip and shown back to the driver; nothing is pushed anywhere.
+ */
+export async function reportDelay(loadId: string, minutes: number, reason: string) {
+  await wait(200);
+  const current = store.get();
+  const application = current.applications[loadId];
+  if (!application || application.status !== ApplicationStatus.CONFIRMED || application.cancelledAfterConfirm) {
+    throw new Error('This trip is not active');
+  }
+  if (!Number.isFinite(minutes) || minutes <= 0) throw new Error('Enter how many minutes you are delayed.');
+  if (!reason.trim()) throw new Error('Choose a reason for the delay.');
+  const delayReport = { minutes: Math.round(minutes), reason: reason.trim(), at: new Date().toISOString() };
+  store.set({ applications: { [loadId]: { ...application, delayReport } } });
+  return { loadId, delayReport };
 }
 
 /**
