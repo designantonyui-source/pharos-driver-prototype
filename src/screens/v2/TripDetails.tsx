@@ -301,7 +301,12 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
             </button>
           )}
         />
-        <div className="flex min-h-0 flex-1 flex-col gap-[12px] overflow-y-auto bg-[var(--color-bg-canvas)] px-[16px] pb-[12px] pt-[12px] [&>*]:shrink-0">
+        {/* One scroll surface for the whole screen. Everything below the back bar belongs
+            here — including the action buttons. When the buttons were siblings of this
+            box they sat outside the scroller and the sticky bar covered the last one
+            (`Cancel trip` was unreachable). `pb` reserves the sticky bar's height so the
+            final button can always be scrolled clear of it. */}
+        <div className="flex min-h-0 flex-1 flex-col gap-[12px] overflow-y-auto bg-[var(--color-bg-canvas)] px-[16px] pb-[calc(var(--sticky-bar-h)+16px)] pt-[12px] [&>*]:shrink-0">
         <h1 className="sr-only">Trip details</h1>
 
         {/* Summary — status + money hero. The route art is gone: it was aria-hidden,
@@ -424,7 +429,6 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
               Customer rating: {load.rating.toFixed(1)} / 5
             </p>
           </section>
-        </div>
 
         {tripStage === 'at-delivery' && !cancelled && (
           <label className="flex items-start gap-[10px] py-[8px] text-body-14 text-[var(--color-text-primary)]">
@@ -496,6 +500,7 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
               onClick={() => setCancelOpen(true)}
             />
           )}
+        </div>
         </div>
       </div>
 
