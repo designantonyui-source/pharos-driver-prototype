@@ -5,6 +5,7 @@ import { Search } from './screens/Search';
 import { Home as HomeV2 } from './screens/v2/Home';
 import { ApplicationTracker } from './screens/v2/ApplicationTracker';
 import { TripDetails } from './screens/v2/TripDetails';
+import { TripChat } from './screens/v2/TripChat';
 import { DemoToggle } from './components/v2/DemoToggle';
 import { Account, EditContact } from './screens/v2/Account';
 import { DismissedLoads } from './screens/v2/DismissedLoads';
@@ -41,6 +42,7 @@ export default function App() {
       />
       <Route path="/application/:id" element={<ApplicationTracker />} />
       <Route path="/trip/:id" element={<TripDetails />} />
+      <Route path="/trip/:id/chat" element={<TripChat />} />
       <Route path="/v2/trips" element={<Trips />} />
       <Route path="/v2/account" element={<Account />} />
       <Route path="/v2/account/profile" element={<Account detail />} />

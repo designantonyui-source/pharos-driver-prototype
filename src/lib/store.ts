@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApplicationStatus } from './models';
 import { migrateLegacyMethod, normalizeContactProfile, normalizePayoutMethod, normalizeSchedule, type ContactProfile, type LedgerEntry, type PayoutMethod, type PayoutSchedule, type ScheduledRun } from './profile';
+import type { ChatMessage } from './chat';
 
 export type Status = ApplicationStatus;
 
@@ -42,6 +43,8 @@ export type AppState = {
   payoutSchedule: PayoutSchedule;
   /** Record of auto executions (Wave 3, prototype: evaluated on Balance open). */
   scheduledRuns: ScheduledRun[];
+  /** Dispatcher threads, one per trip (prototype: local only, nothing is transmitted). */
+  chatMessages: ChatMessage[];
   applications: Record<string, LoadApplication>;
   route: { from: string; to: string };
   loadId: string | null;
@@ -57,6 +60,7 @@ const initial: AppState = {
   ledger: [],
   payoutSchedule: { mode: 'off' },
   scheduledRuns: [],
+  chatMessages: [],
   applications: {},
   route: { from: '', to: '' },
   loadId: null,
@@ -95,6 +99,14 @@ function isLedgerEntry(value: unknown): value is LedgerEntry {
   return false;
 }
 
+function isChatMessage(value: unknown): value is ChatMessage {
+  if (typeof value !== 'object' || value === null) return false;
+  const m = value as Record<string, unknown>;
+  return typeof m.id === 'string' && typeof m.loadId === 'string'
+    && (m.author === 'driver' || m.author === 'dispatcher' || m.author === 'system')
+    && typeof m.text === 'string' && typeof m.at === 'string';
+}
+
 function read(): AppState {
   try {
     const raw = localStorage.getItem(KEY);
@@ -120,11 +132,12 @@ function read(): AppState {
       }
     } catch { /* Ignore malformed prototype payout data without losing the journey. */ }
     const ledger = Array.isArray(saved.ledger) ? saved.ledger.filter(isLedgerEntry) : [];
+    const chatMessages = Array.isArray(saved.chatMessages) ? saved.chatMessages.filter(isChatMessage) : [];
     const payoutSchedule = normalizeSchedule(saved.payoutSchedule);
     const scheduledRuns = Array.isArray(saved.scheduledRuns)
       ? saved.scheduledRuns.filter((r): r is ScheduledRun => typeof r === 'object' && r !== null && typeof (r as ScheduledRun).id === 'string')
       : [];
-    return { ...initial, ...saved, applications, status, contactProfile, payoutMethods, payoutMethod: undefined, ledger, payoutSchedule, scheduledRuns };
+    return { ...initial, ...saved, applications, status, contactProfile, payoutMethods, payoutMethod: undefined, ledger, payoutSchedule, scheduledRuns, chatMessages };
   } catch {
     return initial;
   }
@@ -158,6 +171,7 @@ export const store = {
     try { next.payoutSchedule = normalizeSchedule(next.payoutSchedule); }
     catch { next.payoutSchedule = { mode: 'off' }; }
     if (!Array.isArray(next.scheduledRuns)) next.scheduledRuns = [];
+    if (!Array.isArray(next.chatMessages)) next.chatMessages = [];
     localStorage.setItem(KEY, JSON.stringify(next));
     memory = next;
     listeners.forEach((listener) => listener(memory));

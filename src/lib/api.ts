@@ -11,6 +11,7 @@ import { store, type LoadApplication, type Status } from './store';
 import { V2_LOADS, type V2Load } from './v2/loads';
 import { BL_ORDERS, type BlOrder } from './bl/logic';
 import { createDemoInvoice } from './invoices';
+import { chatId, seedThread, type ChatMessage } from './chat';
 
 import { maskCard, maskIban, normalizeContactProfile, normalizePayoutMethod, normalizeSchedule, type ContactProfile, type LedgerEntry, type PayoutMethod, type PayoutSchedule, type ScheduledRun } from './profile';
 import { MockPayoutProvider, PROTOTYPE_FEES, type Destination, type PayoutProvider, type PayoutQuote } from './psp';
@@ -672,7 +673,41 @@ export async function reportDelay(loadId: string, minutes: number, reason: strin
   if (!reason.trim()) throw new Error('Choose a reason for the delay.');
   const delayReport = { minutes: Math.round(minutes), reason: reason.trim(), at: new Date().toISOString() };
   store.set({ applications: { [loadId]: { ...application, delayReport } } });
+  // The delay and the conversation are the same event: keep them in one place.
+  appendSystemMessage(loadId, `Driver reported a ${delayReport.minutes} min delay — ${delayReport.reason.toLowerCase()}.`);
   return { loadId, delayReport };
+}
+
+/* ---------------- Dispatcher chat (one thread per trip) ---------------- */
+
+const byChatTime = (a: ChatMessage, b: ChatMessage) => +new Date(a.at) - +new Date(b.at);
+
+/** Dispatcher thread for one trip. Seeded on first open so it is never an empty screen. */
+export async function getThread(loadId: string): Promise<ChatMessage[]> {
+  await wait(200);
+  const existing = store.get().chatMessages.filter((m) => m.loadId === loadId);
+  if (existing.length > 0) return [...existing].sort(byChatTime);
+  const load = getLoad(loadId);
+  if (!load) return [];
+  const seeded = seedThread(loadId, { from: load.from, to: load.to, gate: load.pickupSite.note });
+  store.set({ chatMessages: [...store.get().chatMessages, ...seeded] });
+  return [...seeded].sort(byChatTime);
+}
+
+/** Driver sends a message. Prototype: stored on this device, no counterpart answers. */
+export async function sendMessage(loadId: string, text: string): Promise<ChatMessage> {
+  const body = text.trim();
+  if (!body) throw new Error('Write a message first.');
+  const message: ChatMessage = { id: chatId('msg'), loadId, author: 'driver' as const, text: body, at: new Date().toISOString() };
+  store.set({ chatMessages: [...store.get().chatMessages, message] });
+  return message;
+}
+
+/** System line in the thread — when an app action belongs in the conversation. */
+function appendSystemMessage(loadId: string, text: string): ChatMessage {
+  const message: ChatMessage = { id: chatId('sys'), loadId, author: 'system', text, at: new Date().toISOString() };
+  store.set({ chatMessages: [...store.get().chatMessages, message] });
+  return message;
 }
 
 /**

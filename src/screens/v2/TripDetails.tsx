@@ -8,7 +8,6 @@ import { V2BackBar, useV2Back } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { CancelTripSheet } from '../../components/v2/CancelTripSheet';
 import { Sheet } from '../../components/v2/Sheet';
-import { RoutePreview } from '../../components/v2/RoutePreview';
 import { TripDocumentsSheet } from '../../components/v2/TripDocumentsSheet';
 import { Toast, useToast } from '../../components/v2/Toast';
 import { TRIP_STAGE_STEPS, advanceTripStage, cancelTrip, cancellationPenalty, getDefaultMethod, getTripDetails, methodLabel, minutesSince, reportDelay, setEnRoute, submitProofOfDelivery, type PayoutMethod, type TripStage } from '../../lib/api';
@@ -288,13 +287,27 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
   return (
     <V2Frame active="Trips">
       <div className="absolute inset-x-0 top-0 bottom-[117px] z-10 flex flex-col">
-        <V2BackBar title={`Trip ${tripId}`} fallback="/v2/trips" />
+        <V2BackBar
+          title={`Trip ${tripId}`}
+          fallback="/v2/trips"
+          trailing={(
+            <button
+              type="button"
+              onClick={() => navigate(`/trip/${load.id}/chat`)}
+              aria-label="Message your dispatcher"
+              className="flex h-[44px] w-[44px] items-center justify-center rounded-[var(--radius-md)] text-[var(--color-action-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+            >
+              <Icon name="message-square" size="md" />
+            </button>
+          )}
+        />
         <div className="flex min-h-0 flex-1 flex-col gap-[12px] overflow-y-auto bg-[var(--color-bg-canvas)] px-[16px] pb-[12px] pt-[12px] [&>*]:shrink-0">
         <h1 className="sr-only">Trip details</h1>
 
-        {/* Summary — route map + compact payout hero (Postmates-style: map on top, sheet below) */}
+        {/* Summary — status + money hero. The route art is gone: it was aria-hidden,
+            pointer-events-none, 190px of a ~635px viewport, and it duplicated the
+            route line already drawn below it. */}
         <div className="shrink-0 overflow-hidden rounded-[var(--radius-lg)] shadow-card">
-            <RoutePreview from={load.from} to={load.to} />
             <section
               className="bg-[var(--color-nav-bg)] px-[16px] pb-[12px] pt-[10px] text-[var(--color-nav-text)]"
               aria-label="Trip summary"
@@ -394,14 +407,6 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
                     >
                       <Icon name="phone" size="sm" />
                     </a>
-                    <button
-                      type="button"
-                      onClick={() => { void goNavigate(stop.key, stop.mapsQuery); }}
-                      aria-label={`Open ${stop.label.toLowerCase()} in Maps`}
-                      className="flex h-[44px] w-[44px] items-center justify-center rounded-[var(--radius-md)] text-[var(--color-action-primary)] hover:bg-[var(--color-action-secondary-hover)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
-                    >
-                      <Icon name="map-pin" size="sm" />
-                    </button>
                   </div>
                 </li>
                 );
@@ -418,18 +423,6 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
             <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
               Customer rating: {load.rating.toFixed(1)} / 5
             </p>
-            {!cancelled && (
-              <div className="mt-[12px]">
-                <Button
-                  label="Contact dispatcher"
-                  appearance="secondary"
-                  icon={<Icon name="phone" size="sm" />}
-                  onClick={() =>
-                    show({ tone: 'info', title: 'Dispatcher chat is not connected in this demo.' })
-                  }
-                />
-              </div>
-            )}
           </section>
         </div>
 
