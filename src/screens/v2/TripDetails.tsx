@@ -287,20 +287,7 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
   return (
     <V2Frame active="Trips">
       <div className="absolute inset-x-0 top-0 bottom-[117px] z-10 flex flex-col">
-        <V2BackBar
-          title={`Trip ${tripId}`}
-          fallback="/v2/trips"
-          trailing={(
-            <button
-              type="button"
-              onClick={() => navigate(`/trip/${load.id}/chat`)}
-              aria-label="Message your dispatcher"
-              className="flex h-[44px] w-[44px] items-center justify-center rounded-[var(--radius-md)] text-[var(--color-action-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
-            >
-              <Icon name="message-square" size="md" />
-            </button>
-          )}
-        />
+        <V2BackBar title={`Trip ${tripId}`} fallback="/v2/trips" />
         {/* One scroll surface for the whole screen. Everything below the back bar belongs
             here — including the action buttons. When the buttons were siblings of this
             box they sat outside the scroller and the sticky bar covered the last one
@@ -419,7 +406,11 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
             </ol>
           </section>
 
-          {/* Customer */}
+          {/* Customer + the dispatcher you talk to about this trip.
+              The dispatcher action is labelled on purpose: the unlabelled back-bar chat icon
+              that replaced it was a guessing game, and the labelled button before that only
+              fired a "not connected" toast. The icon matches the label — this opens a thread,
+              it does not dial. */}
           <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card">
             <h2 className="text-label-14 text-[var(--color-text-secondary)]">Customer</h2>
             <p className="mt-[8px] text-heading-20 text-[var(--color-text-primary)]">
@@ -428,6 +419,16 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
             <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
               Customer rating: {load.rating.toFixed(1)} / 5
             </p>
+            {!cancelled && (
+              <div className="mt-[12px]">
+                <Button
+                  label="Message your dispatcher"
+                  appearance="secondary"
+                  icon={<Icon name="message-square" size="sm" />}
+                  onClick={() => navigate(`/trip/${load.id}/chat`)}
+                />
+              </div>
+            )}
           </section>
 
         {tripStage === 'at-delivery' && !cancelled && (
