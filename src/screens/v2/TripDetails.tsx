@@ -493,11 +493,12 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
           {cancelled && (
             <Button label="Back to loads" onClick={() => navigate('/v2')} />
           )}
-          {/* Destructive action goes last: it is not a peer of the primary. */}
+          {/* Destructive action goes last (it is not a peer of the primary) AND is red:
+              as a quiet teal link it hid the fact that the action cannot be undone. */}
           {!cancelled && tripStage === 'confirmed' && (
-            <ButtonLink
+            <Button
               label="Cancel trip"
-              full
+              appearance="danger"
               onClick={() => setCancelOpen(true)}
             />
           )}

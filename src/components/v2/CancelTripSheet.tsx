@@ -4,6 +4,7 @@
  * props: open, load, penalty, cancelling, error, onConfirm, onClose
  * tokens: color-bg-surface, color-text-primary, color-text-secondary,
  *         color-status-warning-bg, color-status-warning-text, color-bg-subtle,
+ *         color-text-danger, color-border-danger, color-status-danger-bg,
  *         radius-md
  */
 import { useEffect, useState } from 'react';
@@ -105,7 +106,7 @@ export function CancelTripSheet({
       </div>
 
       <div className="mt-[var(--spacing-20)] flex flex-col gap-[var(--spacing-8)]">
-        <Button label="Cancel trip" loading={cancelling} disabled={cancelling || !reason} onClick={() => { if (reason) onConfirm(reason); }} />
+        <Button label="Cancel trip" appearance="danger" loading={cancelling} disabled={cancelling || !reason} onClick={() => { if (reason) onConfirm(reason); }} />
         <Button label="Keep trip" appearance="secondary" disabled={cancelling} onClick={onClose} />
       </div>
     </Sheet>

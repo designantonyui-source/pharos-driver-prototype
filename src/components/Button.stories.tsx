@@ -3,7 +3,7 @@ import { Button, ButtonLink } from './Button';
 
 /**
  * Mirrors `Pharos/Button` (12:38): Appearance=Primary/Secondary × Size=Web(40)/Mobile(48) ×
- * State=Default/Hover/Pressed/Focus/Disabled/Loading.
+ * State=Default/Hover/Pressed/Focus/Disabled/Loading — plus the prototype-led `danger` appearance.
  * Hover and Pressed are CSS pseudo-classes, so they have no separate story — they are verified
  * against the Figma colours with a real pointer.
  */
@@ -26,6 +26,18 @@ export const SecondaryLoading: Story = { args: { label: 'Use my location', appea
 export const Focus: Story = { args: { label: 'Send application', focus: true } };
 
 export const SecondaryFocus: Story = { args: { label: 'View load details', appearance: 'secondary', focus: true } };
+
+/**
+ * PROTOTYPE-LED: the Figma set has only Primary/Secondary, so these four must go back into it.
+ * One destructive secondary — white fill, danger border, danger label, danger-tinted hover.
+ */
+export const Danger: Story = { args: { label: 'Cancel trip', appearance: 'danger' } };
+
+export const DangerDisabled: Story = { args: { label: 'Cancel trip', appearance: 'danger', disabled: true } };
+
+export const DangerLoading: Story = { args: { label: 'Cancel trip', appearance: 'danger', loading: true } };
+
+export const DangerFocus: Story = { args: { label: 'Cancel trip', appearance: 'danger', focus: true } };
 
 export const WebSize: Story = {
   render: () => (
