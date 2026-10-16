@@ -163,14 +163,14 @@ test('confirmed application opens trip details and demo actions', async ({ page,
   await expect(stops).toContainText('Rue des Champs 12, 59000 Lille');
   await expect(stops).toContainText('Rue du Port 48, 1000 Brussels');
   await expect(stops).toContainText('17:00–18:00');
-  await expect(stops.getByRole('button', { name: 'Open pickup in Maps' })).toBeVisible();
+  await expect(stops).toContainText('Gate B · Bay 4');
   await expect(stops.getByRole('link', { name: /Call pickup/ })).toHaveAttribute('href', 'tel:+33320112233');
   await expect(page.getByText('Customer rating: 4.8 / 5', { exact: true })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('€360');
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('TR-nordcargo');
   await expect(page.getByRole('region', { name: 'Cargo' })).toContainText('Curtainsider');
   await expect(page.getByRole('region', { name: 'Trip progress' })).toContainText('Confirmed');
-  await expect(page.getByRole('button', { name: 'Contact dispatcher', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Message your dispatcher', exact: true })).toBeVisible();
   // Arrival is not offered before navigation — the driver has not left yet.
   await expect(page.getByRole('button', { name: "I've arrived at pickup", exact: true })).toHaveCount(0);
 
@@ -181,7 +181,7 @@ test('confirmed application opens trip details and demo actions', async ({ page,
   await expect(docs).toHaveCount(0);
 
   // Navigate opens Google Maps in a new tab and switches the trip to en-route.
-  const navigate = page.getByRole('button', { name: 'Navigate in Google Maps', exact: true });
+  const navigate = page.getByRole('button', { name: 'Navigate to pickup', exact: true });
   const [mapsPage] = await Promise.all([
     context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
     navigate.click(),
@@ -211,7 +211,7 @@ test('portfolio happy path: apply to payout', async ({ page, context }) => {
   await expect(page).toHaveURL(/#\/trip\/nordcargo$/);
 
   // En-route to pickup, then arrive.
-  const navigate = page.getByRole('button', { name: 'Navigate in Google Maps', exact: true });
+  const navigate = page.getByRole('button', { name: 'Navigate to pickup', exact: true });
   const [mapsPage] = await Promise.all([
     context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
     navigate.click(),
@@ -223,7 +223,7 @@ test('portfolio happy path: apply to payout', async ({ page, context }) => {
   // Loading complete, en-route to delivery, arrive, hand over, complete.
   await page.getByRole('button', { name: 'Confirm loading complete', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('Loaded');
-  const navigateDelivery = page.getByRole('button', { name: 'Navigate in Google Maps', exact: true });
+  const navigateDelivery = page.getByRole('button', { name: 'Navigate to delivery', exact: true });
   const [mapsDelivery] = await Promise.all([
     context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
     navigateDelivery.click(),
