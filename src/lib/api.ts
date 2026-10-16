@@ -78,7 +78,7 @@ function ensureLedger(): LedgerEntry[] {
   if (current.length > 0) return current;
   const seeded = seedLedger();
   store.set({ ledger: seeded });
-  return seeded;
+  return store.get().ledger;
 }
 
 export type BalanceSummary = { available: number; pending: number; currency: 'EUR' };
@@ -307,7 +307,7 @@ export async function addAdjustment(input: { amount: number; reason: AdjustmentR
     status: 'applied',
     createdAt: new Date().toISOString(),
   };
-  store.set({ ledger: [...store.get().ledger, entry] });
+  store.set({ ledger: [...ensureLedger(), entry] });
   return entry;
 }
 
@@ -373,7 +373,7 @@ export async function requestWithdrawal(amount: number, methodId?: string) {
     expectedAt: quote.arrives,
     idempotencyKey: `${result.providerRef}`,
   };
-  store.set({ ledger: [...store.get().ledger, entry] });
+  store.set({ ledger: [...ensureLedger(), entry] });
   return { entry, eta: quote.eta };
 }
 
@@ -614,7 +614,9 @@ export async function advanceTripStage(loadId: string, expected: TripStage, next
   const deliveredAt = new Date().toISOString();
   // Arriving at a stop ends the en-route leg — the next Navigate starts a fresh one.
   const patch: Partial<typeof application> = { tripStage: next, enRouteTo: undefined };
-  let ledger = current.ledger;
+  // Build on ensureLedger(): delivering on a fresh store must keep the seeded
+  // €500 history — appending to the raw (empty) array would drop it.
+  let ledger = ensureLedger();
   if (next === 'delivered') {
     patch.deliveryProofConfirmed = true;
     patch.deliveryCompletedAt = deliveredAt;

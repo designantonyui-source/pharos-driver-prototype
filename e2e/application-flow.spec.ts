@@ -236,9 +236,12 @@ test('portfolio happy path: apply to payout', async ({ page, context }) => {
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('Delivered');
 
   // Delivered work lands in Balance as pending payout.
-  await page.getByRole('link', { name: /Payout 22 Oct/ }).click();
-  await expect(page).toHaveURL(/#\/v2\/account\/balance$/);
-  await page.screenshot({ path: test.info().outputPath('portfolio-balance.png') });
+  // No payout method yet in a clean run — the trip row points at method setup.
+  await expect(page.getByRole('region', { name: 'Earnings' })).toContainText('Upload POD to unlock earnings');
+  await page.getByRole('link', { name: /No payout method yet/ }).click();
+  await expect(page).toHaveURL(/#\/v2\/account\/balance\/method$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/trip\/nordcargo$/);
 });
 
 

@@ -11,7 +11,11 @@
 - VAT: intra-EU B2B 0% reverse charge (Art. 196) — прототипный дефолт, НЕ утверждённая схема (§7 в `PAYMENTS-VISION.md`).
 - Связки: Documents → invoices; History trip rows → свой инвойс (chevron + note); invoice → trip (Open trip).
 - Состояния: row-скелетоны (shared shape), empty «No invoices yet» уже был.
-- Проверки: `pnpm test` 106/106, `pnpm check` чистый; e2e list → details → PDF popup → history link (Chrome).
+- Проверки: `pnpm test` 106/106, `pnpm check` чистый; e2e list → details → history link (Chrome; PDF-попап-хвост убран 2026-10-16 — flaky: попап закрывает контекст страницы; PDF покрыт unit-тестом `invoiceHtml`).
+
+## История
+
+- **2026-10-16, payments:** демо-инвойс создаётся только через `createDemoInvoice` при доставке `DEMO_LOAD_ID` (trip/ledger/invoice всегда согласованы); `customerPaysDemoTrip` помечает инвойс paid через `markDemoInvoicePaid` (см. `flows/balance.md`).
 
 ## История
 
