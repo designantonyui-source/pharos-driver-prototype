@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button, ButtonLink } from '../../components/Button';
 import { Icon } from '../../components/Icon';
-import { ProgressStep, type ProgressState } from '../../components/ProgressStep';
+import { type ProgressState } from '../../components/ProgressStep';
 import { V2BackBar, useV2Back } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { CancelTripSheet } from '../../components/v2/CancelTripSheet';
+import { RoutePreview } from '../../components/v2/RoutePreview';
 import { TripDocumentsSheet } from '../../components/v2/TripDocumentsSheet';
 import { Toast, useToast } from '../../components/v2/Toast';
 import { TRIP_STAGE_STEPS, advanceTripStage, cancelTrip, cancellationPenalty, getDefaultMethod, getTripDetails, methodLabel, setEnRoute, submitProofOfDelivery, type PayoutMethod, type TripStage } from '../../lib/api';
@@ -17,7 +18,7 @@ import type { V2Load } from '../../lib/v2/loads';
  * Payout row: shows the REAL payout method from the store, never the static load mock.
  * No method yet → explicit "Add payout method" CTA instead of a fake IBAN.
  */
-function PayoutRow({ load }: { load: V2Load }) {
+function PayoutRow({ load, compact = false }: { load: V2Load; compact?: boolean }) {
   const [method, setMethod] = useState<PayoutMethod | null | undefined>(undefined);
   useEffect(() => {
     let live = true;
@@ -30,13 +31,36 @@ function PayoutRow({ load }: { load: V2Load }) {
   return (
     <Link
       to={method ? '/v2/account/balance' : '/v2/account/balance/method'}
-      className="mt-[12px] flex min-h-[var(--size-control-mobile)] items-center gap-[8px] rounded-[var(--radius-md)] bg-[var(--color-nav-active)] px-[12px] text-body-14 text-[var(--color-text-inverse)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+      className={`flex min-h-[var(--size-control-mobile)] items-center gap-[8px] rounded-[var(--radius-md)] bg-[var(--color-nav-active)] px-[12px] text-body-14 text-[var(--color-text-inverse)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${compact ? 'mt-[8px]' : 'mt-[12px]'}`}
       aria-label={`Payout: ${body}. ${method ? 'Open Balance.' : 'Add payout method.'}`}
     >
       <span className="shrink-0" aria-hidden><Icon name="wallet" size="sm" /></span>
       <span className="min-w-0 flex-1">{body}</span>
       <span className="shrink-0" aria-hidden><Icon name="chevron-right" size="sm" /></span>
     </Link>
+  );
+}
+
+/**
+ * Horizontal stepper: 5 segments on one line (Postmates-style) with the
+ * current step named. Same TRIP_STAGE_STEPS source — only the layout is compact.
+ */
+function TripStepper({ steps }: { steps: { done: boolean; current: boolean; label: string }[] }) {
+  const currentIdx = steps.findIndex((s) => s.current);
+  const current = steps[currentIdx]?.label ?? '';
+  return (
+    <div>
+      <div className="flex items-center gap-[6px]" role="img" aria-label={`Trip progress: ${current}`}>
+        {steps.map((s) => (
+          <span
+            key={s.label}
+            className={`h-[4px] flex-1 rounded-full ${s.done || s.current ? 'bg-[var(--color-action-primary)]' : 'bg-[var(--color-border-default)]'}`}
+            title={s.done ? `${s.label}: done` : s.current ? `${s.label}: current` : s.label}
+          />
+        ))}
+      </div>
+      <p className="mt-[6px] text-caption-12 text-[var(--color-text-secondary)]">{current} · step {currentIdx + 1} of {steps.length}</p>
+    </div>
   );
 }
 
@@ -194,7 +218,11 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
   ];
   const navigateTarget: 'pickup' | 'delivery' = tripStage === 'confirmed' || tripStage === 'at-pickup' ? 'pickup' : 'delivery';
   const navigateStop = stops.find((stop) => stop.key === navigateTarget) ?? stops[0];
-  const arrivalAction = (navigateTarget === 'pickup' ? nextStage.confirmed : nextStage.loaded) ?? null;
+  // Arrival CTA lives ONLY in the sticky bar and ONLY once en-route to its leg.
+  // Before Navigate the driver has not left yet — there is nothing to arrive from
+  // (this is what the E2E asserts: toHaveCount(0) before Navigate).
+  const legArrival = navigateTarget === 'pickup' ? nextStage.confirmed : nextStage.loaded;
+  const arrivalAction = enRouteTo === navigateTarget ? legArrival ?? null : null;
   const enRouteActive = !cancelled && enRouteTo === navigateTarget
     && (navigateTarget === 'pickup' ? tripStage === 'confirmed' : tripStage === 'loaded');
 
@@ -202,66 +230,59 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
   const stepStates: ProgressState[] = TRIP_STAGE_STEPS.map((_, i) =>
     cancelled ? 'next' : i < stageIndex ? 'done' : i === stageIndex ? 'current' : 'next',
   );
+  const progressSteps = TRIP_STAGE_STEPS.map((step, i) => ({
+    label: step.label,
+    done: stepStates[i] === 'done',
+    current: stepStates[i] === 'current',
+  }));
 
   return (
     <V2Frame active="Trips">
-      <div className="absolute inset-x-0 top-0 z-20">
+      <div className="absolute inset-x-0 top-0 bottom-[117px] z-20 flex flex-col">
         <V2BackBar title={`Trip ${tripId}`} fallback="/v2/trips" />
-      </div>
-
-      <div className="absolute inset-x-0 top-[var(--nav-bar-back-h)] bottom-[117px] flex flex-col px-[16px]">
+        <div className="flex min-h-0 flex-1 flex-col gap-[12px] overflow-y-auto px-[16px] pb-[12px] pt-[12px]">
         <h1 className="sr-only">Trip details</h1>
 
-        <main className="flex min-h-0 flex-1 flex-col gap-[12px] overflow-y-auto pb-[12px]">
-          {/* Summary — payout hero: dark money card, rate first, payout as an action */}
-          <section
-            className="rounded-[var(--radius-lg)] bg-[var(--color-nav-bg)] p-[16px] text-[var(--color-nav-text)] shadow-card"
-            aria-label="Trip summary"
-          >
-            <div className="flex items-center justify-between gap-[8px]">
-              <span
-                className={`inline-flex rounded-[var(--radius-pill)] px-[8px] py-[4px] text-label-12 ${
-                  cancelled
-                    ? 'bg-[var(--color-status-neutral-bg)] text-[var(--color-status-neutral-text)]'
-                    : 'bg-[var(--color-status-success-bg)] text-[var(--color-status-success-text)]'
-                }`}
-              >
-                {cancelled ? 'Cancelled by you' : tripStage === 'delivered' ? 'Delivered' : tripStage === 'confirmed' ? 'Confirmed' : tripStage === 'at-pickup' ? 'At pickup' : tripStage === 'loaded' ? 'Loaded · In transit' : 'At delivery'}
-              </span>
-              <span className="text-caption-12 opacity-80">{tripId}</span>
-            </div>
+        {/* Summary — route map + compact payout hero (Postmates-style: map on top, sheet below) */}
+        <div className="shrink-0 overflow-hidden rounded-[var(--radius-lg)] shadow-card">
+            <RoutePreview from={load.from} to={load.to} />
+            <section
+              className="bg-[var(--color-nav-bg)] px-[16px] pb-[12px] pt-[10px] text-[var(--color-nav-text)]"
+              aria-label="Trip summary"
+            >
+              <div className="flex items-center justify-between gap-[8px]">
+                <span
+                  className={`inline-flex rounded-[var(--radius-pill)] px-[8px] py-[4px] text-label-12 ${
+                    cancelled
+                      ? 'bg-[var(--color-status-neutral-bg)] text-[var(--color-status-neutral-text)]'
+                      : 'bg-[var(--color-status-success-bg)] text-[var(--color-status-success-text)]'
+                  }`}
+                >
+                  {cancelled ? 'Cancelled by you' : tripStage === 'delivered' ? 'Delivered' : tripStage === 'confirmed' ? 'Confirmed' : tripStage === 'at-pickup' ? 'At pickup' : tripStage === 'loaded' ? 'Loaded · In transit' : 'At delivery'}
+                </span>
+                <span className="text-caption-12 opacity-80">{tripId}</span>
+              </div>
 
-            {cancelled && (
-              <p className="mt-[8px] text-body-14 opacity-80">
-                This trip is no longer active.
+              {cancelled && (
+                <p className="mt-[8px] text-body-14 opacity-80">
+                  This trip is no longer active.
+                </p>
+              )}
+
+              <p className="mt-[6px] text-metric-28 text-[var(--color-text-inverse)]">
+                €{load.rate}
               </p>
-            )}
-
-            <p className="mt-[12px] text-metric-28 text-[var(--color-text-inverse)]">
-              €{load.rate}
-            </p>
-            <p className="mt-[4px] text-body-14 opacity-90">
-              {load.km} km loaded · €{load.perKm.toFixed(2)}/km
-            </p>
-            <PayoutRow load={load} />
-          </section>
+              <p className="text-caption-12 opacity-90">
+                {load.km} km loaded · €{load.perKm.toFixed(2)}/km · {load.vehicle}
+              </p>
+              <PayoutRow load={load} compact />
+            </section>
+          </div>
 
           {/* Progress */}
           {!cancelled && (
-            <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card" aria-label="Trip progress">
-              <h2 className="text-heading-20 text-[var(--color-text-primary)]">Trip progress</h2>
-              <ol className="mt-[12px] flex flex-col" aria-label={`Step ${stageIndex + 1} of ${TRIP_STAGE_STEPS.length}`}>
-                {TRIP_STAGE_STEPS.map((step, i) => (
-                  <ProgressStep
-                    key={step.id}
-                    state={stepStates[i]}
-                    number={stepStates[i] === 'done' ? '✓' : i + 1}
-                    label={step.label}
-                    showConnector={i < TRIP_STAGE_STEPS.length - 1}
-                    lineTone={i < stageIndex ? 'bg-[var(--color-status-success-text)]' : 'bg-[var(--color-border-default)]'}
-                  />
-                ))}
-              </ol>
+            <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] shadow-card" aria-label="Trip progress">
+              <TripStepper steps={progressSteps} />
             </section>
           )}
 
@@ -346,7 +367,7 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
               </div>
             )}
           </section>
-        </main>
+        </div>
 
         {tripStage === 'at-delivery' && !cancelled && (
           <label className="flex items-start gap-[10px] py-[8px] text-body-14 text-[var(--color-text-primary)]">
@@ -374,28 +395,16 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
           </section>
         )}
         {stageError && <p role="alert" className="text-body-14 text-[var(--color-text-secondary)]">{stageError}</p>}
-        <div className="flex shrink-0 flex-col gap-[8px] py-[8px]">
-          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && enRouteActive && arrivalAction && (
-            <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card" aria-label={`En route to ${navigateTarget}`}>
-              <p className="text-label-12 text-[var(--color-text-secondary)]">En route to {navigateTarget}</p>
-              <p className="mt-[4px] text-body-14 text-[var(--color-text-primary)]">{navigateStop.site.address}</p>
-              <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
-                {navigateTarget === 'pickup' ? `${load.pickupKm} km · ~${load.pickupMin} min` : `${load.km} km loaded`}
-              </p>
-            </section>
-          )}
-          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && !enRouteActive && (
-            <Button
-              label={tripStage === 'confirmed' ? 'Navigate to pickup' : 'Navigate to delivery'}
-              onClick={() => { void goNavigate(navigateStop.key, navigateStop.mapsQuery); }}
-            />
-          )}
-          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && enRouteActive && arrivalAction && (
-            <Button label={arrivalAction.label} appearance="primary" disabled={updatingStage} loading={updatingStage} onClick={() => { void confirmMilestone(); }} />
-          )}
-          {!cancelled && nextAction && tripStage !== 'confirmed' && tripStage !== 'loaded' && (
-            <Button label={nextAction.label} appearance="primary" disabled={updatingStage || (tripStage === 'at-delivery' && !handoverConfirmed)} loading={updatingStage} onClick={() => { void confirmMilestone(); }} />
-          )}
+        {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && enRouteActive && arrivalAction && (
+          <section className="shrink-0 rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card" aria-label={`En route to ${navigateTarget}`}>
+            <p className="text-label-12 text-[var(--color-text-secondary)]">En route to {navigateTarget}</p>
+            <p className="mt-[4px] text-body-14 text-[var(--color-text-primary)]">{navigateStop.site.address}</p>
+            <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
+              {navigateTarget === 'pickup' ? `${load.pickupKm} km · ~${load.pickupMin} min` : `${load.km} km loaded`}
+            </p>
+          </section>
+        )}
+        <div className="flex shrink-0 flex-col gap-[8px]">
           {!cancelled && (
             <Button
               label={`Documents (${load.documents.length})`}
@@ -411,7 +420,15 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
               onClick={() => setCancelOpen(true)}
             />
           )}
-          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && enRouteActive && (
+          {!cancelled && (tripStage === 'confirmed' || tripStage === 'loaded') && !enRouteActive && (
+            <Button
+              label="Navigate in Google Maps"
+              appearance="secondary"
+              icon={<Icon name="map-pin" size="sm" />}
+              onClick={() => { void goNavigate(navigateStop.key, navigateStop.mapsQuery); }}
+            />
+          )}
+          {!cancelled && enRouteActive && (
             <ButtonLink
               label="Re-open navigation"
               full
@@ -423,6 +440,19 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
           )}
         </div>
       </div>
+
+      {/* Sticky primary action above the tab bar (Postmates-style sheet CTA).
+          Arrival milestones live ONLY here (no inline duplicate): before Navigate
+          arrivalAction is null, so nothing renders; other stages keep nextAction. */}
+      {!cancelled && ((tripStage === 'confirmed' || tripStage === 'loaded') ? arrivalAction : nextAction) && (
+        <div className="absolute inset-x-0 bottom-[117px] z-20 border-t border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-[16px] pb-[12px] pt-[8px]">
+          {(tripStage === 'confirmed' || tripStage === 'loaded') && arrivalAction ? (
+            <Button label={arrivalAction.label} appearance="primary" disabled={updatingStage} loading={updatingStage} onClick={() => { void confirmMilestone(); }} />
+          ) : nextAction && tripStage !== 'confirmed' && tripStage !== 'loaded' ? (
+            <Button label={nextAction.label} appearance="primary" disabled={updatingStage || (tripStage === 'at-delivery' && !handoverConfirmed)} loading={updatingStage} onClick={() => { void confirmMilestone(); }} />
+          ) : null}
+        </div>
+      )}
 
       <CancelTripSheet
         open={cancelOpen}

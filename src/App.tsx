@@ -1,4 +1,5 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
+import { DEMO_ENABLED } from './lib/demo';
 import { DemoPanel } from './components/DemoPanel';
 import { Search } from './screens/Search';
 import { Home as HomeV2 } from './screens/v2/Home';
@@ -34,7 +35,7 @@ export default function App() {
         element={
           <>
             <HomeV2 />
-            <DemoToggle />
+            {DEMO_ENABLED && <DemoToggle />}
           </>
         }
       />
@@ -90,7 +91,7 @@ function Index() {
           </li>
         ))}
       </ul>
-      <DemoPanel />
+      {DEMO_ENABLED && <DemoPanel />}
     </div>
   );
 }

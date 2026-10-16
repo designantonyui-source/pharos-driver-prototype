@@ -181,7 +181,7 @@ test('confirmed application opens trip details and demo actions', async ({ page,
   await expect(docs).toHaveCount(0);
 
   // Navigate opens Google Maps in a new tab and switches the trip to en-route.
-  const navigate = page.getByRole('button', { name: 'Navigate to pickup', exact: true });
+  const navigate = page.getByRole('button', { name: 'Navigate in Google Maps', exact: true });
   const [mapsPage] = await Promise.all([
     context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
     navigate.click(),
@@ -211,7 +211,7 @@ test('portfolio happy path: apply to payout', async ({ page, context }) => {
   await expect(page).toHaveURL(/#\/trip\/nordcargo$/);
 
   // En-route to pickup, then arrive.
-  const navigate = page.getByRole('button', { name: 'Navigate to pickup', exact: true });
+  const navigate = page.getByRole('button', { name: 'Navigate in Google Maps', exact: true });
   const [mapsPage] = await Promise.all([
     context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
     navigate.click(),
@@ -223,7 +223,7 @@ test('portfolio happy path: apply to payout', async ({ page, context }) => {
   // Loading complete, en-route to delivery, arrive, hand over, complete.
   await page.getByRole('button', { name: 'Confirm loading complete', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('Loaded');
-  const navigateDelivery = page.getByRole('button', { name: 'Navigate to delivery', exact: true });
+  const navigateDelivery = page.getByRole('button', { name: 'Navigate in Google Maps', exact: true });
   const [mapsDelivery] = await Promise.all([
     context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
     navigateDelivery.click(),
