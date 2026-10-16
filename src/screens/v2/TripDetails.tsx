@@ -407,10 +407,10 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
           </section>
 
           {/* Customer + the dispatcher you talk to about this trip.
-              The dispatcher action is labelled on purpose: the unlabelled back-bar chat icon
-              that replaced it was a guessing game, and the labelled button before that only
-              fired a "not connected" toast. The icon matches the label — this opens a thread,
-              it does not dial. */}
+              The action is labelled on purpose: the unlabelled back-bar chat icon that replaced
+              it was a guessing game, and the labelled button before that only fired a "not
+              connected" toast. The wording is the one the driver already knew; the icon carries
+              the channel — this opens a thread, it does not dial. */}
           <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card">
             <h2 className="text-label-14 text-[var(--color-text-secondary)]">Customer</h2>
             <p className="mt-[8px] text-heading-20 text-[var(--color-text-primary)]">
@@ -422,7 +422,7 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
             {!cancelled && (
               <div className="mt-[12px]">
                 <Button
-                  label="Message your dispatcher"
+                  label="Contact dispatcher"
                   appearance="secondary"
                   icon={<Icon name="message-square" size="sm" />}
                   onClick={() => navigate(`/trip/${load.id}/chat`)}
