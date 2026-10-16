@@ -107,7 +107,8 @@ No Figma node yet: these screens lead and go back to Figma afterwards. Source of
 |---|---|---|---|
 | `/v2` | Loads — unified List/Map home: filters, route-match markers, quick apply, live banner; direction header states the feed (`Direction: {label}, {N} loads`), empty state recovers via Clear filters + Change direction | V2Frame, SmartLoadList, QuickApplyModal, LoadSheet, ApplicationBanner, Sheet, DemoToggle, RouteSheet | prototype |
 | `/application/:id` | Unified application tracker (replaces Pending screens); `?scenario=approve` (default) / `?scenario=reject`; rejection reason, similar loads and appeal mock; cancel via `CancelApplicationSheet` + info `Toast` for demo stubs | ApplicationTracker, CancelApplicationSheet, Toast | prototype |
-| `/trip/:id` | Confirmed trip — TRIP_ID + payout in summary, Trip progress stepper, Cargo, Route with site addresses/contacts + per-stop Navigate, En-route leg with arrival action, Customer + Contact dispatcher, Documents via `TripDocumentsSheet`, handover + POD, cancel via `CancelTripSheet` | TripDetails, TripDocumentsSheet, CancelTripSheet, Toast | prototype |
+| `/trip/:id` | Confirmed trip — одна скролл-поверхность: TRIP_ID + payout в summary, Trip progress stepper, Cargo, Route с адресами/контактами/гейтами + Call на стоп, En-route leg с действием прибытия, Customer + `Contact dispatcher`, Report a delay → `Sheet`, Documents через `TripDocumentsSheet`, handover + POD, Earnings после доставки, cancel через `CancelTripSheet` | TripDetails, TripDocumentsSheet, CancelTripSheet, Sheet, Toast | prototype |
+| `/trip/:id/chat` | Тред диспетчера на один рейс — полоса контекста груза, сообщения, системные строки (репорт задержки, хендофф на человека), композер; автоответы помечены «AI dispatcher» | TripChat, ChatCargoContext, MessageBubble, ChatComposer, V2BackBar | prototype |
 | `/v2/trips` | Trips (Applications + My day merged) | `screens/v2/Trips.tsx` — active hero + in-review + past, StatusBlock/empty states | prototype |
 | `/v2/account` | Account | placeholder `screens/v2/Soon.tsx` | todo |
 
@@ -151,3 +152,30 @@ Store сохраняет метаданные при set/read; restore удал�
 Проверено: vitest 63/63, Playwright Chrome 7/7 (включая отмену и сохранение причины/tripId), pnpm check проходит.
 Геометрия относительно Figma не измерена: это prototype-led дополнение, не подтверждённый 1:1 порт.
 Открыто: утверждение политики, проверка undo на карте и перезагрузки, дополнительные UI-тесты и замеры.
+
+## Продолжение 2026-10-16: чат диспетчера, AI-диспетчер, скролл рейса
+
+Новый роут `/trip/:id/chat` — в таблице выше. Файл потока: `design/flows/dispatcher-chat.md`.
+Разбор индустрии (6 продуктов) и обоснование AI лежат в кейсе: `dispatcher-communication-analysis.md`.
+
+- **Смысл канала зафиксирован ДО отрисовки:** чат здесь не мессенджер, а канал исключений. На чистом рейсе сообщений быть не должно;
+  каждое сообщение на сломанном должно конвертироваться в пруф, деньги или закрытие. Отсюда все решения ниже.
+- **Убрана декоративная карта маршрута** (`RoutePreview`): была `aria-hidden`, `pointer-events-none`, занимала 190px из ~635px вьюпорта
+  и дублировала строку маршрута. Вместе с ней ушли дубли кнопок: 2 иконки «в Maps» на стопах (тот же `goNavigate()`, что у sticky-primary)
+  и полноширинная «Message dispatcher» (дубль входа). Кнопок 9 → 6.
+- **Задержка и разговор — одно событие:** `reportDelay()` пишет системную строку в тот же тред, а не шлёт отдельный тост.
+  Это денежный хук: отсюда позже вырастает строка detention в Earnings.
+- **AI-диспетчер** — детерминированный мок без LLM (`chat.ts: aiDispatcherReply`): отвечает на рутину фактами рейса, эскалирует человеку
+  деньги / detention / отмену, подписан честно (`automated` → «AI dispatcher»). Реальная модель встаёт за тем же интерфейсом `api.ts`,
+  не трогая экраны. Позиционирование (почему на стороне диспетчера, а не водителя) — в §7 того же анализа.
+- **Баг скролла (замерен, не на глаз):** блок кнопок лежал ВНЕ скролл-контейнера, а sticky-бар его накрывал — кнопки занимали 597–757
+  при баре 688–757, поэтому `Cancel trip` была недостижима, а `Report a delay` наполовину скрыта; на стадии `delivered` блоки Earnings/POD
+  тоже были вне скролла и сжимали его почти в ноль. Исправлено: один скролл-лист + `pb-[calc(var(--sticky-bar-h)+16px)]`.
+  Замер после: `confirmed` 974/635, доскроллено до конца, `Cancel trip` 629–677 против бара 688; `delivered` 1222/635.
+- **Подпись входа вернули.** В `3256bcb` подписанная, но мёртвая кнопка «Contact dispatcher» (только тост «not connected») была заменена
+  на рабочую, но голую иконку в навбаре — водитель не понимал, что это, а телефонный глиф молча стал глифом чата. Теперь один подписанный
+  вход: secondary-кнопка в карточке Customer, иконка `message-square` (канал: тред, не звонок), навбарная иконка убрана. E2E кликает кнопку
+  до треда и обратно, поэтому подпись больше не может стать декоративной незаметно.
+- **Внутренние строки:** ошибка размера POD, internal throw и assumption-нота больше не содержат слова prototype; роут `/prototype-index` → `/screens`.
+- Проверено: unit 160/160, Playwright Chrome 15/15, `pnpm check` чистый. Живой прод проверен отдельно (скролл и вход в чат).
+- Открыто: вложения в треде (фото/голос), бейдж непрочитанных, проактивный входящий, detention-кнопка в треде, состояние закрытия исключения.
