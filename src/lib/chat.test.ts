@@ -47,6 +47,17 @@ it('AI dispatcher escalates money topics to a human instead of answering', async
   expect(reply?.text).toMatch(/earnings|person/i);
 });
 
+it('AI dispatcher logs a detention claim and leaves the amount to a human', async () => {
+  await sendMessage('nordcargo', 'The gate is holding me — can I claim detention pay?');
+  const thread = await getThread('nordcargo');
+  const reply = thread.at(-2);
+  expect(reply?.author).toBe('dispatcher');
+  expect(reply?.automated).toBe(true);
+  // The specific detention intent wins over the generic "pay" keyword.
+  expect(reply?.text).toMatch(/detention note/i);
+  expect(thread.at(-1)?.author).toBe('system');
+});
+
 it('refuses an empty message', async () => {
   await expect(sendMessage('nordcargo', '   ')).rejects.toThrow(/Write a message/);
 });

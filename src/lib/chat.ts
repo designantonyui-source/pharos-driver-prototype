@@ -81,17 +81,18 @@ export function aiDispatcherReply(ctx: AiDispatcherContext, message: string): Ai
   const t = message.toLowerCase();
   const has = (...words: string[]) => words.some((w) => t.includes(w));
 
+  // Detention / waiting is checked BEFORE money: "detention pay" is the specific
+  // intent (a logged claim), while "pay" alone is the generic one.
+  if (has('detention', 'held', 'hold', 'waiting', 'standstill')) {
+    return {
+      text: 'Waiting time is logged from when you marked arrived. I’ve started a detention note — a dispatcher will confirm the compensation.',
+      escalate: true,
+    };
+  }
   // Money-adjacent topics stay with a person.
   if (has('pay', 'paid', 'earnings', 'earn', 'rate', 'amount', 'compensation', 'money', 'fee', 'payout')) {
     return {
       text: 'That affects your earnings, which needs a person to confirm. I’ve handed this to a dispatcher — they’ll reply shortly.',
-      escalate: true,
-    };
-  }
-  // Detention / waiting: the claim is logged automatically, the amount is a human call.
-  if (has('detention', 'held', 'waiting', 'standstill')) {
-    return {
-      text: 'Waiting time is logged from when you marked arrived. I’ve started a detention note — a dispatcher will confirm the compensation.',
       escalate: true,
     };
   }
