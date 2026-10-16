@@ -11,7 +11,7 @@ import { store, type LoadApplication, type Status } from './store';
 import { V2_LOADS, type V2Load } from './v2/loads';
 import { BL_ORDERS, type BlOrder } from './bl/logic';
 import { createDemoInvoice } from './invoices';
-import { chatId, seedThread, type ChatMessage } from './chat';
+import { aiDispatcherReply, chatId, seedThread, type ChatMessage } from './chat';
 
 import { maskCard, maskIban, normalizeContactProfile, normalizePayoutMethod, normalizeSchedule, type ContactProfile, type LedgerEntry, type PayoutMethod, type PayoutSchedule, type ScheduledRun } from './profile';
 import { MockPayoutProvider, PROTOTYPE_FEES, type Destination, type PayoutProvider, type PayoutQuote } from './psp';
@@ -694,12 +694,33 @@ export async function getThread(loadId: string): Promise<ChatMessage[]> {
   return [...seeded].sort(byChatTime);
 }
 
-/** Driver sends a message. Prototype: stored on this device, no counterpart answers. */
+/**
+ * Driver sends a message. The AI dispatcher drafts an in-context reply right away
+ * (vs a human dispatcher's minutes), and consequential topics are handed to a human.
+ * Prototype: deterministic mock, no LLM, stored on this device, nothing is transmitted.
+ */
 export async function sendMessage(loadId: string, text: string): Promise<ChatMessage> {
   const body = text.trim();
   if (!body) throw new Error('Write a message first.');
   const message: ChatMessage = { id: chatId('msg'), loadId, author: 'driver' as const, text: body, at: new Date().toISOString() };
   store.set({ chatMessages: [...store.get().chatMessages, message] });
+
+  // "AI is drafting": production replaces this wait with the real assistant round-trip.
+  await wait(700);
+  const load = getLoad(loadId);
+  if (!load) return message;
+
+  const reply = aiDispatcherReply({
+    from: load.from, to: load.to, gate: load.pickupSite.note, window: load.window,
+  }, body);
+  const automated: ChatMessage = {
+    id: chatId('ai'), loadId, author: 'dispatcher' as const, text: reply.text,
+    at: new Date().toISOString(), automated: true,
+  };
+  store.set({ chatMessages: [...store.get().chatMessages, automated] });
+  if (reply.escalate) {
+    appendSystemMessage(loadId, 'Handed to a dispatcher — a human will reply shortly.');
+  }
   return message;
 }
 

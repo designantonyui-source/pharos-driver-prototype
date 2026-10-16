@@ -13,12 +13,38 @@ it('seeds one thread per trip and appends driver messages to it', async () => {
 
   const sent = await sendMessage('nordcargo', 'Gate is backed up');
   expect(sent.author).toBe('driver');
-  expect((await getThread('nordcargo')).length).toBe(seeded.length + 1);
+  // driver message + the AI dispatcher's automated reply.
+  expect((await getThread('nordcargo')).length).toBe(seeded.length + 2);
 
   // Threads are per trip: a second trip does not inherit the first conversation.
   const other = await getThread('belroute');
   expect(other.length).toBeGreaterThan(0);
   expect(other.every((m) => m.loadId === 'belroute')).toBe(true);
+});
+
+it('AI dispatcher answers a routine question in-context, marked automated', async () => {
+  await sendMessage('nordcargo', 'What is my pickup number?');
+  const thread = await getThread('nordcargo');
+  const reply = thread.at(-1);
+  expect(reply?.author).toBe('dispatcher');
+  expect(reply?.automated).toBe(true);
+  expect(reply?.text).toMatch(/pickup number/i);
+  expect(reply?.text).toMatch(/Lille → Brussels/);
+  // Routine → no handoff line appended.
+  expect(thread.some((m) => m.author === 'system' && /human/i.test(m.text))).toBe(false);
+});
+
+it('AI dispatcher escalates money topics to a human instead of answering', async () => {
+  await sendMessage('nordcargo', 'How much do I get paid?');
+  const thread = await getThread('nordcargo');
+  const handoff = thread.at(-1);
+  expect(handoff?.author).toBe('system');
+  expect(handoff?.text).toMatch(/dispatcher/i);
+  // The AI still acknowledged immediately (never dead silence), but did not decide.
+  const reply = thread.at(-2);
+  expect(reply?.author).toBe('dispatcher');
+  expect(reply?.automated).toBe(true);
+  expect(reply?.text).toMatch(/earnings|person/i);
 });
 
 it('refuses an empty message', async () => {

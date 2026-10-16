@@ -62,6 +62,20 @@ export const AppThread: Story = {
   ),
 };
 
+/**
+ * Prototype-led: the AI dispatcher's automated reply reuses the plain skin's `Sender` row as the
+ * honest "this was automated" label — the driver must be able to tell it apart from a person.
+ */
+export const AiDispatcher: Story = {
+  decorators: [frame(294)],
+  args: {
+    skin: 'plain',
+    sender: 'AI dispatcher',
+    message: 'Your documents are in the Documents tab — the CMR is prefilled. The POD is required before payout.',
+    time: '10:36',
+  },
+};
+
 /** The desktop chat on page 21 keeps the tinted skin and shows the sender line. */
 export const WebThread: Story = {
   decorators: [frame(280)],

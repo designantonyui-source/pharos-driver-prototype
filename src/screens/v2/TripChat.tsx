@@ -11,6 +11,9 @@
  *
  * Threads are per trip. The context strip at the top always states which cargo is
  * being discussed, so the flow never needs a thread picker.
+ *
+ * An "AI dispatcher" drafts the reply to routine questions (marked by the bubble's
+ * `Sender` row); consequential topics are handed to a human with a system line.
  */
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -77,7 +80,7 @@ export function TripChat() {
                 <MessageBubble
                   key={m.id}
                   skin="plain"
-                  sender={null}
+                  sender={m.author === 'dispatcher' && m.automated ? 'AI dispatcher' : null}
                   direction={m.author === 'driver' ? 'outgoing' : 'incoming'}
                   message={m.text}
                   time={formatChatTime(m.at)}
