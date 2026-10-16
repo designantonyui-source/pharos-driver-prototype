@@ -221,7 +221,7 @@ export function Balance() {
       <RowLink to="/v2/account/balance/invoices" icon="history" title="Invoices" detail="Per-trip paperwork with VAT, PDF export" />
       <RowLink to="/v2/account/balance/schedules" icon="clock" title="Auto-withdraw" detail="Schedules, runs, accountant export" last />
     </Section>
-    <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Prototype only - no real money moves. Provider: {payoutProvider.name}.</p>
+    <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">No real money moves. Provider: {payoutProvider.name}.</p>
   </BalanceFrame>;
 }
 
@@ -477,7 +477,7 @@ export function CashOut() {
           <dd className="text-right text-[var(--color-text-primary)]">{quote.eta}</dd>
         </div>
       </dl>
-      <p className="mt-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Prototype only - no real money moves.</p>
+      <p className="mt-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">No real money moves.</p>
       <div className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-8)]">
         <Button label={sending ? 'Sending...' : `Confirm - ${validNumber ? formatEuro(parsed) : ''}`.trim()} loading={sending} onClick={() => void confirm()} />
         <Button label="Keep editing" appearance="secondary" disabled={sending} onClick={() => setConfirmOpen(false)} />
@@ -516,7 +516,7 @@ export function BalanceHistory() {
     </div> : <Section label={`${ledger.length} entries`}>
       {ledger.map((entry, i) => <LedgerLine key={entry.id} entry={entry} last={i === ledger.length - 1} invoiceId={entry.kind === 'trip' ? invoiceByLoad[entry.loadId] ?? null : null} />)}
     </Section>}
-    <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Prototype ledger - stored on this device only.</p>
+    <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Ledger - stored on this device only.</p>
   </BalanceFrame>;
 }
 

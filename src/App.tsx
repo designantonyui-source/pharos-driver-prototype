@@ -79,7 +79,7 @@ function Index() {
   ] as const;
   return (
     <div className="mx-auto max-w-[720px] p-6">
-      <h1 className="text-[24px] font-semibold">Pharos Driver — prototype</h1>
+      <h1 className="text-[24px] font-semibold">Pharos Driver</h1>
       <p className="mt-2 text-[14px] text-[var(--color-text-secondary)]">
         Driver flow: loads list/map → quick apply → application status → back to loads.
       </p>

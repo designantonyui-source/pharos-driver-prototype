@@ -49,11 +49,11 @@ describe('ApplicationTrackerView cancel confirmation', () => {
   });
 });
 
-describe('ApplicationTrackerView demo notices', () => {
+describe('ApplicationTrackerView notices', () => {
   it('shows dispatcher chat as a toast, not an alert', () => {
     renderView(ApplicationStatus.SENT);
     fireEvent.click(screen.getByRole('button', { name: 'Contact dispatcher' }));
-    expect(screen.getByRole('status')).toHaveTextContent('Dispatcher chat is not connected in this demo.');
+    expect(screen.getByRole('status')).toHaveTextContent('Dispatcher chat is not connected yet.');
   });
 
   it('shows dispute as a toast, not an alert', () => {

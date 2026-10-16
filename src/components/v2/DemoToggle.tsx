@@ -14,11 +14,12 @@ export function DemoToggle() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
+        aria-label={open ? 'Hide walkthrough controls' : 'Show walkthrough controls'}
         className={`fixed right-4 z-50 rounded-full border border-[var(--color-border-default)] bg-white px-3 py-1 text-[12px] shadow-lg min-h-[44px] min-w-[44px] ${
           open ? 'bottom-[7.5rem]' : 'bottom-4'
         }`}
       >
-        {open ? 'Hide demo' : 'Demo'}
+        {open ? 'Hide' : 'Walkthrough'}
       </button>
     </>
   );

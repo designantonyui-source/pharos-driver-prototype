@@ -115,7 +115,7 @@ export function InvoiceList() {
       </Link>)}
     </Section>}
     {invoices.length > 0 && <div className="mt-[var(--spacing-16)]"><Button label="Export CSV for accountant" appearance="secondary" onClick={exportCsv} /></div>}
-    <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Prototype documents - confirm with accounting before use.</p>
+    <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Documents - confirm with accounting before use.</p>
   </InvoiceFrame>;
 }
 

@@ -138,7 +138,7 @@ export function ApplicationTrackerView({
             label="Contact dispatcher"
             appearance={positive || rejected ? 'secondary' : 'primary'}
             icon={<Icon name="user-round" size="sm" />}
-            onClick={() => show({ tone: 'info', title: 'Dispatcher chat is not connected in this demo.' })}
+            onClick={() => show({ tone: 'info', title: 'Dispatcher chat is not connected yet.' })}
           />
           {canCancel && CANCELLABLE.has(status) ? (
             <Button

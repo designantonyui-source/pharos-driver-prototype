@@ -539,7 +539,7 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
           ))}
         </div>
         {delayError && <p role="alert" className="mt-[12px] text-body-14 text-[var(--color-text-danger)]">{delayError}</p>}
-        <p className="mt-[12px] text-caption-12 text-[var(--color-text-secondary)]">Prototype only — no dispatcher is actually notified.</p>
+        <p className="mt-[12px] text-caption-12 text-[var(--color-text-secondary)]">No dispatcher is notified when you cancel here.</p>
         <div className="mt-[16px] flex flex-col gap-[8px]">
           <Button label={savingDelay ? 'Sending…' : 'Send to dispatcher'} loading={savingDelay} onClick={() => { void submitDelay(); }} />
           <Button label="Keep driving" appearance="secondary" disabled={savingDelay} onClick={() => setDelayOpen(false)} />

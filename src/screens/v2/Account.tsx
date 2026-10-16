@@ -89,7 +89,7 @@ export function Account({ detail = false }: { detail?: boolean }) {
     return <AccountFrame title="Profile" backTo="/v2/account">
       {profile ? <>
         <div className="mt-[var(--spacing-8)]"><DriverProfile {...profile} verified={false} /></div>
-        <div className="mt-[var(--spacing-16)]"><Alert type="info" title="Prototype profile">Contact details are stored on this device only — not authenticated or verified. Driver identity is read-only.</Alert></div>
+        <div className="mt-[var(--spacing-16)]"><Alert type="info" title="Profile">Contact details are stored on this device only — not authenticated or verified. Driver identity is read-only.</Alert></div>
         <AccountSection label="Contact">
           <div className="flex min-h-[var(--size-control-mobile)] items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)]">
             <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="phone" size="md" /></span>
@@ -123,7 +123,7 @@ export function Account({ detail = false }: { detail?: boolean }) {
         <MenuRow to="/v2/account" icon="bell" title="Notifications" detail="Push and email updates" />
         <MenuRow to="/v2/account" icon="languages" title="Language" detail="English" last />
       </AccountSection>
-      <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Prototype build · v0.1.0 — contact details stay on this device.</p>
+      <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Contact details stay on this device.</p>
     </> : <ProfileStatus error={error} retry={retry} />}
   </AccountFrame>;
 }
@@ -174,7 +174,7 @@ export function ContactEditor({ initial }: { initial: ProfileData }) {
   const emailState = !validEmail && (touchedEmail || contact.email !== saved.email) ? 'error' as const : contact.email ? 'filled' as const : 'empty' as const;
   return <AccountFrame title="Edit contact" backTo="/v2/account/profile" toast={<Toast toast={toast} onClose={dismiss} />}>
     <div className="mt-[var(--spacing-8)]"><DriverProfile {...initial} verified={false} /></div>
-    <div className="mt-[var(--spacing-16)]"><Alert type="info" title="Prototype profile">Contact details are stored on this device only — not authenticated or verified. Driver identity is read-only.</Alert></div>
+    <div className="mt-[var(--spacing-16)]"><Alert type="info" title="Profile">Contact details are stored on this device only — not authenticated or verified. Driver identity is read-only.</Alert></div>
     <form onSubmit={event => { event.preventDefault(); void save(); }} noValidate className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-16)]">
       <Input label="Phone" value={contact.phone} placeholder="+33 6 12 34 56 78" state={phoneState} icon={false} hint={phoneState === 'error' ? 'Enter a valid phone — 7–15 digits.' : 'Used for trip updates on this device.'} onChange={value => { setContact({ ...contact, phone: value }); setTouchedPhone(true); setSaveError(false); }} />
       <Input label="Email" value={contact.email} placeholder="driver@example.com" state={emailState} icon={false} hint={emailState === 'error' ? 'Enter a valid email address.' : 'Used for receipts on this device.'} onChange={value => { setContact({ ...contact, email: value }); setTouchedEmail(true); setSaveError(false); }} />

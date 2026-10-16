@@ -152,7 +152,7 @@ export function Schedules() {
     { mode: 'weekly', title: 'Every Friday', detail: 'Withdraw everything available' },
   ];
   return <SchedulesFrame title="Auto-withdraw" toast={<Toast toast={toast} onClose={dismiss} />}>
-    <div className="mt-[var(--spacing-16)]"><Alert type="info" title="Prototype scheduler">Evaluated when you open Balance. Production runs on a server cron — the rule shape is identical.</Alert></div>
+    <div className="mt-[var(--spacing-16)]"><Alert type="info" title="Scheduler">Evaluated when you open Balance. Production runs on a server cron — the rule shape is identical.</Alert></div>
     <Section label="Rule">
       {modes.map((m, i) => <label key={m.mode} className={`flex min-h-[var(--size-control-mobile)] cursor-pointer items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${i === modes.length - 1 ? '' : 'border-b border-[var(--color-border-default)]'}`}>
         <input type="radio" name="schedule-mode" checked={schedule.mode === m.mode} onChange={() => void pick(m.mode)} disabled={saving} className="h-[20px] w-[20px] accent-[var(--color-action-primary)]" aria-label={m.title} />
