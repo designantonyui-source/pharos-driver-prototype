@@ -19,7 +19,7 @@ export const DepartureToPickup: Story = {
   args: {
     summaryLabel: 'To pickup',
     summaryValue: '12 km · about 18 min',
-    driverLabel: 'You · demo',
+    driverLabel: 'You',
     pickupLabel: 'Pickup · €420',
     caption: 'Approach to pickup point',
   },

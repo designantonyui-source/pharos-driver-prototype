@@ -29,7 +29,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/v2" replace />} />
-      <Route path="/prototype-index" element={<Index />} />
+      <Route path="/screens" element={<Index />} />
       <Route path="/search" element={<Search />} />
       <Route
         path="/v2"

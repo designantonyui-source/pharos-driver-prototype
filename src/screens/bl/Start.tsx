@@ -100,7 +100,7 @@ export function BlStart() {
         <Progress step={step} />
 
         {step === 'phone' && (
-          <Section title="Podaj numer telefonu" text="Wyślemy kod potwierdzający. W demo SMS nie jest wysyłany.">
+          <Section title="Podaj numer telefonu" text="Wyślemy kod potwierdzający. SMS nie jest wysyłany.">
             <input
               id="bl-phone"
               type="tel"
@@ -158,7 +158,7 @@ export function BlStart() {
             <button type="button" onClick={() => setStep('phone')} className="text-label-14 text-[var(--color-action-primary)]">
               Zmień numer
             </button>
-            <span className="text-caption-12 text-[var(--color-text-tertiary)]">Demo: kod to {DEMO_CODE}.</span>
+            <span className="text-caption-12 text-[var(--color-text-tertiary)]">Kod weryfikacyjny: {DEMO_CODE}.</span>
           </Section>
         )}
 

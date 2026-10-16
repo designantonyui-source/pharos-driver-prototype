@@ -92,7 +92,7 @@ export function BlProfile() {
         )}
 
         <div className="mt-[8px] flex flex-col gap-[8px] rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border-default)] p-[14px]">
-          <span className="text-label-12 text-[var(--color-text-secondary)]">Demo (dla prezentacji)</span>
+          <span className="text-label-12 text-[var(--color-text-secondary)]">Narzędzia prezentacji</span>
           <div className="flex flex-wrap gap-[8px]">
             <button
               type="button"
@@ -118,7 +118,7 @@ export function BlProfile() {
               +1 godz. (teraz {tm(s.clock)})
             </button>
             <button type="button" onClick={() => { bl.reset(); }} className="h-[36px] rounded-[var(--radius-pill)] border border-[var(--color-border-default)] px-[12px] text-label-12 text-[var(--color-status-danger-text)]">
-              Zresetuj demo
+              Zresetuj dane
             </button>
           </div>
           <Link to="/bl/start" className="text-label-12 text-[var(--color-action-primary)]">

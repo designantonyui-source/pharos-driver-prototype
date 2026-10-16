@@ -23,7 +23,7 @@ export function ApproachMap({
   city = 'Lille',
   summaryLabel = 'To pickup',
   summaryValue = '18 km · about 25 min',
-  driverLabel = 'You · demo',
+  driverLabel = 'You',
   pickupLabel = 'Pickup · €360',
   caption = 'Approach to selected load',
 }: {

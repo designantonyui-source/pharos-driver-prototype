@@ -36,7 +36,7 @@ export const payoutProvider: PayoutProvider = new MockPayoutProvider();
 export const OWNER_DRIVER_ASSUMPTION = Object.freeze({
   role: 'owner-driver',
   carrier: 'Northway Freight SPRL',
-  note: 'Prototype assumption: the driver receives trip revenue and manages payout details.',
+  note: 'Assumption: the driver receives trip revenue and manages payout details.',
 });
 
 /**
@@ -46,7 +46,7 @@ export const OWNER_DRIVER_ASSUMPTION = Object.freeze({
 export const DEMO_LOAD_ID = 'nordcargo';
 export function getDemoLoad(): V2Load {
   const load = V2_LOADS.find((l) => l.id === DEMO_LOAD_ID);
-  if (!load) throw new Error('Demo load is missing from the feed');
+  if (!load) throw new Error('Seed load is missing from the feed');
   return load;
 }
 
@@ -811,7 +811,7 @@ export async function submitProofOfDelivery(loadId: string, file: { filename: st
     throw new Error('Complete delivery before submitting POD');
   }
   if (!/^data:(image\/(jpeg|png|webp)|application\/pdf);base64,/.test(file.dataUrl)) throw new Error('Unsupported document format');
-  if (file.dataUrl.length > 3_000_000) throw new Error('Document is too large for this prototype');
+  if (file.dataUrl.length > 3_000_000) throw new Error('Document is too large (max 2 MB).');
   const pod = { ...file, uploadedAt: new Date().toISOString(), status: 'submitted' as const };
   store.set({ applications: { [loadId]: { ...application, pod } } });
   return { loadId, status: pod.status };

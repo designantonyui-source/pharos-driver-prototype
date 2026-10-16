@@ -64,7 +64,7 @@ export function invoiceHtml(invoice: Invoice): string {
     <div class="row grand"><span>Total</span><span>${formatEuro(invoice.total)}</span></div>
   </div>
   <div class="note">${invoice.note}</div>
-  <div class="foot">Prototype document — generated locally by the Pharos driver app. Not a fiscal invoice until confirmed by accounting.</div>
+  <div class="foot">Generated locally by the Pharos driver app. Not a fiscal invoice until confirmed by accounting.</div>
   <script>window.addEventListener('load', () => setTimeout(() => window.print(), 300));</script>
 </body></html>`;
 }

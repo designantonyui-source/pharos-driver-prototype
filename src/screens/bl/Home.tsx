@@ -83,7 +83,7 @@ export function BlHome() {
               className="h-[48px] w-full rounded-[var(--radius-sm)] bg-[var(--color-action-primary)] text-label-14 text-[var(--color-action-text-inverse)]"
               onClick={() => bl.addTrip()}
             >
-              Dodaj kurs demo
+              Dodaj kurs
             </button>
             <Link to="/bl/search" className="text-label-14 text-[var(--color-action-primary)]">
               Szukaj zleceń bez kursu

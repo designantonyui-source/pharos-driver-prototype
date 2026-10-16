@@ -37,7 +37,7 @@ export function DemoPanel() {
       await fn();
       if (to) navigate(to);
     } catch (e) {
-      setNote(e instanceof Error ? e.message : 'Demo action failed');
+      setNote(e instanceof Error ? e.message : 'Action failed');
     } finally {
       setBusy(null);
     }
@@ -55,7 +55,7 @@ export function DemoPanel() {
   const wid = lastWithdrawalId();
   return (
     <div className="fixed bottom-4 right-4 z-50 max-h-[70vh] w-[280px] overflow-y-auto rounded-xl border border-[var(--color-border-default)] bg-white p-3 text-[12px] shadow-lg">
-      <div className="mb-2 font-semibold">Demo · payments case · {state.status ?? 'none'}</div>
+      <div className="mb-2 font-semibold">Payments case · {state.status ?? 'none'}</div>
       <div className="mb-2 flex flex-col gap-1">
         {SCENARIOS.map((s) => (
           <button key={s.id} disabled={!!busy} onClick={() => { void scenario(s.id, s.to); }} className="rounded border border-[var(--color-border-default)] px-2 py-1 text-left disabled:opacity-50">
