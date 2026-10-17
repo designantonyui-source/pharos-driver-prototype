@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { FiltersSheet } from './FiltersSheet';
 import { RouteSheet } from './RouteSheet';
+import { isoDayOffset } from '../../lib/v2/loads';
 
 describe('FiltersSheet draft semantics', () => {
   const countFor = (draft: string[]) => (draft.includes('rate') ? 2 : 3);
@@ -88,26 +89,35 @@ describe('RouteSheet draft semantics', () => {
     expect(box.getByRole('option', { name: 'Brussels, 1 load' })).toBeVisible();
   });
 
-  it('applies the pickup day with the route', () => {
+  it('applies a strip day with the route', () => {
     const onApply = vi.fn();
+    const todayIso = isoDayOffset(0);
+    const countFor = (route: { from: string; to: string; day?: string }) =>
+      route.day ? (route.day === todayIso ? 2 : 0) : 3;
     render(
       <MemoryRouter>
-        <RouteSheet open value={{ from: '', to: 'Brussels' }} countFor={() => 2} onApply={onApply} onClose={() => undefined} cities={['Brussels']} />
+        <RouteSheet open value={{ from: '', to: 'Brussels' }} countFor={countFor} onApply={onApply} onClose={() => undefined} cities={['Brussels']} />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Today' }));
-    expect(screen.getByRole('button', { name: 'Today, selected. Activate to remove.' })).toBeVisible();
+    const group = within(screen.getByRole('group', { name: 'Pickup day' }));
+    fireEvent.click(group.getByRole('button', { name: /2 loads/ }));
+    expect(screen.getByRole('button', { name: 'Show 2 loads' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Show 2 loads' }));
-    expect(onApply).toHaveBeenCalledWith({ from: '', to: 'Brussels', day: 'today' });
+    expect(onApply).toHaveBeenCalledWith({ from: '', to: 'Brussels', day: todayIso });
   });
 
   it('opens on the committed day', () => {
+    const tomorrowIso = isoDayOffset(1);
+    const full = new Date(`${tomorrowIso}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    const countFor = (route: { from: string; to: string; day?: string }) =>
+      route.day === tomorrowIso ? 1 : 0;
     render(
       <MemoryRouter>
-        <RouteSheet open value={{ from: '', to: 'Brussels', day: 'tomorrow' }} countFor={() => 1} onApply={() => undefined} onClose={() => undefined} cities={['Brussels']} />
+        <RouteSheet open value={{ from: '', to: 'Brussels', day: tomorrowIso }} countFor={countFor} onApply={() => undefined} onClose={() => undefined} cities={['Brussels']} />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('button', { name: 'Tomorrow, selected. Activate to remove.' })).toBeVisible();
+    const group = within(screen.getByRole('group', { name: 'Pickup day' }));
+    expect(group.getByRole('button', { name: `${full}, selected. Activate to remove.` })).toBeVisible();
   });
 
   it('recalls recent directions and applies one in one tap', () => {

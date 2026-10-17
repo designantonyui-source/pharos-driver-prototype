@@ -13,7 +13,7 @@ import { Toast, useToast } from '../../components/v2/Toast';
 import { TRIP_STAGE_STEPS, advanceTripStage, cancelTrip, cancellationPenalty, getDefaultMethod, getTripDetails, methodLabel, minutesSince, reportDelay, setEnRoute, submitProofOfDelivery, type PayoutMethod, type TripStage } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore, type LoadApplication } from '../../lib/store';
-import type { V2Load } from '../../lib/v2/loads';
+import { dayLabel, type V2Load } from '../../lib/v2/loads';
 
 /**
  * Payout row: shows the REAL payout method from the store, never the static load mock.
@@ -222,8 +222,8 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
   }
 
   const stops = [
-    { key: 'pickup' as const, label: 'Pickup', city: load.from, day: load.day, window: load.window, site: load.pickupSite, mapsQuery: `${load.pickupSite.address}` },
-    { key: 'delivery' as const, label: 'Delivery', city: load.to, day: load.deliveryDay, window: load.deliveryWindow, site: load.deliverySite, mapsQuery: `${load.deliverySite.address}` },
+    { key: 'pickup' as const, label: 'Pickup', city: load.from, date: load.date, window: load.window, site: load.pickupSite, mapsQuery: `${load.pickupSite.address}` },
+    { key: 'delivery' as const, label: 'Delivery', city: load.to, date: load.deliveryDate, window: load.deliveryWindow, site: load.deliverySite, mapsQuery: `${load.deliverySite.address}` },
   ];
   const navigateTarget: 'pickup' | 'delivery' = tripStage === 'confirmed' || tripStage === 'at-pickup' ? 'pickup' : 'delivery';
   const navigateStop = stops.find((stop) => stop.key === navigateTarget) ?? stops[0];
@@ -383,7 +383,7 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
                       {stop.site.address}
                     </p>
                     <p className="mt-[2px] text-caption-12 text-[var(--color-text-secondary)]">
-                      {stop.day === 'today' ? 'Today' : 'Tomorrow'} · {stop.window} · {stop.site.note}
+                      {dayLabel(stop.date)} · {stop.window} · {stop.site.note}
                     </p>
                     {isHere && (
                       <p className="mt-[4px] text-caption-12 text-[var(--color-action-primary)]" role="status">

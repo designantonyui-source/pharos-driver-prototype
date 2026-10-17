@@ -29,7 +29,7 @@ describe('DismissedLoads', () => {
     expect(screen.getByText('No dismissed loads')).toBeTruthy();
     act(dismiss);
     expect(screen.getByText('Lille → Brussels')).toBeTruthy();
-    expect(screen.getByText('NordCargo · €360 · today 14:00–15:00')).toBeTruthy();
+    expect(screen.getByText('NordCargo · €360 · Today 14:00–15:00')).toBeTruthy();
     act(() => store.reset());
     expect(screen.getByText('No dismissed loads')).toBeTruthy();
   });

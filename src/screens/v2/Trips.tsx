@@ -26,7 +26,7 @@ import { V2Frame } from '../../components/v2/V2Frame';
 import { getLoads } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore, type LoadApplication } from '../../lib/store';
-import { pickupTimestamp, type V2Load } from '../../lib/v2/loads';
+import { pickupTimestamp, dayLabel, type V2Load } from '../../lib/v2/loads';
 
 function TripsFrame({ toast, children }: { toast?: ReactNode; children: ReactNode }) {
   return <V2Frame active="Trips">
@@ -67,7 +67,7 @@ function StatusBlock({ error, retry, label, rows = 3 }: { error: boolean; retry:
 const REVIEW = new Set([ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REVIEW, ApplicationStatus.CUSTOMER_REVIEW]);
 
 function tripWindow(load: V2Load): string {
-  return `${load.day === 'today' ? 'Today' : 'Tomorrow'} · ${load.window}`;
+  return `${dayLabel(load.date)} · ${load.window}`;
 }
 
 const STATE_TONE: Record<'booked' | 'pending' | 'past' | 'rejected', string> = {
@@ -155,7 +155,7 @@ export function Trips() {
       {active.map(({ load }) => <div key={load.id} className="rounded-[var(--radius-md)] bg-[var(--color-nav-bg)] p-[var(--spacing-16)] text-[var(--color-nav-text)]">
         <p className="text-metric-28 text-[var(--color-text-inverse)]">EUR {load.rate.toFixed(2)}</p>
         <p className="mt-[var(--spacing-4)] text-body-14 opacity-90">{load.from} to {load.to} · {tripWindow(load)}</p>
-        <p className="mt-[var(--spacing-4)] text-caption-12 opacity-80">Pickup at {pickupTimestamp(load.day, load.window)}</p>
+        <p className="mt-[var(--spacing-4)] text-caption-12 opacity-80">Pickup at {pickupTimestamp(load.date, load.window)}</p>
         <div className="mt-[var(--spacing-16)]"><Button label="Open trip" onClick={() => navigate(`/trip/${load.id}`)} /></div>
       </div>)}
     </div>}

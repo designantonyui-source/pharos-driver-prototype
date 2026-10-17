@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { dismissLoad, getLoads, restoreLoad, commitRoute } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore } from '../../lib/store';
-import type { V2Load } from '../../lib/v2/loads';
+import { dayLabel, type V2Load } from '../../lib/v2/loads';
 import { Icon } from '../../components/Icon';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { LoadSheet } from '../../components/v2/LoadSheet';
@@ -34,7 +34,7 @@ const FILTER_TESTS: Record<string, (l: V2Load) => boolean> = {
   near: (l) => l.pickupKm < 30,
 };
 
-export type DayFilter = '' | 'today' | 'tomorrow';
+export type DayFilter = '' | string;
 
 export function Home() {
   const navigate = useNavigate();
@@ -80,7 +80,7 @@ export function Home() {
     () => (loads ?? [])
       .filter((l) => !dismissedIds.includes(l.id))
       .filter(routeMatch)
-      .filter((l) => !day || l.day === day)
+      .filter((l) => !day || l.date === day)
       .filter((l) => FILTERS.every((f) => !on.includes(f.id) || FILTER_TESTS[f.id](l))),
     // routeMatch reads origin/destination — keep them as explicit deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -89,8 +89,8 @@ export function Home() {
   const applied = loads?.find((l) => l.id === state.loadId) ?? null;
   const status = state.status;
   const open = loads?.find((l) => l.id === openId) ?? null;
-  const dayLabel = day === 'today' ? 'Today' : day === 'tomorrow' ? 'Tomorrow' : null;
-  const activeLabels = [...(dayLabel ? [dayLabel] : []), ...FILTERS.filter((f) => on.includes(f.id)).map((f) => f.label)];
+  const dayLabelText = day ? dayLabel(day) : null;
+  const activeLabels = [...(dayLabelText ? [dayLabelText] : []), ...FILTERS.filter((f) => on.includes(f.id)).map((f) => f.label)];
 
   return (
     <V2Frame active="Loads">
@@ -98,7 +98,7 @@ export function Home() {
         <button
           type="button"
           onClick={() => setRouteOpen(true)}
-          aria-label={`Direction: ${routeLabel}${dayLabel ? `, ${dayLabel}` : ''}, ${visible.length} of ${loads?.length ?? 0} loads. Activate to change.`}
+          aria-label={`Direction: ${routeLabel}${dayLabelText ? `, ${dayLabelText}` : ''}, ${visible.length} of ${loads?.length ?? 0} loads. Activate to change.`}
           className="flex items-center justify-between gap-[8px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] text-left shadow-card focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
         >
           <span className="flex min-w-0 items-start gap-[8px] text-[var(--color-text-primary)]">
@@ -163,7 +163,7 @@ export function Home() {
         countFor={(route) => (loads ?? []).filter((l) =>
           (route.to.trim() === '' || l.to.trim().toLocaleLowerCase() === route.to.trim().toLocaleLowerCase()) &&
           (route.from.trim() === '' || l.from.trim().toLocaleLowerCase() === route.from.trim().toLocaleLowerCase()) &&
-          (!route.day || l.day === route.day),
+          (!route.day || l.date === route.day),
         ).length}
         onApply={(route) => {
           setDay(route.day);

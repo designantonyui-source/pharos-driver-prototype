@@ -10,7 +10,7 @@ import { V2Frame } from '../../components/v2/V2Frame';
 import { advanceStatus, cancelApplication, getLoads } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { store, useStore } from '../../lib/store';
-import type { V2Load } from '../../lib/v2/loads';
+import { dayLabel, type V2Load } from '../../lib/v2/loads';
 
 /**
  * v2 · ApplicationTracker — one status screen for every application outcome (replaces Pending screens).
@@ -119,7 +119,7 @@ export function ApplicationTrackerView({
             </div>
             <div className="mt-[16px] border-t border-[var(--color-border-default)] pt-[12px]">
               <p className="text-label-14 text-[var(--color-text-primary)]">{load.from} → {load.to}</p>
-              <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">€{load.rate} · {load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window}</p>
+              <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">€{load.rate} · {dayLabel(load.date)} · {load.window}</p>
             </div>
           </section>
 

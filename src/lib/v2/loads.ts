@@ -17,11 +17,13 @@ export type V2Load = {
   km: number;
   from: string;
   to: string;
-  day: 'today' | 'tomorrow';
+  /** Pickup day as an ISO date (yyyy-mm-dd). The driver plans real days, not "today". */
+  date: string;
   window: string;
   pickupTime?: string;
   onRoute?: boolean;
-  deliveryDay: 'today' | 'tomorrow';
+  /** Delivery day as an ISO date (fixtures: same day as pickup). */
+  deliveryDate: string;
   deliveryWindow: string;
   pickupKm: number;
   pickupMin: number;
@@ -42,9 +44,29 @@ export type V2Load = {
   documents: { id: string; name: string; detail: string }[];
 };
 
-export function pickupTimestamp(day: V2Load['day'], window: string): string {
-  const date = new Date();
-  if (day === 'tomorrow') date.setDate(date.getDate() + 1);
+/** ISO date (yyyy-mm-dd) N days from today — anchors fixtures to real days. */
+export function isoDayOffset(offset: number, now: Date = new Date()): string {
+  const date = new Date(now);
+  date.setDate(date.getDate() + offset);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** Short day label for a pickup ISO date: Today / Tomorrow / Mon 20. */
+export function dayLabel(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso + 'T00:00:00');
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.round((date.getTime() - today.getTime()) / 86_400_000);
+  if (diff <= 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
+}
+
+export function pickupTimestamp(isoDate: string, window: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
   const [hours, minutes] = window.split('–')[0].split(':').map(Number);
   date.setHours(hours, minutes, 0, 0);
   return date.toISOString();
@@ -60,10 +82,10 @@ export const V2_LOADS: V2Load[] = [
     km: 111,
     from: 'Lille',
     to: 'Brussels',
-    day: 'today',
+    date: isoDayOffset(0),
     window: '14:00–15:00',
-    pickupTime: pickupTimestamp('today', '14:00–15:00'),
-    deliveryDay: 'today',
+    pickupTime: pickupTimestamp(isoDayOffset(0), '14:00–15:00'),
+    deliveryDate: isoDayOffset(0),
     deliveryWindow: '17:00–18:00',
     pickupKm: 18,
     pickupMin: 25,
@@ -97,10 +119,10 @@ export const V2_LOADS: V2Load[] = [
     km: 68,
     from: 'Ghent',
     to: 'Antwerp',
-    day: 'today',
+    date: isoDayOffset(0),
     window: '16:00–17:00',
-    pickupTime: pickupTimestamp('today', '16:00–17:00'),
-    deliveryDay: 'today',
+    pickupTime: pickupTimestamp(isoDayOffset(0), '16:00–17:00'),
+    deliveryDate: isoDayOffset(0),
     deliveryWindow: '18:00–19:00',
     pickupKm: 42,
     pickupMin: 45,
@@ -134,10 +156,10 @@ export const V2_LOADS: V2Load[] = [
     km: 102,
     from: 'Calais',
     to: 'Lille',
-    day: 'tomorrow',
+    date: isoDayOffset(1),
     window: '08:00–09:00',
-    pickupTime: pickupTimestamp('tomorrow', '08:00–09:00'),
-    deliveryDay: 'tomorrow',
+    pickupTime: pickupTimestamp(isoDayOffset(1), '08:00–09:00'),
+    deliveryDate: isoDayOffset(1),
     deliveryWindow: '11:00–12:00',
     pickupKm: 64,
     pickupMin: 55,
@@ -171,10 +193,10 @@ export const V2_LOADS: V2Load[] = [
     km: 125,
     from: 'Paris',
     to: 'Brussels',
-    day: 'today',
+    date: isoDayOffset(0),
     window: '10:00–11:00',
-    pickupTime: pickupTimestamp('today', '10:00–11:00'),
-    deliveryDay: 'today',
+    pickupTime: pickupTimestamp(isoDayOffset(0), '10:00–11:00'),
+    deliveryDate: isoDayOffset(0),
     deliveryWindow: '14:00–15:00',
     pickupKm: 12,
     pickupMin: 15,
@@ -208,10 +230,10 @@ export const V2_LOADS: V2Load[] = [
     km: 129,
     from: 'Brussels',
     to: 'Amsterdam',
-    day: 'tomorrow',
+    date: isoDayOffset(2),
     window: '09:00–10:00',
-    pickupTime: pickupTimestamp('tomorrow', '09:00–10:00'),
-    deliveryDay: 'tomorrow',
+    pickupTime: pickupTimestamp(isoDayOffset(2), '09:00–10:00'),
+    deliveryDate: isoDayOffset(2),
     deliveryWindow: '13:00–14:00',
     pickupKm: 22,
     pickupMin: 30,
@@ -245,10 +267,10 @@ export const V2_LOADS: V2Load[] = [
     km: 102,
     from: 'Lille',
     to: 'Paris',
-    day: 'today',
+    date: isoDayOffset(1),
     window: '18:00–19:00',
-    pickupTime: pickupTimestamp('today', '18:00–19:00'),
-    deliveryDay: 'today',
+    pickupTime: pickupTimestamp(isoDayOffset(1), '18:00–19:00'),
+    deliveryDate: isoDayOffset(1),
     deliveryWindow: '21:00–22:00',
     pickupKm: 8,
     pickupMin: 12,

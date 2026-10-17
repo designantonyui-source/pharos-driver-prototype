@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import type { V2Load } from '../../lib/v2/loads';
+import { dayLabel } from '../../lib/v2/loads';
 import mapArt from '../../assets/maps/route-628x674.svg';
 import { Button } from '../Button';
 import { Icon } from '../Icon';
@@ -171,7 +172,7 @@ export function SmartLoadList({
             <span className="truncate">{load.from}</span><Icon name="arrow-right" size="sm" /><span className="truncate">{load.to}</span>
           </span>
           <span className="text-body-14 text-[var(--color-text-secondary)]">
-            {load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window} · {load.pickupKm} km to pickup
+            {dayLabel(load.date)} · {load.window} · {load.pickupKm} km to pickup
           </span>
         </button>
       </article>

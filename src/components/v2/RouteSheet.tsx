@@ -16,8 +16,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../Button';
 import { Icon } from '../Icon';
 import { Sheet } from './Sheet';
+import { isoDayOffset } from '../../lib/v2/loads';
 
-export type RouteDay = '' | 'today' | 'tomorrow';
+export type RouteDay = string;
 
 export type RouteValue = { from: string; to: string; day?: RouteDay };
 
@@ -195,11 +196,20 @@ export function RouteSheet({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [open, cities, dayDraft]);
 
-  const DAYS: { id: RouteDay; label: string }[] = [
-    { id: '', label: 'Any day' },
-    { id: 'today', label: 'Today' },
-    { id: 'tomorrow', label: 'Tomorrow' },
-  ];
+  // 7-day strip (iOS-native: browser scroll physics + snap, no JS animation).
+  // Counts follow the current From/To draft live; dead days stay disabled.
+  const strip = Array.from({ length: 7 }, (_, i) => {
+    const iso = isoDayOffset(i);
+    const date = new Date(iso + 'T00:00:00');
+    const matches = countFor({ from: fromDraft, to: toDraft, day: iso });
+    return {
+      iso,
+      weekday: date.toLocaleDateString('en-GB', { weekday: 'short' }),
+      dayNum: date.getDate(),
+      full: date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
+      matches,
+    };
+  });
 
   return (
     <Sheet open={open} onClose={onClose} label="Change direction">
@@ -237,23 +247,46 @@ export function RouteSheet({
         />
       </div>
       <div className="mt-[16px]" role="group" aria-label="Pickup day">
-        <div className="flex gap-[8px]" role="presentation">
-          {DAYS.map((d) => {
-            const selected = dayDraft === d.id;
+        <div className="flex snap-x snap-proximity gap-[8px] overflow-x-auto pb-[4px] [scrollbar-width:none] [touch-action:pan-y] [&::-webkit-scrollbar]:hidden">
+          <button
+            type="button"
+            aria-pressed={dayDraft === ''}
+            aria-label={dayDraft === '' ? 'Any day, selected. Activate to remove.' : 'Any day'}
+            onClick={() => setDayDraft('')}
+            className={`flex min-h-[64px] min-w-[56px] shrink-0 snap-start select-none flex-col items-center justify-center gap-[2px] rounded-[var(--radius-md)] border px-[8px] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
+              dayDraft === ''
+                ? 'border-transparent bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]'
+                : 'border-[var(--color-action-border)] bg-[var(--color-action-secondary)] text-[var(--color-action-text)]'
+            }`}
+          >
+            <span className="text-caption-12 uppercase">Any</span>
+            <span className="text-heading-14">day</span>
+            <span className="text-caption-12 opacity-80">{visible} total</span>
+          </button>
+          {strip.map((d) => {
+            const selected = dayDraft === d.iso;
+            const dead = d.matches === 0;
             return (
               <button
-                key={d.id || 'any'}
+                key={d.iso}
                 type="button"
+                disabled={dead}
                 aria-pressed={selected}
-                aria-label={selected ? `${d.label}, selected. Activate to remove.` : d.label}
-                onClick={() => setDayDraft(d.id)}
-                className={`flex min-h-[44px] flex-1 items-center justify-center rounded-[var(--radius-pill)] border px-[14px] text-label-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
-                  selected
-                    ? 'border-transparent bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]'
-                    : 'border-[var(--color-action-border)] bg-[var(--color-action-secondary)] text-[var(--color-action-text)]'
+                aria-label={selected ? `${d.full}, selected. Activate to remove.` : `${d.full}, ${dead ? 'no loads' : `${d.matches} ${d.matches === 1 ? 'load' : 'loads'}`}`}
+                onClick={() => setDayDraft(d.iso)}
+                className={`flex min-h-[64px] min-w-[56px] shrink-0 snap-start select-none flex-col items-center justify-center gap-[2px] rounded-[var(--radius-md)] border px-[8px] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
+                  dead
+                    ? 'cursor-not-allowed border-[var(--color-border-default)] text-[var(--color-text-disabled)]'
+                    : selected
+                      ? 'border-transparent bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]'
+                      : 'border-[var(--color-action-border)] bg-[var(--color-action-secondary)] text-[var(--color-action-text)]'
                 }`}
               >
-                {d.label}
+                <span className="text-caption-12 uppercase">{d.weekday}</span>
+                <span className="text-heading-14">{d.dayNum}</span>
+                <span className="text-caption-12 opacity-80">
+                  {dead ? '·' : d.matches}
+                </span>
               </button>
             );
           })}

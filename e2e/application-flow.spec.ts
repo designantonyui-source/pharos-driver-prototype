@@ -26,7 +26,7 @@ test('filters narrow the feed and the empty state recovers', async ({ page }) =>
   await page.getByRole('button', { name: 'Direction: Anywhere → Brussels, 2 of 6 loads. Activate to change.' }).click();
   const routeSheet = page.getByRole('dialog', { name: 'Change direction' });
   await expect(routeSheet).toBeVisible();
-  await routeSheet.getByRole('button', { name: 'Today' }).click();
+  await routeSheet.getByRole('group', { name: 'Pickup day' }).getByRole('button', { name: /2 loads/ }).click();
   await expect(routeSheet.getByRole('button', { name: 'Show 2 loads' })).toBeVisible();
   await routeSheet.getByRole('button', { name: 'Show 2 loads' }).click();
   await expect(page.getByRole('button', { name: 'Direction: Anywhere → Brussels, Today, 2 of 6 loads. Activate to change.' })).toBeVisible();

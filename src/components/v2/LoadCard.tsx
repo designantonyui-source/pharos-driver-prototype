@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ApplicationStatus } from '../../lib/models';
 import { getApplicationForLoad, store, useStore, type LoadApplication } from '../../lib/store';
-import { pickupTimestamp, type V2Load } from '../../lib/v2/loads';
+import { dayLabel, pickupTimestamp, type V2Load } from '../../lib/v2/loads';
 import { Icon, type IconName } from '../Icon';
 import { LoadCta } from './LoadCta';
 
@@ -130,7 +130,7 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
   const [params] = useSearchParams();
   const scenario = params.get('scenario');
   const search = scenario === 'approve' || scenario === 'reject' ? `?scenario=${scenario}` : '';
-  const pickupTime = useMemo(() => load.pickupTime ?? pickupTimestamp(load.day, load.window), [load.pickupTime, load.day, load.window]);
+  const pickupTime = useMemo(() => load.pickupTime ?? pickupTimestamp(load.date, load.window), [load.pickupTime, load.date, load.window]);
   const badge: Badge | null = state === 'pending' ? { icon: 'clock', label: 'In review' }
     : state === 'booked' ? { icon: 'circle-check', label: `Booked · ${application?.tripId ?? `TR-${load.id}`}` }
       : state === 'rejected' ? { icon: 'circle-x', label: 'Rejected' }
@@ -211,7 +211,7 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
           </span>
         </span>
         <span className="inline-flex shrink-0 items-center gap-[4px] rounded-[var(--radius-pill)] bg-[var(--color-status-info-bg)] px-[10px] py-[6px] text-label-14 text-[var(--color-status-info-text)]">
-          <Icon name="clock" size={14} />{load.day === 'today' ? 'Today' : 'Tomorrow'} {load.window}
+          <Icon name="clock" size={14} />{dayLabel(load.date)} {load.window}
         </span>
       </button>
       <p className="flex flex-wrap items-baseline gap-[8px]">
@@ -219,7 +219,7 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
         <span className="text-label-14 text-[var(--color-text-secondary)]">€{load.perKm.toFixed(2)}/km</span>
       </p>
       <p className="truncate text-caption-12 text-[var(--color-text-secondary)]">{load.vehicle}</p>
-      <p className="sr-only">{load.day === 'today' ? 'Today' : 'Tomorrow'} {load.window}, {load.km} km loaded, {load.pickupKm} km {load.pickupMin} minutes to pickup</p>
+      <p className="sr-only">{dayLabel(load.date)} {load.window}, {load.km} km loaded, {load.pickupKm} km {load.pickupMin} minutes to pickup</p>
       <p className="flex items-center gap-[4px] overflow-hidden whitespace-nowrap text-label-14 text-[var(--color-text-primary)]" aria-label={`${load.company}, rating ${load.rating.toFixed(1)}, verified, ${load.paidIn}${cross ? ', cross-border' : ''}`}>
         <span className="shrink-0 font-semibold">{load.company}</span>
         <span aria-hidden="true" className="shrink-0 font-normal text-[var(--color-text-secondary)]"> · <span className="inline-flex items-center gap-[2px]"><Icon name="star" size={12} />{load.rating.toFixed(1)}</span> Verified · {load.paidIn}</span>

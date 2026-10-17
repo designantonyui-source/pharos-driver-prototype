@@ -1,4 +1,5 @@
 import type { V2Load } from '../../lib/v2/loads';
+import { dayLabel } from '../../lib/v2/loads';
 import { getApplicationForLoad } from '../../lib/store';
 import { CARD_STATE_STYLES, getLoadCardState } from './LoadCard';
 import { LoadCta } from './LoadCta';
@@ -65,7 +66,7 @@ export function LoadSheet({
 
       <ul className="mt-[16px] flex flex-col gap-[12px]">
         <Fact icon="clock">
-          {load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window}
+          {dayLabel(load.date)} · {load.window}
         </Fact>
         <Fact icon="map-pin">
           <span className="text-[var(--color-offer-text-highlight)]">

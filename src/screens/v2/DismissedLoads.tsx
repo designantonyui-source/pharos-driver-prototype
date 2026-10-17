@@ -15,7 +15,7 @@ import { V2BackBar } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { dismissLoad, getLoads, restoreLoad } from '../../lib/api';
 import { store, useStore } from '../../lib/store';
-import type { V2Load } from '../../lib/v2/loads';
+import { dayLabel, type V2Load } from '../../lib/v2/loads';
 
 type ViewProps = {
   loads: V2Load[];
@@ -52,7 +52,7 @@ export function DismissedLoadsView({ loads, loading, fetchError, mutationError, 
               <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="truck" size="md" /></span>
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-body-14 text-[var(--color-text-primary)]">{load.from} → {load.to}</span>
-                <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{load.company} · €{load.rate} · {load.day} {load.window}</span>
+                <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{load.company} · €{load.rate} · {dayLabel(load.date)} {load.window}</span>
               </span>
             </div>
             <div className="mt-[var(--spacing-12)]"><Button label={busy ? 'Restoring…' : `Restore ${load.company}`} appearance="secondary" disabled={busy} loading={busy} onClick={() => onRestore(load)} /></div>

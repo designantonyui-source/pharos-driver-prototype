@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { submitApplication } from '../../lib/api';
 import type { V2Load } from '../../lib/v2/loads';
+import { dayLabel } from '../../lib/v2/loads';
 import { Button } from '../Button';
 import { Icon } from '../Icon';
 import { Sheet } from './Sheet';
@@ -68,7 +69,7 @@ export function QuickApplyModal({ loadId, load, onCancel, onSubmitted, onAlready
           <div className="flex items-center justify-between gap-[12px]">
             <dt className="text-body-14 text-[var(--color-text-secondary)]">Pickup time</dt>
             <dd className="text-label-14 text-[var(--color-text-primary)]">
-              {load.day === 'today' ? 'Today' : 'Tomorrow'} · {load.window}
+              {dayLabel(load.date)} · {load.window}
             </dd>
           </div>
         </dl> : (
