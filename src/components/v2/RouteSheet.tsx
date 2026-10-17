@@ -1,8 +1,10 @@
 /**
  * v2 · RouteSheet — change the feed direction without leaving `/v2` (closes P2-1:
- * direction used to live only on `/search`). From/To live in ONE grouped box
- * (Grab/Lyft pattern: blue origin dot, red destination dot, shared border) with
- * inline suggestion lists (count included) — no chip rows, no dead options.
+ * direction used to live only on `/search`). From/To live in ONE grouped box:
+ * two-line rows (small label over the value), markers joined by a route line
+ * (filled origin dot, hollow destination ring — one neutral hue, red would read
+ * as an error), hairline divider inset to the text. Inline suggestion lists
+ * (count included) — no chip rows, no dead options.
  * Below: Recent (last applied, current excluded, with relative time) and Popular
  * (top feed destinations not already in Recent) — tap fills the draft fields,
  * Show commits. One commit path: the sheet never applies behind your back
@@ -39,7 +41,6 @@ function CityField({
   onChange,
   onPick,
   marker,
-  edge,
 }: {
   id: string;
   label: string;
@@ -54,10 +55,8 @@ function CityField({
   onClose: () => void;
   onChange: (value: string) => void;
   onPick: (city: string) => void;
-  /** Grab-style dot: blue origin, red destination. */
+  /** Route marker: filled origin dot, hollow destination ring (one neutral hue — red reads as an error). */
   marker: 'from' | 'to';
-  /** Joined pair: top keeps only the top rounding, bottom only the bottom. */
-  edge: 'top' | 'bottom';
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -80,35 +79,37 @@ function CityField({
 
   return (
     <div ref={boxRef} className="relative">
-      <div className={`flex min-h-[52px] items-center gap-[8px] bg-[var(--color-bg-surface)] px-[12px] ${
-        edge === 'top' ? 'rounded-t-[var(--radius-md)] border-b border-[var(--color-border-default)]' : 'rounded-b-[var(--radius-md)]'
-      }`}>
+      <div className="flex min-h-[60px] items-center gap-[8px] px-[12px]">
         <span
           aria-hidden
           className={`h-[10px] w-[10px] shrink-0 rounded-full ${
-            marker === 'from' ? 'bg-[var(--color-action-primary)]' : 'bg-[var(--color-status-danger-text)]'
+            marker === 'from'
+              ? 'bg-[var(--color-action-primary)]'
+              : 'border-[2.5px] border-[var(--color-action-primary)]'
           }`}
         />
-        <label htmlFor={id} className="w-[38px] shrink-0 text-caption-12 uppercase text-[var(--color-text-secondary)]">{label}</label>
-        <input
-          id={id}
-          type="text"
-          role="combobox"
-          aria-expanded={options.length > 0 && open}
-          aria-autocomplete="list"
-          aria-controls={`${id}-suggestions`}
-          value={value}
-          onChange={(event) => { onChange(event.target.value); onOpen(); }}
-          onFocus={onOpen}
-          onBlur={() => {
-            // Let the option tap land first (pointerdown fires before blur).
-            window.setTimeout(() => onClose(), 150);
-          }}
-          onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }}
-          placeholder={placeholder}
-          autoComplete="off"
-          className="flex min-h-[48px] min-w-0 flex-1 items-center bg-transparent text-body-16 text-[var(--color-text-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
-        />
+        <div className="flex min-w-0 flex-1 flex-col justify-center py-[6px]">
+          <label htmlFor={id} className="text-caption-12 leading-tight text-[var(--color-text-secondary)]">{label}</label>
+          <input
+            id={id}
+            type="text"
+            role="combobox"
+            aria-expanded={options.length > 0 && open}
+            aria-autocomplete="list"
+            aria-controls={`${id}-suggestions`}
+            value={value}
+            onChange={(event) => { onChange(event.target.value); onOpen(); }}
+            onFocus={onOpen}
+            onBlur={() => {
+              // Let the option tap land first (pointerdown fires before blur).
+              window.setTimeout(() => onClose(), 150);
+            }}
+            onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }}
+            placeholder={placeholder}
+            autoComplete="off"
+            className="w-full bg-transparent text-body-16 text-[var(--color-text-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+          />
+        </div>
         {value.trim() !== '' && (
           <button
             type="button"
@@ -208,12 +209,13 @@ export function RouteSheet({
   return (
     <Sheet open={open} onClose={onClose} label="Change direction">
       <h2 className="text-heading-20 text-[var(--color-text-primary)]">Loads towards</h2>
-      <div className="mt-[16px] rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)]">
+      <div className="relative mt-[16px] rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)]">
+        <span aria-hidden className="absolute bottom-[24px] left-[16px] top-[24px] w-[2px] bg-[var(--color-border-default)]" />
         <CityField
           id="route-origin"
           label="From"
           value={fromDraft}
-          placeholder="Where do you start?"
+          placeholder="Search city"
           cities={cities}
           countFor={(city) => countFor({ from: city, to: toDraft })}
           open={openField === 'from'}
@@ -222,13 +224,13 @@ export function RouteSheet({
           onChange={setFromDraft}
           onPick={setFromDraft}
           marker="from"
-          edge="top"
         />
+        <div aria-hidden className="ml-[30px] h-px bg-[var(--color-border-default)]" />
         <CityField
           id="route-destination"
           label="To"
           value={toDraft}
-          placeholder="Where to?"
+          placeholder="Search city"
           cities={cities}
           countFor={(city) => countFor({ from: fromDraft, to: city })}
           open={openField === 'to'}
@@ -237,7 +239,6 @@ export function RouteSheet({
           onChange={setToDraft}
           onPick={setToDraft}
           marker="to"
-          edge="bottom"
         />
       </div>
       {(recents.length > 0 || popular.length > 0) && (
