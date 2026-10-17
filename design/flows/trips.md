@@ -3,10 +3,11 @@
 > Рабочий файл потока. Правило: сверху 10 строк правды, снизу append-only история.
 > Маппинг: `design/figma-map.md`.
 
-## Текущее состояние (2026-10-17, tracker fix-2 EXPIRED)
+## Текущее состояние (2026-10-17, нотификации)
 
 - EXPIRED — терминальный статус заявки (`models.ts`): трекер показывает `Application expired` + `Needed both approvals by {approvalsBy}` + `Back to loads`; Cancel скрыт, Dispute нет, re-apply разрешён. Картка фида — нейтральный `cancelled`-стиль, `LoadCta` — `Application expired` + `View status` + `Apply again`. Хаб Trips — секция Past с чипом `Expired` (нейтральный, не danger). Демо: кнопка `→ expired` в DemoPanel.
-- Проверки: unit 167/167, E2E application-flow 9/9, `pnpm check` чистый.
+- Проверки: unit 174/174, `pnpm check` чистый.
+- Нотификации: банер `/v2` — только живые (waiting + confirmed mini-player); ended → null, состояние несут пилюля карточки + Trips Past. `Step 4 of 4` удалён. Toast — только success/info; ошибки — инлайн; подтверждения — Sheet. Висяк — Dispute-тост (№3).
 
 - Portfolio happy path: `Loads → Apply → Confirmed → Trip (en-route → arrived → loaded → en-route → delivered) → Balance (pending payout)`. `advanceTripStage(delivered)` пишет `trip`-запись `pending` в ledger (без дублей); payout-строка в TripDetails — ссылка в Balance; E2E `portfolio happy path: apply to payout` 9/9.
 - RouteSheet: чипов нет — inline-подсказки в инпуте (combobox + listbox, фильтр по вводу, count/`No loads`, один список за раз, закрытие на blur/Escape/скролл/тап-снаружи). Шит короче вдвое.
