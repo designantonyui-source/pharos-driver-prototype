@@ -82,35 +82,36 @@ function CityField({
 
   return (
     <div ref={boxRef} className="relative">
-      <label className="sr-only" htmlFor={id}>{label}</label>
-      <span
-        aria-hidden
-        className={`absolute left-[12px] top-1/2 h-[10px] w-[10px] -translate-y-1/2 rounded-full ${
-          marker === 'from' ? 'bg-[var(--color-action-primary)]' : 'bg-[var(--color-status-danger-text)]'
-        }`}
-      />
-      <input
-        id={id}
-        type="text"
-        role="combobox"
-        aria-label={label}
-        aria-expanded={options.length > 0 && open}
-        aria-autocomplete="list"
-        aria-controls={`${id}-suggestions`}
-        value={value}
-        onChange={(event) => { onChange(event.target.value); onOpen(); }}
-        onFocus={onOpen}
-        onBlur={() => {
-          // Let the option tap land first (pointerdown fires before blur).
-          window.setTimeout(() => onClose(), 150);
-        }}
-        onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }}
-        placeholder={placeholder}
-        autoComplete="off"
-        className={`flex min-h-[48px] w-full items-center bg-[var(--color-bg-surface)] pl-[32px] pr-[12px] text-body-16 text-[var(--color-text-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
-          edge === 'top' ? 'rounded-t-[var(--radius-md)] border-b border-[var(--color-border-default)]' : 'rounded-b-[var(--radius-md)]'
-        }`}
-      />
+      <div className={`flex min-h-[52px] items-center gap-[8px] bg-[var(--color-bg-surface)] px-[12px] ${
+        edge === 'top' ? 'rounded-t-[var(--radius-md)] border-b border-[var(--color-border-default)]' : 'rounded-b-[var(--radius-md)]'
+      }`}>
+        <span
+          aria-hidden
+          className={`h-[10px] w-[10px] shrink-0 rounded-full ${
+            marker === 'from' ? 'bg-[var(--color-action-primary)]' : 'bg-[var(--color-status-danger-text)]'
+          }`}
+        />
+        <label htmlFor={id} className="w-[38px] shrink-0 text-caption-12 uppercase text-[var(--color-text-secondary)]">{label}</label>
+        <input
+          id={id}
+          type="text"
+          role="combobox"
+          aria-expanded={options.length > 0 && open}
+          aria-autocomplete="list"
+          aria-controls={`${id}-suggestions`}
+          value={value}
+          onChange={(event) => { onChange(event.target.value); onOpen(); }}
+          onFocus={onOpen}
+          onBlur={() => {
+            // Let the option tap land first (pointerdown fires before blur).
+            window.setTimeout(() => onClose(), 150);
+          }}
+          onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }}
+          placeholder={placeholder}
+          autoComplete="off"
+          className="flex min-h-[48px] min-w-0 flex-1 items-center bg-transparent text-body-16 text-[var(--color-text-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+        />
+      </div>
       {open && options.length > 0 && (
         <ul
           id={`${id}-suggestions`}
@@ -219,7 +220,7 @@ export function RouteSheet({
           id="route-origin"
           label="From"
           value={fromDraft}
-          placeholder="Anywhere"
+          placeholder="Where do you start?"
           cities={cities}
           countFor={(city) => countFor({ from: city, to: toDraft, day: dayDraft })}
           open={openField === 'from'}
@@ -234,7 +235,7 @@ export function RouteSheet({
           id="route-destination"
           label="To"
           value={toDraft}
-          placeholder="Brussels"
+          placeholder="Where to?"
           cities={cities}
           countFor={(city) => countFor({ from: fromDraft, to: city, day: dayDraft })}
           open={openField === 'to'}
