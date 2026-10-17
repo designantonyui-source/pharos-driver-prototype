@@ -58,10 +58,10 @@ test('filters narrow the feed and the empty state recovers', async ({ page }) =>
   await page.getByRole('button', { name: 'Show 6 loads' }).click();
   await expect(page.getByRole('button', { name: 'Filters', exact: true })).toBeVisible();
   await expect(page.getByRole('article', { name: 'Load nordcargo' })).toBeVisible();
-  // Reset the day too: direction sheet → Any day, the header drops the day.
+  // Reset the day too: tap the selected day again — it deselects, the header drops the day.
   await page.getByRole('button', { name: 'Direction: Anywhere → Brussels, Today, 2 of 6 loads. Activate to change.' }).click();
   await expect(routeSheet).toBeVisible();
-  await routeSheet.getByRole('button', { name: 'Any day' }).click();
+  await routeSheet.getByRole('group', { name: 'Pickup day' }).getByRole('button', { name: /selected\. Activate to remove\./ }).click();
   await expect(routeSheet.getByRole('button', { name: 'Show 2 loads' })).toBeVisible();
   await routeSheet.getByRole('button', { name: 'Show 2 loads' }).click();
   await expect(page.getByRole('button', { name: 'Direction: Anywhere → Brussels, 2 of 6 loads. Activate to change.' })).toBeVisible();

@@ -249,21 +249,6 @@ export function RouteSheet({
       </div>
       <div className="mt-[16px]" role="group" aria-label="Pickup day">
         <div className="flex snap-x snap-proximity gap-[8px] overflow-x-auto pb-[4px] [scrollbar-width:none] [touch-action:pan-y] [&::-webkit-scrollbar]:hidden">
-          <button
-            type="button"
-            aria-pressed={dayDraft === ''}
-            aria-label={dayDraft === '' ? 'Any day, selected. Activate to remove.' : 'Any day'}
-            onClick={() => setDayDraft('')}
-            className={`flex min-h-[64px] min-w-[56px] shrink-0 snap-start select-none flex-col items-center justify-center gap-[2px] rounded-[var(--radius-md)] border px-[8px] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
-              dayDraft === ''
-                ? 'border-transparent bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]'
-                : 'border-[var(--color-action-border)] bg-[var(--color-action-secondary)] text-[var(--color-action-text)]'
-            }`}
-          >
-            <span className="text-caption-12 uppercase">Any</span>
-            <span className="text-heading-14">day</span>
-            <span className="text-caption-12 opacity-80">{visible} total</span>
-          </button>
           {strip.map((d) => {
             const selected = dayDraft === d.iso;
             const dead = d.matches === 0;
@@ -274,7 +259,7 @@ export function RouteSheet({
                 disabled={dead}
                 aria-pressed={selected}
                 aria-label={selected ? `${d.full}, selected. Activate to remove.` : `${d.full}, ${dead ? 'no loads' : `${d.matches} ${d.matches === 1 ? 'load' : 'loads'}`}`}
-                onClick={() => setDayDraft(d.iso)}
+                onClick={() => setDayDraft(selected ? '' : d.iso)}
                 className={`flex min-h-[64px] min-w-[56px] shrink-0 snap-start select-none flex-col items-center justify-center gap-[2px] rounded-[var(--radius-md)] border px-[8px] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
                   dead
                     ? 'cursor-not-allowed border-[var(--color-border-default)] text-[var(--color-text-disabled)]'

@@ -106,6 +106,25 @@ describe('RouteSheet draft semantics', () => {
     expect(onApply).toHaveBeenCalledWith({ from: '', to: 'Brussels', day: todayIso });
   });
 
+  it('tapping the selected strip day again clears it back to any day', () => {
+    const onApply = vi.fn();
+    const todayIso = isoDayOffset(0);
+    const countFor = (route: { from: string; to: string; day?: string }) =>
+      route.day ? (route.day === todayIso ? 2 : 0) : 3;
+    render(
+      <MemoryRouter>
+        <RouteSheet open value={{ from: '', to: 'Brussels' }} countFor={countFor} onApply={onApply} onClose={() => undefined} cities={['Brussels']} />
+      </MemoryRouter>,
+    );
+    const group = within(screen.getByRole('group', { name: 'Pickup day' }));
+    fireEvent.click(group.getByRole('button', { name: /2 loads/ }));
+    expect(screen.getByRole('button', { name: 'Show 2 loads' })).toBeEnabled();
+    fireEvent.click(group.getByRole('button', { name: /selected\. Activate to remove\./ }));
+    expect(screen.getByRole('button', { name: 'Show 3 loads' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Show 3 loads' }));
+    expect(onApply).toHaveBeenCalledWith({ from: '', to: 'Brussels', day: '' });
+  });
+
   it('opens on the committed day', () => {
     const tomorrowIso = isoDayOffset(1);
     const full = new Date(`${tomorrowIso}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
