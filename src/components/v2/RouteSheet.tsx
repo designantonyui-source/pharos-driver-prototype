@@ -82,10 +82,10 @@ function CityField({
       <div className="flex min-h-[60px] items-center gap-[8px] px-[12px]">
         <span
           aria-hidden
-          className={`h-[10px] w-[10px] shrink-0 rounded-full ${
+          className={`shrink-0 rounded-full ${
             marker === 'from'
-              ? 'bg-[var(--color-action-primary)]'
-              : 'border-[2.5px] border-[var(--color-action-primary)]'
+              ? 'h-[10px] w-[10px] bg-[var(--color-action-primary)]'
+              : 'h-[12px] w-[12px] border-2 border-[var(--color-action-primary)] bg-[var(--color-bg-surface)]'
           }`}
         />
         <div className="flex min-w-0 flex-1 flex-col justify-center py-[6px]">
@@ -210,7 +210,7 @@ export function RouteSheet({
     <Sheet open={open} onClose={onClose} label="Change direction">
       <h2 className="text-heading-20 text-[var(--color-text-primary)]">Loads towards</h2>
       <div className="relative mt-[16px] rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)]">
-        <span aria-hidden className="absolute bottom-[24px] left-[16px] top-[24px] w-[2px] bg-[var(--color-border-default)]" />
+        <span aria-hidden className="absolute bottom-[30px] left-[16px] top-[30px] w-[2px] bg-[var(--color-border-default)]" />
         <CityField
           id="route-origin"
           label="From"
