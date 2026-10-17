@@ -41,6 +41,7 @@ function CityField({
   onChange,
   onPick,
   marker,
+  edge,
 }: {
   id: string;
   label: string;
@@ -57,6 +58,8 @@ function CityField({
   onPick: (city: string) => void;
   /** Route marker: filled origin dot, hollow destination ring (one neutral hue — red reads as an error). */
   marker: 'from' | 'to';
+  /** Each row owns its connector half: top row extends below its dot, bottom row above its ring — they always meet. */
+  edge: 'top' | 'bottom';
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -79,13 +82,16 @@ function CityField({
 
   return (
     <div ref={boxRef} className="relative">
-      <div className="flex min-h-[60px] items-center gap-[8px] px-[12px]">
+      {/* Connector half: runs from this row's marker centre to its shared edge — the two halves always meet at the divider. */}
+      <span aria-hidden className={`absolute left-[17px] w-[2px] bg-[var(--color-border-default)] ${edge === 'top' ? 'bottom-0 top-1/2' : 'bottom-1/2 top-0'}`} />
+      {/* relative: markers paint ABOVE the absolute line (positioned later in the paint order) — the line must never pierce a dot or ring. */}
+      <div className="relative flex min-h-[60px] items-center gap-[8px] px-[12px]">
         <span
           aria-hidden
-          className={`shrink-0 rounded-full ${
+          className={`h-[12px] w-[12px] shrink-0 rounded-full ${
             marker === 'from'
-              ? 'h-[10px] w-[10px] bg-[var(--color-action-primary)]'
-              : 'h-[12px] w-[12px] border-2 border-[var(--color-action-primary)] bg-[var(--color-bg-surface)]'
+              ? 'bg-[var(--color-action-primary)]'
+              : 'border-2 border-[var(--color-action-primary)] bg-[var(--color-bg-surface)]'
           }`}
         />
         <div className="flex min-w-0 flex-1 flex-col justify-center py-[6px]">
@@ -210,7 +216,6 @@ export function RouteSheet({
     <Sheet open={open} onClose={onClose} label="Change direction">
       <h2 className="text-heading-20 text-[var(--color-text-primary)]">Loads towards</h2>
       <div className="relative mt-[16px] rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)]">
-        <span aria-hidden className="absolute bottom-[30px] left-[16px] top-[30px] w-[2px] bg-[var(--color-border-default)]" />
         <CityField
           id="route-origin"
           label="From"
@@ -224,8 +229,9 @@ export function RouteSheet({
           onChange={setFromDraft}
           onPick={setFromDraft}
           marker="from"
+          edge="top"
         />
-        <div aria-hidden className="ml-[30px] h-px bg-[var(--color-border-default)]" />
+        <div aria-hidden className="ml-[32px] h-px bg-[var(--color-border-default)]" />
         <CityField
           id="route-destination"
           label="To"
@@ -239,6 +245,7 @@ export function RouteSheet({
           onChange={setToDraft}
           onPick={setToDraft}
           marker="to"
+          edge="bottom"
         />
       </div>
       {(recents.length > 0 || popular.length > 0) && (
