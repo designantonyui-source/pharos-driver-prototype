@@ -36,7 +36,7 @@ test('filters narrow the feed and the empty state recovers', async ({ page }) =>
   await expect(page.getByRole('article', { name: 'Load paris-brussels' })).toBeVisible();
   // The empty state lives one route away: drive into the Antwerp → Paris dead
   // end by hand — no fixture serves it — and recover via Change direction.
-  await page.getByRole('button', { name: 'Direction: Brussels, 2 loads. Activate to change.' }).click();
+  await page.getByRole('button', { name: 'Direction: Anywhere → Brussels, 2 of 6 loads. Activate to change.' }).click();
   const routeSheet = page.getByRole('dialog', { name: 'Change direction' });
   await expect(routeSheet).toBeVisible();
   await routeSheet.getByLabel('Origin city').fill('Antwerp');
@@ -55,7 +55,7 @@ test('filters narrow the feed and the empty state recovers', async ({ page }) =>
 
 test('direction changes without leaving the feed', async ({ page }) => {
   await page.goto('/#/v2');
-  await page.getByRole('button', { name: 'Direction: Brussels, 2 loads. Activate to change.' }).click();
+  await page.getByRole('button', { name: 'Direction: Anywhere → Brussels, 2 of 6 loads. Activate to change.' }).click();
   await expect(page.getByRole('dialog', { name: 'Change direction' })).toBeVisible();
   await page.getByLabel('Destination city').fill('Antwerp');
   await page.getByRole('heading', { name: 'Loads towards' }).click();
@@ -63,14 +63,14 @@ test('direction changes without leaving the feed', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Show 1 load' })).toBeEnabled();
   await page.getByRole('button', { name: 'Show 1 load' }).click();
   // Direction commits and narrows the feed: only Antwerp survives.
-  await expect(page.getByRole('button', { name: 'Direction: Antwerp, 1 load. Activate to change.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Direction: Anywhere → Antwerp, 1 of 6 loads. Activate to change.' })).toBeVisible();
   await expect(page.getByRole('article', { name: 'Load belroute' })).toBeVisible();
   await expect(page.getByRole('article', { name: 'Load paris-brussels' })).toHaveCount(0);
 });
 
 test('route suggestions carry live counts and the dead end recovers', async ({ page }) => {
   await page.goto('/#/v2');
-  await page.getByRole('button', { name: 'Direction: Brussels, 2 loads. Activate to change.' }).click();
+  await page.getByRole('button', { name: 'Direction: Anywhere → Brussels, 2 of 6 loads. Activate to change.' }).click();
   const sheet = page.getByRole('dialog', { name: 'Change direction' });
   await expect(sheet).toBeVisible();
   // Suggestions live inside the focused field: dead ends read "No loads",
@@ -84,10 +84,10 @@ test('route suggestions carry live counts and the dead end recovers', async ({ p
   await sheet.getByRole('heading', { name: 'Loads towards' }).click();
   await expect(sheet.getByRole('button', { name: 'Show 1 load' })).toBeEnabled();
   await sheet.getByRole('button', { name: 'Show 1 load' }).click();
-  await expect(page.getByRole('button', { name: 'Direction: Paris → Brussels, 1 load. Activate to change.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Direction: Paris → Brussels, 1 of 6 loads. Activate to change.' })).toBeVisible();
   await expect(page.getByRole('article', { name: 'Load paris-brussels' })).toBeVisible();
   // Now drive into the dead end by hand: Antwerp → Paris has no fixture.
-  await page.getByRole('button', { name: 'Direction: Paris → Brussels, 1 load. Activate to change.' }).click();
+  await page.getByRole('button', { name: 'Direction: Paris → Brussels, 1 of 6 loads. Activate to change.' }).click();
   await expect(sheet).toBeVisible();
   await sheet.getByLabel('Origin city').fill('Antwerp');
   await sheet.getByLabel('Destination city').fill('Paris');
@@ -139,7 +139,10 @@ test('driver submits, sees a status update and cancels an application', async ({
 
   await test.step('7. Return to the list with the cancellation saved', async () => {
     await expect(page).toHaveURL(/#\/v2$/);
-    await expect(page.getByRole('button', { name: /Cancelled by you/ })).toBeVisible();
+    // No banner for ended applications (rule: banner is live-only) — the card
+    // pill owns the state, Trips owns the history.
+    await expect(page.getByRole('button', { name: /Cancelled by you/ })).toHaveCount(0);
+    await expect(page.getByText('Cancelled by you', { exact: true }).first()).toBeVisible();
     // Cancelled load re-sorts last, so its CTA reads "Apply again", not "Apply for €…".
     await expect(page.getByRole('button', { name: 'Apply again', exact: true })).toBeEnabled();
     const status = await page.evaluate(() => JSON.parse(localStorage.getItem('pharos-driver-prototype') ?? '{}').status);

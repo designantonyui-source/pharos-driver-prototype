@@ -24,7 +24,9 @@ import { SmartLoadList } from '../../components/v2/SmartLoadList';
  * No form first: the feed is already there; direction + three quick filters narrow it. Applying is one tap and the
  * driver stays on the current view with a live banner. Status moves with the Demo panel (→ dispatcher approved, → confirmed).
  *
- * The direction header states the feed (`Direction: {label}, {N} loads`); the empty state
+ * The direction header states the feed (`Direction: {from → to}, {visible} of {total} loads`);
+ * origin empty reads "Anywhere", never a bare city; the subline names active
+ * filters (or "No filters") — counts, not prices. The empty state
  * offers both Clear filters and Change direction, so a dead-end route recovers in one tap.
  */
 const FILTER_TESTS: Record<string, (l: V2Load) => boolean> = {
@@ -67,7 +69,8 @@ export function Home() {
   );
   const origin = state.route.from.trim();
   const destination = state.route.to.trim() || 'Brussels';
-  const routeLabel = origin ? `${origin} → ${destination}` : destination;
+  const originLabel = origin || 'Anywhere';
+  const routeLabel = `${originLabel} → ${destination}`;
   const routeMatch = (l: V2Load) =>
     (destination === '' || l.to.trim().toLocaleLowerCase() === destination.toLocaleLowerCase()) &&
     (origin === '' || l.from.trim().toLocaleLowerCase() === origin.toLocaleLowerCase());
@@ -83,7 +86,7 @@ export function Home() {
   const applied = loads?.find((l) => l.id === state.loadId) ?? null;
   const status = state.status;
   const open = loads?.find((l) => l.id === openId) ?? null;
-  const minPerKm = visible.length > 0 ? Math.min(...visible.map((l) => l.perKm)) : null;
+  const activeLabels = FILTERS.filter((f) => on.includes(f.id)).map((f) => f.label);
 
   return (
     <V2Frame active="Loads">
@@ -91,7 +94,7 @@ export function Home() {
         <button
           type="button"
           onClick={() => setRouteOpen(true)}
-          aria-label={`Direction: ${routeLabel}, ${visible.length} ${visible.length === 1 ? 'load' : 'loads'}. Activate to change.`}
+          aria-label={`Direction: ${routeLabel}, ${visible.length} of ${loads?.length ?? 0} loads. Activate to change.`}
           className="flex items-center justify-between gap-[8px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] text-left shadow-card focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
         >
           <span className="flex min-w-0 items-start gap-[8px] text-[var(--color-text-primary)]">
@@ -100,11 +103,11 @@ export function Home() {
               <span className="flex min-w-0 items-center gap-[8px]">
                 <span className="text-heading-14 truncate">{routeLabel}</span>
                 <span className="shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-action-primary)] px-[8px] py-[2px] text-label-12 text-[var(--color-action-text-inverse)]">
-                  {loads ? `${visible.length} ${visible.length === 1 ? 'load' : 'loads'}` : '…'}
+                  {loads ? `${visible.length} of ${loads.length}` : '…'}
                 </span>
               </span>
               <span className="text-caption-12 truncate text-[var(--color-text-secondary)]">
-                Loads · Today{minPerKm !== null ? ` · from €${minPerKm.toFixed(2)}/km` : ''}{on.length > 0 ? ` · ${on.length} filter${on.length === 1 ? '' : 's'}` : ''}
+                {activeLabels.length > 0 ? activeLabels.join(' · ') : 'No filters'}
               </span>
             </span>
           </span>
