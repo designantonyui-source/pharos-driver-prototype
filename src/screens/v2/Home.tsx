@@ -25,15 +25,16 @@ import { SmartLoadList } from '../../components/v2/SmartLoadList';
  * driver stays on the current view with a live banner. Status moves with the Demo panel (→ dispatcher approved, → confirmed).
  *
  * The direction header states the feed (`Direction: {from → to}, {visible} of {total} loads`);
- * origin empty reads "Anywhere", never a bare city; the subline names active
- * filters (or "No filters") — counts, not prices. The empty state
+ * origin empty reads "Anywhere", never a bare city; the subline names the pickup
+ * day + active filters (or "No filters") — counts, not prices. The empty state
  * offers both Clear filters and Change direction, so a dead-end route recovers in one tap.
  */
 const FILTER_TESTS: Record<string, (l: V2Load) => boolean> = {
-  today: (l) => l.day === 'today',
   rate: (l) => l.perKm >= 3,
   near: (l) => l.pickupKm < 30,
 };
+
+export type DayFilter = '' | 'today' | 'tomorrow';
 
 export function Home() {
   const navigate = useNavigate();
@@ -45,6 +46,7 @@ export function Home() {
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [on, setOn] = useState<string[]>([]);
+  const [day, setDay] = useState<DayFilter>('');
   const [openId, setOpenId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [routeOpen, setRouteOpen] = useState(false);
@@ -78,15 +80,17 @@ export function Home() {
     () => (loads ?? [])
       .filter((l) => !dismissedIds.includes(l.id))
       .filter(routeMatch)
+      .filter((l) => !day || l.day === day)
       .filter((l) => FILTERS.every((f) => !on.includes(f.id) || FILTER_TESTS[f.id](l))),
     // routeMatch reads origin/destination — keep them as explicit deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loads, on, dismissedIds, origin, destination],
+    [loads, on, day, dismissedIds, origin, destination],
   );
   const applied = loads?.find((l) => l.id === state.loadId) ?? null;
   const status = state.status;
   const open = loads?.find((l) => l.id === openId) ?? null;
-  const activeLabels = FILTERS.filter((f) => on.includes(f.id)).map((f) => f.label);
+  const dayLabel = day === 'today' ? 'Today' : day === 'tomorrow' ? 'Tomorrow' : null;
+  const activeLabels = [...(dayLabel ? [dayLabel] : []), ...FILTERS.filter((f) => on.includes(f.id)).map((f) => f.label)];
 
   return (
     <V2Frame active="Loads">
@@ -94,7 +98,7 @@ export function Home() {
         <button
           type="button"
           onClick={() => setRouteOpen(true)}
-          aria-label={`Direction: ${routeLabel}, ${visible.length} of ${loads?.length ?? 0} loads. Activate to change.`}
+          aria-label={`Direction: ${routeLabel}${dayLabel ? `, ${dayLabel}` : ''}, ${visible.length} of ${loads?.length ?? 0} loads. Activate to change.`}
           className="flex items-center justify-between gap-[8px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] text-left shadow-card focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
         >
           <span className="flex min-w-0 items-start gap-[8px] text-[var(--color-text-primary)]">
@@ -153,15 +157,17 @@ export function Home() {
       />
       <RouteSheet
         open={routeOpen}
-        value={{ from: state.route.from, to: destination }}
+        value={{ from: state.route.from, to: destination, day }}
         cities={[...new Set((loads ?? []).flatMap((l) => [l.from, l.to]))].sort()}
         recentRoutes={state.recentRoutes}
         countFor={(route) => (loads ?? []).filter((l) =>
           (route.to.trim() === '' || l.to.trim().toLocaleLowerCase() === route.to.trim().toLocaleLowerCase()) &&
-          (route.from.trim() === '' || l.from.trim().toLocaleLowerCase() === route.from.trim().toLocaleLowerCase()),
+          (route.from.trim() === '' || l.from.trim().toLocaleLowerCase() === route.from.trim().toLocaleLowerCase()) &&
+          (!route.day || l.day === route.day),
         ).length}
         onApply={(route) => {
-          void commitRoute(route);
+          setDay(route.day);
+          void commitRoute({ from: route.from, to: route.to });
           setRouteOpen(false);
         }}
         onClose={() => setRouteOpen(false)}

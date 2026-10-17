@@ -32,7 +32,7 @@ export const FiltersEmpty: Story = {
 /** Two filters committed: badge would read 2, draft starts there. */
 export const FiltersActive: Story = {
   render: () => (
-    <FiltersSheet open active={['today', 'near']} countFor={(draft) => 3 - draft.length} onApply={() => undefined} onClose={() => undefined} />
+    <FiltersSheet open active={['rate', 'near']} countFor={(draft) => 3 - draft.length} onApply={() => undefined} onClose={() => undefined} />
   ),
 };
 

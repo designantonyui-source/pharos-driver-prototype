@@ -14,10 +14,9 @@ import { Button } from '../Button';
 import { Icon } from '../Icon';
 import { Sheet } from './Sheet';
 
-export type FilterId = 'today' | 'rate' | 'near';
+export type FilterId = 'rate' | 'near';
 
 export const FILTERS: { id: FilterId; label: string; section: string }[] = [
-  { id: 'today', label: 'Today', section: 'Loading day' },
   { id: 'rate', label: '€3+/km', section: 'Minimum rate' },
   { id: 'near', label: 'Under 30 km', section: 'Pickup distance' },
 ];
