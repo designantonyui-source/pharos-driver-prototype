@@ -55,7 +55,7 @@ export const RouteChange: Story = {
   ),
 };
 
-/** Recent + Popular: one tap recalls a route, no typing. */
+/** Recent: one tap recalls a route, no typing. */
 export const RouteRecent: Story = {
   render: () => (
     <RouteSheet

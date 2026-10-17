@@ -5,10 +5,12 @@
  * (filled origin dot, hollow destination ring — one neutral hue, red would read
  * as an error), hairline divider inset to the text. Inline suggestion lists
  * (count included) — no chip rows, no dead options.
- * Below: Recent (last applied, current excluded, with relative time) and Popular
- * (top feed destinations not already in Recent) — tap fills the draft fields,
- * Show commits. One commit path: the sheet never applies behind your back
- * (Mobbin: Lyft/Grab recents fill, Transit quick actions).
+ * Below: Recent (last applied, current excluded, with relative time) — tap fills the
+ * draft fields, Show commits. One commit path: the sheet never applies behind your back
+ * (Mobbin: Lyft/Grab recents fill, Transit quick actions). Suggestions open only while
+ * typing — a bare focus must not dump a catalog (measured: 5 of 6 options dead). No
+ * Popular block: the feed behind the sheet is already the supply list (measured: its
+ * top row equalled the current direction — a no-op tap).
  * Day is NOT picked here: pickup dates live on the loads themselves
  * (`V2Load.date`, shown on every card) — the feed shows all days.
  * props: open, value, countFor, onApply, onClose, cities, recentRoutes
@@ -50,7 +52,7 @@ function CityField({
   cities: string[];
   /** Loads the route would match if this city were committed. */
   countFor: (city: string) => number;
-  /** Only one suggestion list is open at a time. */
+  /** Only one suggestion list at a time; lists appear while typing, never on a bare focus. */
   open: boolean;
   onOpen: () => void;
   onClose: () => void;
@@ -78,7 +80,8 @@ function CityField({
     };
   }, [open, onClose ]);
 
-  const options = matchesFor(cities, value).slice(0, 6);
+  // Open only while there is a query — a bare focus must not dump an alphabetical catalog.
+  const options = value.trim() === '' ? [] : matchesFor(cities, value).slice(0, 6);
 
   return (
     <div ref={boxRef} className="relative">
@@ -104,8 +107,7 @@ function CityField({
             aria-autocomplete="list"
             aria-controls={`${id}-suggestions`}
             value={value}
-            onChange={(event) => { onChange(event.target.value); onOpen(); }}
-            onFocus={onOpen}
+            onChange={(event) => { onChange(event.target.value); if (event.target.value.trim() === '') onClose(); else onOpen(); }}
             onBlur={() => {
               // Let the option tap land first (pointerdown fires before blur).
               window.setTimeout(() => onClose(), 150);
@@ -119,7 +121,7 @@ function CityField({
         {value.trim() !== '' && (
           <button
             type="button"
-            onClick={() => { onChange(''); onOpen(); }}
+            onClick={() => { onChange(''); onClose(); }}
             aria-label={`Clear ${label}`}
             className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full text-[var(--color-text-secondary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
           >
@@ -182,7 +184,7 @@ export function RouteSheet({
   countFor: (route: { from: string; to: string }) => number;
   onApply: (route: { from: string; to: string }) => void;
   onClose: () => void;
-  /** Known cities for one-tap suggestions — derived from the feed. */
+  /** Known cities for type-ahead suggestions — derived from the feed. */
   cities?: string[];
   /** Last applied directions, most-recent-first — current route is excluded. */
   recentRoutes?: { from: string; to: string; at?: string }[];
@@ -200,17 +202,9 @@ export function RouteSheet({
   const recents = useMemo(() => recentRoutes
     .filter((r) => !(norm(r.from) === norm(value.from) && norm(r.to) === norm(value.to)))
     .map((route) => ({ route, matches: countFor(route) })),
-  // countFor is re-created by the owner each render; sections mirror the draft snapshot.
+  // countFor is re-created by the owner each render; Recent mirrors the draft snapshot.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [open, recentRoutes, value.from, value.to]);
-  const recentTos = useMemo(() => new Set(recents.map(({ route }) => norm(route.to))), [recents]);
-  const popular = useMemo(() => cities
-    .map((city) => ({ city, matches: countFor({ from: '', to: city }) }))
-    .filter((p) => p.matches > 0 && !recentTos.has(norm(p.city)))
-    .sort((a, b) => b.matches - a.matches)
-    .slice(0, 3),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  [open, cities, recentTos]);
 
   return (
     <Sheet open={open} onClose={onClose} label="Change direction">
@@ -248,67 +242,40 @@ export function RouteSheet({
           edge="bottom"
         />
       </div>
-      {(recents.length > 0 || popular.length > 0) && (
-        <div className="mt-[16px] flex flex-col gap-[16px]">
-          {recents.length > 0 && (
-            <section aria-label="Recent directions">
-              <h3 className="text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">Recent</h3>
-              <ul className="mt-[8px] flex flex-col gap-[4px]">
-                {recents.map(({ route, matches }) => {
-                  const dead = matches === 0;
-                  const fromLabel = route.from.trim() || 'Anywhere';
-                  return (
-                    <li key={`${route.from}→${route.to}`}>
-                      <button
-                        type="button"
-                        disabled={dead}
-                        onClick={() => { setFromDraft(route.from); setToDraft(route.to); closeSuggestions(); }}
-                        aria-label={`${fromLabel} to ${route.to}, ${dead ? 'no loads' : `${matches} ${matches === 1 ? 'load' : 'loads'}`}${route.at ? `, ${timeAgo(route.at)}` : ''}`}
-                        className={`flex min-h-[44px] w-full items-center gap-[8px] rounded-[var(--radius-md)] px-[12px] text-left text-body-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
-                          dead
-                            ? 'cursor-not-allowed text-[var(--color-text-disabled)]'
-                            : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)] active:bg-[var(--color-bg-subtle)]'
-                        }`}
-                      >
-                        <Icon name="clock" size="sm" className="shrink-0 text-[var(--color-text-secondary)]" />
-                        <span className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate">{fromLabel} → {route.to}</span>
-                          {route.at && <span className="text-caption-12 text-[var(--color-text-secondary)]">{timeAgo(route.at)}</span>}
-                        </span>
-                        <span className="shrink-0 text-caption-12 text-[var(--color-text-secondary)]">
-                          {dead ? 'No loads' : `${matches} ${matches === 1 ? 'load' : 'loads'}`}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          )}
-          {popular.length > 0 && (
-            <section aria-label="Popular destinations">
-              <h3 className="text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">Popular</h3>
-              <ul className="mt-[8px] flex flex-col gap-[4px]">
-                {popular.map(({ city, matches }) => (
-                  <li key={city}>
-                    <button
-                      type="button"
-                      onClick={() => { setToDraft(city); closeSuggestions(); }}
-                      aria-label={`${city}, ${matches} ${matches === 1 ? 'load' : 'loads'}`}
-                      className="flex min-h-[44px] w-full items-center gap-[8px] rounded-[var(--radius-md)] px-[12px] text-left text-body-14 text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] active:bg-[var(--color-bg-subtle)]"
-                    >
-                      <Icon name="map-pin" size="sm" className="shrink-0 text-[var(--color-action-primary)]" />
-                      <span className="min-w-0 flex-1 truncate">{city}</span>
-                      <span className="shrink-0 text-caption-12 text-[var(--color-text-secondary)]">
-                        {matches} {matches === 1 ? 'load' : 'loads'}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </div>
+      {recents.length > 0 && (
+        <section aria-label="Recent directions" className="mt-[16px]">
+          <h3 className="text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">Recent</h3>
+          <ul className="mt-[8px] flex flex-col gap-[4px]">
+            {recents.map(({ route, matches }) => {
+              const dead = matches === 0;
+              const fromLabel = route.from.trim() || 'Anywhere';
+              return (
+                <li key={`${route.from}→${route.to}`}>
+                  <button
+                    type="button"
+                    disabled={dead}
+                    onClick={() => { setFromDraft(route.from); setToDraft(route.to); closeSuggestions(); }}
+                    aria-label={`${fromLabel} to ${route.to}, ${dead ? 'no loads' : `${matches} ${matches === 1 ? 'load' : 'loads'}`}${route.at ? `, ${timeAgo(route.at)}` : ''}`}
+                    className={`flex min-h-[44px] w-full items-center gap-[8px] rounded-[var(--radius-md)] px-[12px] text-left text-body-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
+                      dead
+                        ? 'cursor-not-allowed text-[var(--color-text-disabled)]'
+                        : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)] active:bg-[var(--color-bg-subtle)]'
+                    }`}
+                  >
+                    <Icon name="clock" size="sm" className="shrink-0 text-[var(--color-text-secondary)]" />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate">{fromLabel} → {route.to}</span>
+                      {route.at && <span className="text-caption-12 text-[var(--color-text-secondary)]">{timeAgo(route.at)}</span>}
+                    </span>
+                    <span className="shrink-0 text-caption-12 text-[var(--color-text-secondary)]">
+                      {dead ? 'No loads' : `${matches} ${matches === 1 ? 'load' : 'loads'}`}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
       <div className="mt-[20px]">
         <Button

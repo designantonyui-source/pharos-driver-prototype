@@ -70,12 +70,18 @@ test('route suggestions carry live counts and the dead end recovers', async ({ p
   await page.getByRole('button', { name: 'Direction: Anywhere → Brussels, 2 of 6 loads. Activate to change.' }).click();
   const sheet = page.getByRole('dialog', { name: 'Change direction' });
   await expect(sheet).toBeVisible();
-  // Suggestions live inside the focused field: dead ends read "No loads",
-  // a live one shows its count — never promising an empty feed.
+  // A bare focus shows no catalog — suggestions appear only while typing.
   await sheet.getByLabel('To', { exact: true }).click();
+  await expect(sheet.getByTestId('route-destination-suggestions')).toHaveCount(0);
+  // Typing filters the feed's cities; every option carries its live count —
+  // dead ends read "No loads", a live one shows its count, never promising an empty feed.
+  await sheet.getByLabel('To', { exact: true }).fill('B');
   const suggestions = sheet.getByTestId('route-destination-suggestions');
   await expect(suggestions).toBeVisible();
   await expect(suggestions.getByRole('option', { name: 'Brussels, 2 loads' })).toBeEnabled();
+  // Tapping the option fills the field — one commit path stays: Show.
+  await suggestions.getByRole('option', { name: 'Brussels, 2 loads' }).click();
+  await expect(sheet.getByLabel('To', { exact: true })).toHaveValue('Brussels');
   // Type to filter, pick Paris as origin via its own suggestions.
   await sheet.getByLabel('From', { exact: true }).fill('Paris');
   await sheet.getByRole('heading', { name: 'Loads towards' }).click();

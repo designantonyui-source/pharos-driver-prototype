@@ -53,7 +53,7 @@ describe('RouteSheet draft semantics', () => {
     expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
   });
 
-  it('suggests cities inside the field with live counts', () => {
+  it('suggests cities while typing, with live counts', () => {
     const onApply = vi.fn();
     // Origin Paris leaves only paris-brussels for Brussels: every other
     // destination suggestion reads 0 — it never promises an empty feed.
@@ -64,7 +64,8 @@ describe('RouteSheet draft semantics', () => {
         <RouteSheet open value={{ from: 'Paris', to: '' }} countFor={countFor} onApply={onApply} onClose={() => undefined} cities={['Paris', 'Brussels', 'Lille']} />
       </MemoryRouter>,
     );
-    fireEvent.focus(screen.getByLabelText('To'));
+    // Typing 'l' matches Brussels and Lille — one live, one dead.
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'l' } });
     const box = within(screen.getByTestId('route-destination-suggestions'));
     expect(box.getByRole('option', { name: 'Brussels, 1 load' })).toBeEnabled();
     expect(box.getByRole('option', { name: 'Lille, no loads' })).toBeDisabled();
@@ -80,12 +81,24 @@ describe('RouteSheet draft semantics', () => {
         <RouteSheet open value={{ from: '', to: '' }} countFor={() => 1} onApply={() => undefined} onClose={() => undefined} cities={['Paris', 'Brussels', 'Lille']} />
       </MemoryRouter>,
     );
-    fireEvent.focus(screen.getByLabelText('To'));
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'a' } });
     const box = within(screen.getByTestId('route-destination-suggestions'));
     expect(box.getByRole('option', { name: 'Paris, 1 load' })).toBeVisible();
     fireEvent.change(screen.getByLabelText('To'), { target: { value: 'bru' } });
     expect(box.queryByRole('option', { name: 'Paris, 1 load' })).not.toBeInTheDocument();
     expect(box.getByRole('option', { name: 'Brussels, 1 load' })).toBeVisible();
+  });
+
+  it('shows no catalog on a bare focus — suggestions only while typing', () => {
+    render(
+      <MemoryRouter>
+        <RouteSheet open value={{ from: '', to: '' }} countFor={() => 1} onApply={() => undefined} onClose={() => undefined} cities={['Paris', 'Brussels']} />
+      </MemoryRouter>,
+    );
+    fireEvent.focus(screen.getByLabelText('To'));
+    expect(screen.queryByTestId('route-destination-suggestions')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'par' } });
+    expect(screen.getByTestId('route-destination-suggestions')).toBeInTheDocument();
   });
 
   it('recalls recent directions by filling the draft, then Show commits', () => {
@@ -113,31 +126,6 @@ describe('RouteSheet draft semantics', () => {
     expect(onApply).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Show 1 load' }));
     expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
-  });
-
-  it('offers popular destinations not already in Recent, tap fills To', () => {
-    const onApply = vi.fn();
-    const countFor = (route: { from: string; to: string }) =>
-      route.from === '' && (route.to === 'Brussels' || route.to === 'Antwerp') ? 2 : 0;
-    render(
-      <MemoryRouter>
-        <RouteSheet
-          open
-          value={{ from: '', to: 'Paris' }}
-          countFor={countFor}
-          onApply={onApply}
-          onClose={() => undefined}
-          cities={['Brussels', 'Antwerp']}
-          recentRoutes={[{ from: '', to: 'Antwerp', at: new Date().toISOString() }]}
-        />
-      </MemoryRouter>,
-    );
-    const popular = within(screen.getByRole('region', { name: 'Popular destinations' }));
-    // Antwerp lives in Recent — Popular must not duplicate it.
-    expect(popular.queryByRole('button', { name: /Antwerp/ })).toBeNull();
-    fireEvent.click(popular.getByRole('button', { name: 'Brussels, 2 loads' }));
-    expect(screen.getByLabelText('To')).toHaveValue('Brussels');
-    expect(onApply).not.toHaveBeenCalled();
   });
 
   it('clears a filled field with one tap', () => {
