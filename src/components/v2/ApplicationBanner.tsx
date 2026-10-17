@@ -22,6 +22,11 @@ export const STATUS_COPY: Record<ApplicationStatus, { title: string; step: numbe
  * ETA-first (km to go), status second, truck badge, hairline progress.
  * The route itself is NOT duplicated — the load card below already shows it.
  * Taps straight into the trip.
+ *
+ * Rule: live states ONLY (sent / dispatcher-review / customer-review / confirmed).
+ * Ended states (rejected / expired / cancelled) render NOTHING here — the state
+ * already lives on the card pill and in Trips → Past. A banner for a dead
+ * application duplicates the card and its "Step 4 of 4" means nothing.
  * props: load, status, application, onOpen
  * tokens: color-nav-bg/text, color-status-info/warning-bg/text, radius-lg, shadow-card
  */
@@ -40,6 +45,9 @@ export function ApplicationBanner({
   const { step } = STATUS_COPY[status];
   const done = status === ApplicationStatus.CONFIRMED;
   const ended = status === ApplicationStatus.REJECTED || status === ApplicationStatus.CANCELLED || status === ApplicationStatus.EXPIRED;
+
+  // Ended applications own no banner: card pill + Trips Past carry the state.
+  if (ended) return null;
 
   if (done) {
     const stage = application?.tripStage ?? 'confirmed';
@@ -103,15 +111,11 @@ export function ApplicationBanner({
     <button
       type="button"
       onClick={onOpen}
-      className={`flex w-full flex-col gap-[8px] rounded-[var(--radius-lg)] p-[12px] text-left shadow-card ${
-        ended
-          ? 'bg-[var(--color-status-warning-bg)] text-[var(--color-status-warning-text)]'
-          : 'bg-[var(--color-status-info-bg)] text-[var(--color-status-info-text)]'
-      }`}
+      className="flex w-full flex-col gap-[8px] rounded-[var(--radius-lg)] bg-[var(--color-status-info-bg)] p-[12px] text-left text-[var(--color-status-info-text)] shadow-card"
     >
       <span className="flex items-center justify-between text-label-14">
         <span className="flex items-center gap-[8px]">
-          <Icon name={ended ? 'circle-x' : 'clock'} size="sm" />
+          <Icon name="clock" size="sm" />
           {title}
         </span>
         <span className="text-label-12">{`Step ${step} of 4`}</span>
