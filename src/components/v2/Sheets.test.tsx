@@ -3,7 +3,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { FiltersSheet } from './FiltersSheet';
 import { RouteSheet } from './RouteSheet';
-import { isoDayOffset } from '../../lib/v2/loads';
 
 describe('FiltersSheet draft semantics', () => {
   const countFor = (draft: string[]) => (draft.includes('rate') ? 2 : 3);
@@ -51,7 +50,7 @@ describe('RouteSheet draft semantics', () => {
     fireEvent.change(screen.getByLabelText('To'), { target: { value: 'Brussels' } });
     fireEvent.change(screen.getByLabelText('From'), { target: { value: 'Paris' } });
     fireEvent.click(screen.getByRole('button', { name: 'Show 1 load' }));
-    expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels', day: '' });
+    expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
   });
 
   it('suggests cities inside the field with live counts', () => {
@@ -72,7 +71,7 @@ describe('RouteSheet draft semantics', () => {
     fireEvent.click(box.getByRole('option', { name: 'Brussels, 1 load' }));
     expect(screen.getByLabelText('To')).toHaveValue('Brussels');
     fireEvent.click(screen.getByRole('button', { name: 'Show 1 load' }));
-    expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels', day: '' });
+    expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
   });
 
   it('filters suggestions as the driver types', () => {
@@ -89,57 +88,7 @@ describe('RouteSheet draft semantics', () => {
     expect(box.getByRole('option', { name: 'Brussels, 1 load' })).toBeVisible();
   });
 
-  it('applies a strip day with the route', () => {
-    const onApply = vi.fn();
-    const todayIso = isoDayOffset(0);
-    const countFor = (route: { from: string; to: string; day?: string }) =>
-      route.day ? (route.day === todayIso ? 2 : 0) : 3;
-    render(
-      <MemoryRouter>
-        <RouteSheet open value={{ from: '', to: 'Brussels' }} countFor={countFor} onApply={onApply} onClose={() => undefined} cities={['Brussels']} />
-      </MemoryRouter>,
-    );
-    const group = within(screen.getByRole('group', { name: 'Pickup day' }));
-    fireEvent.click(group.getByRole('button', { name: /2 loads/ }));
-    expect(screen.getByRole('button', { name: 'Show 2 loads' })).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Show 2 loads' }));
-    expect(onApply).toHaveBeenCalledWith({ from: '', to: 'Brussels', day: todayIso });
-  });
-
-  it('tapping the selected strip day again clears it back to any day', () => {
-    const onApply = vi.fn();
-    const todayIso = isoDayOffset(0);
-    const countFor = (route: { from: string; to: string; day?: string }) =>
-      route.day ? (route.day === todayIso ? 2 : 0) : 3;
-    render(
-      <MemoryRouter>
-        <RouteSheet open value={{ from: '', to: 'Brussels' }} countFor={countFor} onApply={onApply} onClose={() => undefined} cities={['Brussels']} />
-      </MemoryRouter>,
-    );
-    const group = within(screen.getByRole('group', { name: 'Pickup day' }));
-    fireEvent.click(group.getByRole('button', { name: /2 loads/ }));
-    expect(screen.getByRole('button', { name: 'Show 2 loads' })).toBeEnabled();
-    fireEvent.click(group.getByRole('button', { name: /selected\. Activate to remove\./ }));
-    expect(screen.getByRole('button', { name: 'Show 3 loads' })).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Show 3 loads' }));
-    expect(onApply).toHaveBeenCalledWith({ from: '', to: 'Brussels', day: '' });
-  });
-
-  it('opens on the committed day', () => {
-    const tomorrowIso = isoDayOffset(1);
-    const full = new Date(`${tomorrowIso}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-    const countFor = (route: { from: string; to: string; day?: string }) =>
-      route.day === tomorrowIso ? 1 : 0;
-    render(
-      <MemoryRouter>
-        <RouteSheet open value={{ from: '', to: 'Brussels', day: tomorrowIso }} countFor={countFor} onApply={() => undefined} onClose={() => undefined} cities={['Brussels']} />
-      </MemoryRouter>,
-    );
-    const group = within(screen.getByRole('group', { name: 'Pickup day' }));
-    expect(group.getByRole('button', { name: `${full}, selected. Activate to remove.` })).toBeVisible();
-  });
-
-  it('recalls recent directions and applies one in one tap', () => {
+  it('recalls recent directions by filling the draft, then Show commits', () => {
     const onApply = vi.fn();
     render(
       <MemoryRouter>
@@ -157,28 +106,47 @@ describe('RouteSheet draft semantics', () => {
     const recent = within(screen.getByRole('region', { name: 'Recent directions' }));
     // The committed route is not offered back to itself.
     expect(recent.queryByRole('button', { name: /Anywhere to Brussels/ })).toBeNull();
+    // Tap fills the fields instead of applying behind your back.
     fireEvent.click(recent.getByRole('button', { name: 'Paris to Brussels, 1 load' }));
-    expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels', day: '' });
+    expect(screen.getByLabelText('From')).toHaveValue('Paris');
+    expect(screen.getByLabelText('To')).toHaveValue('Brussels');
+    expect(onApply).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Show 1 load' }));
+    expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
   });
 
-  it('offers popular destinations with live counts', () => {
+  it('offers popular destinations not already in Recent, tap fills To', () => {
     const onApply = vi.fn();
     const countFor = (route: { from: string; to: string }) =>
-      route.from === '' && route.to === 'Brussels' ? 2 : 0;
+      route.from === '' && (route.to === 'Brussels' || route.to === 'Antwerp') ? 2 : 0;
     render(
       <MemoryRouter>
         <RouteSheet
           open
-          value={{ from: '', to: 'Antwerp' }}
+          value={{ from: '', to: 'Paris' }}
           countFor={countFor}
           onApply={onApply}
           onClose={() => undefined}
           cities={['Brussels', 'Antwerp']}
+          recentRoutes={[{ from: '', to: 'Antwerp', at: new Date().toISOString() }]}
         />
       </MemoryRouter>,
     );
     const popular = within(screen.getByRole('region', { name: 'Popular destinations' }));
-    fireEvent.click(popular.getByRole('button', { name: 'Anywhere to Brussels, 2 loads' }));
-    expect(onApply).toHaveBeenCalledWith({ from: '', to: 'Brussels', day: '' });
+    // Antwerp lives in Recent — Popular must not duplicate it.
+    expect(popular.queryByRole('button', { name: /Antwerp/ })).toBeNull();
+    fireEvent.click(popular.getByRole('button', { name: 'Brussels, 2 loads' }));
+    expect(screen.getByLabelText('To')).toHaveValue('Brussels');
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it('clears a filled field with one tap', () => {
+    render(
+      <MemoryRouter>
+        <RouteSheet open value={{ from: 'Paris', to: 'Brussels' }} countFor={() => 1} onApply={() => undefined} onClose={() => undefined} cities={['Paris', 'Brussels']} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Clear From' }));
+    expect(screen.getByLabelText('From')).toHaveValue('');
   });
 });

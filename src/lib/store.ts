@@ -48,7 +48,7 @@ export type AppState = {
   applications: Record<string, LoadApplication>;
   route: { from: string; to: string };
   /** Last applied directions, most-recent-first (max 5). Powers the Recent section. */
-  recentRoutes: { from: string; to: string }[];
+  recentRoutes: { from: string; to: string; at?: string }[];
   loadId: string | null;
   status: ApplicationStatus | null;
   submittedAt: string | null;
@@ -103,10 +103,11 @@ function isLedgerEntry(value: unknown): value is LedgerEntry {
   return false;
 }
 
-function isRoute(value: unknown): value is { from: string; to: string } {
+function isRoute(value: unknown): value is { from: string; to: string; at?: string } {
   if (typeof value !== 'object' || value === null) return false;
   const route = value as Record<string, unknown>;
-  return typeof route.from === 'string' && typeof route.to === 'string';
+  return typeof route.from === 'string' && typeof route.to === 'string'
+    && (route.at === undefined || typeof route.at === 'string');
 }
 
 function isChatMessage(value: unknown): value is ChatMessage {

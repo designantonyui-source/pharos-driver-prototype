@@ -3,10 +3,12 @@
  * direction used to live only on `/search`). From/To live in ONE grouped box
  * (Grab/Lyft pattern: blue origin dot, red destination dot, shared border) with
  * inline suggestion lists (count included) — no chip rows, no dead options.
- * Below: When (pickup day: Any day / Today / Tomorrow) — where + when in one
- * place, the day filter moved out of FiltersSheet. Recent (last applied,
- * current excluded) and Popular (top feed destinations) apply in one tap
- * (Mobbin: Transit quick actions + Recent, Lyft recents, Eventbrite picks).
+ * Below: Recent (last applied, current excluded, with relative time) and Popular
+ * (top feed destinations not already in Recent) — tap fills the draft fields,
+ * Show commits. One commit path: the sheet never applies behind your back
+ * (Mobbin: Lyft/Grab recents fill, Transit quick actions).
+ * Day is NOT picked here: pickup dates live on the loads themselves
+ * (`V2Load.date`, shown on every card) — the feed shows all days.
  * props: open, value, countFor, onApply, onClose, cities, recentRoutes
  * tokens: color-bg-surface, color-bg-subtle, color-text-primary, color-text-secondary,
  *         color-text-disabled, color-action-primary, color-action-text-inverse,
@@ -16,11 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../Button';
 import { Icon } from '../Icon';
 import { Sheet } from './Sheet';
-import { isoDayOffset } from '../../lib/v2/loads';
-
-export type RouteDay = string;
-
-export type RouteValue = { from: string; to: string; day?: RouteDay };
+import { timeAgo } from '../../lib/v2/loads';
 
 function matchesFor(cities: string[], query: string): string[] {
   const q = query.trim().toLocaleLowerCase();
@@ -111,6 +109,16 @@ function CityField({
           autoComplete="off"
           className="flex min-h-[48px] min-w-0 flex-1 items-center bg-transparent text-body-16 text-[var(--color-text-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
         />
+        {value.trim() !== '' && (
+          <button
+            type="button"
+            onClick={() => { onChange(''); onOpen(); }}
+            aria-label={`Clear ${label}`}
+            className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-full text-[var(--color-text-secondary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+          >
+            <Icon name="x" size="sm" />
+          </button>
+        )}
       </div>
       {open && options.length > 0 && (
         <ul
@@ -161,56 +169,41 @@ export function RouteSheet({
   recentRoutes = [],
 }: {
   open: boolean;
-  /** Committed direction + day — snapshotted into the draft on open, never mutated. */
-  value: { from: string; to: string; day?: RouteDay };
+  /** Committed direction — snapshotted into the draft on open, never mutated. */
+  value: { from: string; to: string };
   /** Loads a given route would match. */
-  countFor: (route: { from: string; to: string; day?: RouteDay }) => number;
-  onApply: (route: { from: string; to: string; day: RouteDay }) => void;
+  countFor: (route: { from: string; to: string }) => number;
+  onApply: (route: { from: string; to: string }) => void;
   onClose: () => void;
   /** Known cities for one-tap suggestions — derived from the feed. */
   cities?: string[];
   /** Last applied directions, most-recent-first — current route is excluded. */
-  recentRoutes?: { from: string; to: string }[];
+  recentRoutes?: { from: string; to: string; at?: string }[];
 }) {
   const [fromDraft, setFromDraft] = useState(value.from);
   const [toDraft, setToDraft] = useState(value.to);
-  const [dayDraft, setDayDraft] = useState<RouteDay>(value.day ?? '');
   const [openField, setOpenField] = useState<'from' | 'to' | null>(null);
   const closeSuggestions = useCallback(() => setOpenField(null), []);
   useEffect(() => {
-    if (open) { setFromDraft(value.from); setToDraft(value.to); setDayDraft(value.day ?? ''); setOpenField(null); }
-  }, [open, value.from, value.to, value.day]);
-  const visible = countFor({ from: fromDraft, to: toDraft, day: dayDraft });
+    if (open) { setFromDraft(value.from); setToDraft(value.to); setOpenField(null); }
+  }, [open, value.from, value.to]);
+  const visible = countFor({ from: fromDraft, to: toDraft });
 
   const norm = (s: string) => s.trim().toLocaleLowerCase();
   const recents = useMemo(() => recentRoutes
     .filter((r) => !(norm(r.from) === norm(value.from) && norm(r.to) === norm(value.to)))
-    .map((route) => ({ route, matches: countFor({ ...route, day: dayDraft }) })),
+    .map((route) => ({ route, matches: countFor(route) })),
   // countFor is re-created by the owner each render; sections mirror the draft snapshot.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [open, recentRoutes, value.from, value.to, dayDraft]);
+  [open, recentRoutes, value.from, value.to]);
+  const recentTos = useMemo(() => new Set(recents.map(({ route }) => norm(route.to))), [recents]);
   const popular = useMemo(() => cities
-    .map((city) => ({ city, matches: countFor({ from: '', to: city, day: dayDraft }) }))
-    .filter((p) => p.matches > 0)
+    .map((city) => ({ city, matches: countFor({ from: '', to: city }) }))
+    .filter((p) => p.matches > 0 && !recentTos.has(norm(p.city)))
     .sort((a, b) => b.matches - a.matches)
     .slice(0, 3),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [open, cities, dayDraft]);
-
-  // 7-day strip (iOS-native: browser scroll physics + snap, no JS animation).
-  // Counts follow the current From/To draft live; dead days stay disabled.
-  const strip = Array.from({ length: 7 }, (_, i) => {
-    const iso = isoDayOffset(i);
-    const date = new Date(iso + 'T00:00:00');
-    const matches = countFor({ from: fromDraft, to: toDraft, day: iso });
-    return {
-      iso,
-      weekday: date.toLocaleDateString('en-GB', { weekday: 'short' }),
-      dayNum: date.getDate(),
-      full: date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }),
-      matches,
-    };
-  });
+  [open, cities, recentTos]);
 
   return (
     <Sheet open={open} onClose={onClose} label="Change direction">
@@ -222,7 +215,7 @@ export function RouteSheet({
           value={fromDraft}
           placeholder="Where do you start?"
           cities={cities}
-          countFor={(city) => countFor({ from: city, to: toDraft, day: dayDraft })}
+          countFor={(city) => countFor({ from: city, to: toDraft })}
           open={openField === 'from'}
           onOpen={() => setOpenField('from')}
           onClose={closeSuggestions}
@@ -237,7 +230,7 @@ export function RouteSheet({
           value={toDraft}
           placeholder="Where to?"
           cities={cities}
-          countFor={(city) => countFor({ from: fromDraft, to: city, day: dayDraft })}
+          countFor={(city) => countFor({ from: fromDraft, to: city })}
           open={openField === 'to'}
           onOpen={() => setOpenField('to')}
           onClose={closeSuggestions}
@@ -246,37 +239,6 @@ export function RouteSheet({
           marker="to"
           edge="bottom"
         />
-      </div>
-      <div className="mt-[16px]" role="group" aria-label="Pickup day">
-        <div className="flex snap-x snap-proximity gap-[8px] overflow-x-auto pb-[4px] [scrollbar-width:none] [touch-action:pan-y] [&::-webkit-scrollbar]:hidden">
-          {strip.map((d) => {
-            const selected = dayDraft === d.iso;
-            const dead = d.matches === 0;
-            return (
-              <button
-                key={d.iso}
-                type="button"
-                disabled={dead}
-                aria-pressed={selected}
-                aria-label={selected ? `${d.full}, selected. Activate to remove.` : `${d.full}, ${dead ? 'no loads' : `${d.matches} ${d.matches === 1 ? 'load' : 'loads'}`}`}
-                onClick={() => setDayDraft(selected ? '' : d.iso)}
-                className={`flex min-h-[64px] min-w-[56px] shrink-0 snap-start select-none flex-col items-center justify-center gap-[2px] rounded-[var(--radius-md)] border px-[8px] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
-                  dead
-                    ? 'cursor-not-allowed border-[var(--color-border-default)] text-[var(--color-text-disabled)]'
-                    : selected
-                      ? 'border-transparent bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]'
-                      : 'border-[var(--color-action-border)] bg-[var(--color-action-secondary)] text-[var(--color-action-text)]'
-                }`}
-              >
-                <span className="text-caption-12 uppercase">{d.weekday}</span>
-                <span className="text-heading-14">{d.dayNum}</span>
-                <span className="text-caption-12 opacity-80">
-                  {dead ? '·' : d.matches}
-                </span>
-              </button>
-            );
-          })}
-        </div>
       </div>
       {(recents.length > 0 || popular.length > 0) && (
         <div className="mt-[16px] flex flex-col gap-[16px]">
@@ -292,8 +254,8 @@ export function RouteSheet({
                       <button
                         type="button"
                         disabled={dead}
-                        onClick={() => onApply({ from: route.from, to: route.to, day: dayDraft })}
-                        aria-label={`${fromLabel} to ${route.to}, ${dead ? 'no loads' : `${matches} ${matches === 1 ? 'load' : 'loads'}`}`}
+                        onClick={() => { setFromDraft(route.from); setToDraft(route.to); closeSuggestions(); }}
+                        aria-label={`${fromLabel} to ${route.to}, ${dead ? 'no loads' : `${matches} ${matches === 1 ? 'load' : 'loads'}`}${route.at ? `, ${timeAgo(route.at)}` : ''}`}
                         className={`flex min-h-[44px] w-full items-center gap-[8px] rounded-[var(--radius-md)] px-[12px] text-left text-body-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
                           dead
                             ? 'cursor-not-allowed text-[var(--color-text-disabled)]'
@@ -301,7 +263,10 @@ export function RouteSheet({
                         }`}
                       >
                         <Icon name="clock" size="sm" className="shrink-0 text-[var(--color-text-secondary)]" />
-                        <span className="min-w-0 flex-1 truncate">{fromLabel} → {route.to}</span>
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span className="truncate">{fromLabel} → {route.to}</span>
+                          {route.at && <span className="text-caption-12 text-[var(--color-text-secondary)]">{timeAgo(route.at)}</span>}
+                        </span>
                         <span className="shrink-0 text-caption-12 text-[var(--color-text-secondary)]">
                           {dead ? 'No loads' : `${matches} ${matches === 1 ? 'load' : 'loads'}`}
                         </span>
@@ -320,12 +285,12 @@ export function RouteSheet({
                   <li key={city}>
                     <button
                       type="button"
-                      onClick={() => onApply({ from: '', to: city, day: dayDraft })}
-                      aria-label={`Anywhere to ${city}, ${matches} ${matches === 1 ? 'load' : 'loads'}`}
+                      onClick={() => { setToDraft(city); closeSuggestions(); }}
+                      aria-label={`${city}, ${matches} ${matches === 1 ? 'load' : 'loads'}`}
                       className="flex min-h-[44px] w-full items-center gap-[8px] rounded-[var(--radius-md)] px-[12px] text-left text-body-14 text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] active:bg-[var(--color-bg-subtle)]"
                     >
                       <Icon name="map-pin" size="sm" className="shrink-0 text-[var(--color-action-primary)]" />
-                      <span className="min-w-0 flex-1 truncate">Anywhere → {city}</span>
+                      <span className="min-w-0 flex-1 truncate">{city}</span>
                       <span className="shrink-0 text-caption-12 text-[var(--color-text-secondary)]">
                         {matches} {matches === 1 ? 'load' : 'loads'}
                       </span>
@@ -341,7 +306,7 @@ export function RouteSheet({
         <Button
           label={visible === 0 ? 'No loads match' : `Show ${visible} ${visible === 1 ? 'load' : 'loads'}`}
           disabled={visible === 0}
-          onClick={() => onApply({ from: fromDraft.trim(), to: toDraft.trim() || value.to, day: dayDraft })}
+          onClick={() => onApply({ from: fromDraft.trim(), to: toDraft.trim() || value.to })}
         />
       </div>
     </Sheet>

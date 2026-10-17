@@ -475,13 +475,13 @@ describe('application lifecycle', () => {
     await vi.advanceTimersByTimeAsync(150);
     await expect(first).resolves.toEqual({ from: 'Paris', to: 'Brussels' });
     expect(store.get().route).toEqual({ from: 'Paris', to: 'Brussels' });
-    expect(store.get().recentRoutes).toEqual([{ from: 'Paris', to: 'Brussels' }]);
+    expect(store.get().recentRoutes).toEqual([{ from: 'Paris', to: 'Brussels', at: expect.any(String) }]);
 
     const second = commitRoute({ from: 'paris', to: 'brussels' });
     await vi.advanceTimersByTimeAsync(150);
     await second;
     // Case-insensitive re-apply moves to front instead of duplicating.
-    expect(store.get().recentRoutes).toEqual([{ from: 'paris', to: 'brussels' }]);
+    expect(store.get().recentRoutes).toEqual([{ from: 'paris', to: 'brussels', at: expect.any(String) }]);
   });
 
   it('caps recent routes at five', async () => {
@@ -491,7 +491,7 @@ describe('application lifecycle', () => {
       await run;
     }
     expect(store.get().recentRoutes).toHaveLength(5);
-    expect(store.get().recentRoutes[0]).toEqual({ from: '', to: 'City5' });
+    expect(store.get().recentRoutes[0]).toEqual({ from: '', to: 'City5', at: expect.any(String) });
   });
 
 });

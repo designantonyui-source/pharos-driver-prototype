@@ -21,19 +21,8 @@ test('map pins mirror the feed and open the sheet', async ({ page }) => {
 test('filters narrow the feed and the empty state recovers', async ({ page }) => {
   await page.goto('/#/v2');
   await expect(page.getByRole('article', { name: 'Load nordcargo' })).toBeVisible();
-  // The pickup day lives in the direction sheet now (where + when in one
-  // place): open it, pick Today, preview, apply — the header names the day.
-  await page.getByRole('button', { name: 'Direction: Anywhere → Brussels, 2 of 6 loads. Activate to change.' }).click();
-  const routeSheet = page.getByRole('dialog', { name: 'Change direction' });
-  await expect(routeSheet).toBeVisible();
-  await routeSheet.getByRole('group', { name: 'Pickup day' }).getByRole('button', { name: /2 loads/ }).click();
-  await expect(routeSheet.getByRole('button', { name: 'Show 2 loads' })).toBeVisible();
-  await routeSheet.getByRole('button', { name: 'Show 2 loads' }).click();
-  await expect(page.getByRole('button', { name: 'Direction: Anywhere → Brussels, Today, 2 of 6 loads. Activate to change.' })).toBeVisible();
-  await expect(page.getByRole('article', { name: 'Load nordcargo' })).toBeVisible();
-  await expect(page.getByRole('article', { name: 'Load paris-brussels' })).toBeVisible();
-  // Load attributes stay behind Filters: toggle €3+/km, the badge lands,
-  // the route feed keeps its 2.
+  // Load attributes live behind Filters: toggle €3+/km, preview, apply —
+  // the badge lands, the Brussels route feed keeps its 2.
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Filters' })).toBeVisible();
   await page.getByRole('button', { name: '€3+/km' }).click();
@@ -44,7 +33,8 @@ test('filters narrow the feed and the empty state recovers', async ({ page }) =>
   await expect(page.getByRole('article', { name: 'Load paris-brussels' })).toBeVisible();
   // The empty state lives one route away: drive into the Antwerp → Paris dead
   // end by hand — no fixture serves it — and recover via Change direction.
-  await page.getByRole('button', { name: 'Direction: Anywhere → Brussels, Today, 2 of 6 loads. Activate to change.' }).click();
+  await page.getByRole('button', { name: 'Direction: Anywhere → Brussels, 2 of 6 loads. Activate to change.' }).click();
+  const routeSheet = page.getByRole('dialog', { name: 'Change direction' });
   await expect(routeSheet).toBeVisible();
   await routeSheet.getByLabel('From', { exact: true }).fill('Antwerp');
   await routeSheet.getByLabel('To', { exact: true }).fill('Paris');
@@ -58,13 +48,6 @@ test('filters narrow the feed and the empty state recovers', async ({ page }) =>
   await page.getByRole('button', { name: 'Show 6 loads' }).click();
   await expect(page.getByRole('button', { name: 'Filters', exact: true })).toBeVisible();
   await expect(page.getByRole('article', { name: 'Load nordcargo' })).toBeVisible();
-  // Reset the day too: tap the selected day again — it deselects, the header drops the day.
-  await page.getByRole('button', { name: 'Direction: Anywhere → Brussels, Today, 2 of 6 loads. Activate to change.' }).click();
-  await expect(routeSheet).toBeVisible();
-  await routeSheet.getByRole('group', { name: 'Pickup day' }).getByRole('button', { name: /selected\. Activate to remove\./ }).click();
-  await expect(routeSheet.getByRole('button', { name: 'Show 2 loads' })).toBeVisible();
-  await routeSheet.getByRole('button', { name: 'Show 2 loads' }).click();
-  await expect(page.getByRole('button', { name: 'Direction: Anywhere → Brussels, 2 of 6 loads. Activate to change.' })).toBeVisible();
 });
 
 test('direction changes without leaving the feed', async ({ page }) => {
@@ -128,10 +111,12 @@ test('recent routes recall the last direction in one tap', async ({ page }) => {
   await expect(sheet.getByRole('button', { name: 'Show 1 load' })).toBeEnabled();
   await sheet.getByRole('button', { name: 'Show 1 load' }).click();
   await expect(page.getByRole('button', { name: 'Direction: Anywhere → Antwerp, 1 of 6 loads. Activate to change.' })).toBeVisible();
-  // Reopen: Recent offers Paris → Brussels back in one tap.
+  // Reopen: Recent fills the draft back in one tap, Show commits.
   await page.getByRole('button', { name: 'Direction: Anywhere → Antwerp, 1 of 6 loads. Activate to change.' }).click();
   await expect(sheet.getByRole('region', { name: 'Recent directions' })).toBeVisible();
   await sheet.getByRole('button', { name: 'Paris to Brussels, 1 load' }).click();
+  await expect(sheet.getByRole('button', { name: 'Show 1 load' })).toBeEnabled();
+  await sheet.getByRole('button', { name: 'Show 1 load' }).click();
   await expect(page.getByRole('button', { name: 'Direction: Paris → Brussels, 1 of 6 loads. Activate to change.' })).toBeVisible();
 });
 

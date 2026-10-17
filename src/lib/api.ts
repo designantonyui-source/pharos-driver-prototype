@@ -490,7 +490,7 @@ export async function commitRoute(route: { from: string; to: string }) {
   await wait(150);
   const clean = { from: route.from.trim(), to: route.to.trim() };
   const rest = store.get().recentRoutes.filter((r) => !sameRoute(r, clean));
-  store.set({ route: clean, recentRoutes: [clean, ...rest].slice(0, MAX_RECENT_ROUTES) });
+  store.set({ route: clean, recentRoutes: [{ ...clean, at: new Date().toISOString() }, ...rest].slice(0, MAX_RECENT_ROUTES) });
   return clean;
 }
 
