@@ -17,6 +17,7 @@ function renderView(status: ApplicationStatus, onCancel: () => void = noop) {
         onCancel={onCancel}
         onViewTrip={noop}
         onSimilarLoads={noop}
+        onContactDispatcher={noop}
       />
     </MemoryRouter>,
   );
@@ -50,15 +51,53 @@ describe('ApplicationTrackerView cancel confirmation', () => {
 });
 
 describe('ApplicationTrackerView notices', () => {
-  it('shows dispatcher chat as a toast, not an alert', () => {
-    renderView(ApplicationStatus.SENT);
+  it('routes contact dispatcher to the trip thread', () => {
+    const onContact = vi.fn();
+    render(
+      <MemoryRouter>
+        <ApplicationTrackerView
+          status={ApplicationStatus.SENT}
+          load={load}
+          onCancel={noop}
+          onViewTrip={noop}
+          onSimilarLoads={noop}
+          onContactDispatcher={onContact}
+        />
+      </MemoryRouter>,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Contact dispatcher' }));
-    expect(screen.getByRole('status')).toHaveTextContent('Dispatcher chat is not connected yet.');
+    expect(onContact).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the approvals deadline while waiting', () => {
+    renderView(ApplicationStatus.SENT);
+    expect(screen.getByText(/Application closes unless both approve by/)).toHaveTextContent(load.approvalsBy);
   });
 
   it('shows dispute as a toast, not an alert', () => {
     renderView(ApplicationStatus.REJECTED);
     fireEvent.click(screen.getByRole('button', { name: 'Dispute decision' }));
     expect(screen.getByRole('status')).toHaveTextContent('Disputing a decision is not connected yet.');
+  });
+
+  it('shows the expired outcome with a recovery path', () => {
+    const onSimilar = vi.fn();
+    render(
+      <MemoryRouter>
+        <ApplicationTrackerView
+          status={ApplicationStatus.EXPIRED}
+          load={load}
+          onCancel={noop}
+          onViewTrip={noop}
+          onSimilarLoads={onSimilar}
+          onContactDispatcher={noop}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('heading', { name: 'Application expired' })).toBeVisible();
+    expect(screen.getByText(/Needed both approvals by/)).toHaveTextContent(load.approvalsBy);
+    expect(screen.queryByRole('button', { name: 'Cancel application' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Back to loads' }));
+    expect(onSimilar).toHaveBeenCalledTimes(1);
   });
 });

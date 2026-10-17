@@ -84,6 +84,7 @@ export function DemoPanel() {
         <button onClick={() => setStatus(ApplicationStatus.SENT)}>→ sent</button>
         <button onClick={() => setStatus(ApplicationStatus.CUSTOMER_REVIEW)}>→ dispatcher approved</button>
         <button onClick={() => setStatus(ApplicationStatus.CONFIRMED)}>→ customer confirmed</button>
+        <button onClick={() => setStatus(ApplicationStatus.EXPIRED)}>→ expired</button>
         <button onClick={() => setStatus(null)}>⟲ reset</button>
         <button onClick={reset}>clear storage</button>
       </div>

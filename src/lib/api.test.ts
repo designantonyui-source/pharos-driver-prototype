@@ -448,11 +448,26 @@ describe('application lifecycle', () => {
     await assertion;
   });
 
-  it.each([ApplicationStatus.CANCELLED, ApplicationStatus.REJECTED])('allows a new application after %s', async (status) => {
+  it.each([ApplicationStatus.CANCELLED, ApplicationStatus.REJECTED, ApplicationStatus.EXPIRED])('allows a new application after %s', async (status) => {
     store.set({ loadId: 'nordcargo', status });
     const result = submitApplication('nordcargo');
     await vi.advanceTimersByTimeAsync(600);
     await expect(result).resolves.toMatchObject({ status: ApplicationStatus.SENT });
+  });
+
+  it('dismisses an expired application from the feed', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.EXPIRED });
+    await dismissLoad('nordcargo');
+    expect(store.getApplicationForLoad('nordcargo')).toMatchObject({
+      status: ApplicationStatus.EXPIRED, dismissed: true,
+    });
+  });
+
+  it('rejects cancellation after the application expired', async () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.EXPIRED });
+    const assertion = expect(cancelApplication('nordcargo')).rejects.toThrow('This application can no longer be cancelled');
+    await vi.advanceTimersByTimeAsync(300);
+    await assertion;
   });
 
 });

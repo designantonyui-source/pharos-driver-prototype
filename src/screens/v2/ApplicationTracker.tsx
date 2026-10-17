@@ -48,6 +48,11 @@ const STATUS_VIEW: Record<ApplicationStatus, { title: string; message: string; i
     message: 'The customer chose another carrier.',
     icon: 'circle-x',
   },
+  [ApplicationStatus.EXPIRED]: {
+    title: 'Application expired',
+    message: 'Both approvals didn’t arrive in time.',
+    icon: 'circle-x',
+  },
   [ApplicationStatus.CANCELLED]: {
     title: 'Cancelled by you',
     message: 'You cancelled this application. You can apply for another load.',
@@ -67,6 +72,7 @@ export function ApplicationTrackerView({
   onCancel,
   onViewTrip,
   onSimilarLoads,
+  onContactDispatcher,
   listPath = '/v2',
   cancelling = false,
   cancelError = null,
@@ -77,6 +83,7 @@ export function ApplicationTrackerView({
   onCancel: () => void;
   onViewTrip: () => void;
   onSimilarLoads: () => void;
+  onContactDispatcher: () => void;
   listPath?: string;
   cancelling?: boolean;
   cancelError?: string | null;
@@ -86,6 +93,7 @@ export function ApplicationTrackerView({
   const waiting = CANCELLABLE.has(status);
   const positive = status === ApplicationStatus.CONFIRMED;
   const rejected = status === ApplicationStatus.REJECTED;
+  const expired = status === ApplicationStatus.EXPIRED;
   const { toast, show, dismiss } = useToast();
   const [cancelOpen, setCancelOpen] = useState(false);
   const closeCancel = useCallback(() => { if (!cancelling) setCancelOpen(false); }, [cancelling]);
@@ -121,7 +129,12 @@ export function ApplicationTrackerView({
 
           {waiting ? (
             <p className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-subtle)] p-[12px] text-body-14 text-[var(--color-text-secondary)]">
-              Average response time: ~15 min
+              Average response time: ~15 min · Application closes unless both approve by {load.approvalsBy}.
+            </p>
+          ) : null}
+          {expired ? (
+            <p className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-subtle)] p-[12px] text-body-14 text-[var(--color-text-secondary)]">
+              Needed both approvals by {load.approvalsBy}. You can apply again or find a similar load.
             </p>
           ) : null}
         </main>
@@ -133,12 +146,15 @@ export function ApplicationTrackerView({
               <Button label="Dispute decision" appearance="secondary" onClick={() => show({ tone: 'info', title: 'Disputing a decision is not connected yet.' })} />
             </>
           ) : null}
+          {expired ? (
+            <Button label="Back to loads" onClick={onSimilarLoads} />
+          ) : null}
           {positive ? <Button label="View trip" onClick={onViewTrip} /> : null}
           <Button
             label="Contact dispatcher"
-            appearance={positive || rejected ? 'secondary' : 'primary'}
+            appearance="secondary"
             icon={<Icon name="user-round" size="sm" />}
-            onClick={() => show({ tone: 'info', title: 'Dispatcher chat is not connected yet.' })}
+            onClick={onContactDispatcher}
           />
           {canCancel && CANCELLABLE.has(status) ? (
             <Button
@@ -226,7 +242,7 @@ export function ApplicationTracker() {
   }
 
   if (status && load) {
-    return <ApplicationTrackerView status={status} load={load} onCancel={handleCancel} cancelError={cancelError} canCancel={state.loadId === id} listPath={listPath} onSimilarLoads={() => navigate(listPath)} onViewTrip={() => navigate(`/trip/${id}`)} cancelling={cancelling} />;
+    return <ApplicationTrackerView status={status} load={load} onCancel={handleCancel} cancelError={cancelError} canCancel={state.loadId === id} listPath={listPath} onSimilarLoads={() => navigate(listPath)} onViewTrip={() => navigate(`/trip/${id}`)} onContactDispatcher={() => navigate(`/trip/${id}/chat`)} cancelling={cancelling} />;
   }
 
   return (

@@ -50,6 +50,15 @@ describe('LoadCta', () => {
     expect(screen.getByRole('heading', { name: 'Apply for Lille → Brussels' })).toBeVisible();
   });
 
+  it('EXPIRED disables applying, links to status and allows applying again', () => {
+    store.set({ loadId: 'nordcargo', status: ApplicationStatus.EXPIRED });
+    renderCta();
+    expect(screen.getByRole('button', { name: 'Application expired' })).toBeDisabled();
+    expect(screen.getByRole('link', { name: 'View status' })).toHaveAttribute('href', '/application/nordcargo');
+    fireEvent.click(screen.getByRole('button', { name: 'Apply again' }));
+    expect(screen.getByRole('heading', { name: 'Apply for Lille → Brussels' })).toBeVisible();
+  });
+
   it('updates when global application state changes', () => {
     renderCta();
     act(() => store.set({ loadId: 'nordcargo', status: ApplicationStatus.SENT }));

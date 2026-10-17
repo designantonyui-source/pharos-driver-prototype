@@ -11,6 +11,7 @@ const meta = {
     onCancel: () => undefined,
     onViewTrip: () => undefined,
     onSimilarLoads: () => undefined,
+    onContactDispatcher: () => undefined,
   },
   parameters: { layout: 'centered' },
 } satisfies Meta<typeof ApplicationTrackerView>;
@@ -23,4 +24,5 @@ export const DispatcherReview: Story = { args: { status: ApplicationStatus.DISPA
 export const CustomerReview: Story = { args: { status: ApplicationStatus.CUSTOMER_REVIEW } };
 export const Confirmed: Story = { args: { status: ApplicationStatus.CONFIRMED } };
 export const Rejected: Story = { args: { status: ApplicationStatus.REJECTED } };
+export const Expired: Story = { args: { status: ApplicationStatus.EXPIRED } };
 export const Cancelled: Story = { args: { status: ApplicationStatus.CANCELLED } };

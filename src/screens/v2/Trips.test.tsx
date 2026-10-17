@@ -57,4 +57,13 @@ describe('Trips hub', () => {
     setup();
     expect(await screen.findByText('No trips yet')).toBeTruthy();
   });
+
+  it('shows expired applications in Past with an Expired chip', async () => {
+    store.set({ applications: {
+      nordcargo: { loadId: 'nordcargo', status: ApplicationStatus.EXPIRED, submittedAt: null },
+    } });
+    setup();
+    expect(await screen.findByText('Past')).toBeTruthy();
+    expect(screen.getByText('Expired')).toBeTruthy();
+  });
 });

@@ -75,6 +75,7 @@ const LEGACY_STATUS: Record<string, ApplicationStatus | null> = {
   'awaiting-customer': ApplicationStatus.CUSTOMER_REVIEW,
   confirmed: ApplicationStatus.CONFIRMED,
   rejected: ApplicationStatus.REJECTED,
+  expired: ApplicationStatus.EXPIRED,
   cancelled: ApplicationStatus.CANCELLED,
 };
 

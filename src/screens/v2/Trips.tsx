@@ -1,14 +1,12 @@
 /**
- * figma: new Trips hub proposal, not measured - reuses NavigationBar 586:33,
- *   Button 12:38, Alert 575:9632, V2Frame shell
+ * figma: prototype-led · Trips = Applications + My day merged (V2Frame)
  * props: none (controller)
  * tokens: color-bg-*, color-text-*, color-action-*, color-alert-*, color-border-default,
  *   color-status-*, spacing-*, radius-md/sm/pill, text-metric-28,
  *   text-heading-*, text-body-14, text-caption-12, nav-bar-h, tab-bar-h, home-indicator-h,
  *   size-control-mobile, size-icon-xl
  *
- * Trips = Applications + My day merged (V2Frame): active confirmed trip on top,
- * in-review applications next, past (rejected / cancelled / cancelled-after-confirm)
+ * in-review applications next, past (rejected / expired / cancelled / cancelled-after-confirm)
  * at the bottom. Data comes from store.applications + V2_LOADS via api.getLoads;
  * no new model. Dismissed loads stay out (they live in /v2/account/dismissed).
  *
@@ -104,6 +102,7 @@ type TripEntry = { load: V2Load; application: LoadApplication };
 
 function pastLook(application: LoadApplication): { chip: string; tone: 'past' | 'rejected'; icon: 'circle-x' | 'x' } {
   if (application.status === ApplicationStatus.REJECTED) return { chip: 'Declined', tone: 'rejected', icon: 'x' };
+  if (application.status === ApplicationStatus.EXPIRED) return { chip: 'Expired', tone: 'past', icon: 'circle-x' };
   if (application.cancelledAfterConfirm) return { chip: 'Cancelled trip', tone: 'past', icon: 'circle-x' };
   return { chip: 'Cancelled', tone: 'past', icon: 'circle-x' };
 }
@@ -130,12 +129,13 @@ export function Trips() {
   }
   const byId = new Map(loads.map(l => [l.id, l]));
   const entries: TripEntry[] = Object.values(state.applications)
-    .filter(a => byId.has(a.loadId) && (!a.dismissed || a.cancelledAfterConfirm || (a.submittedAt !== null && (a.status === ApplicationStatus.CANCELLED || a.status === ApplicationStatus.REJECTED))))
+    .filter(a => byId.has(a.loadId) && (!a.dismissed || a.cancelledAfterConfirm || (a.submittedAt !== null && (a.status === ApplicationStatus.CANCELLED || a.status === ApplicationStatus.REJECTED || a.status === ApplicationStatus.EXPIRED))))
     .map(a => ({ load: byId.get(a.loadId)!, application: a }));
   const active = entries.filter(e => e.application.status === ApplicationStatus.CONFIRMED && !e.application.cancelledAfterConfirm);
   const review = entries.filter(e => REVIEW.has(e.application.status));
   const past = entries.filter(e =>
     e.application.status === ApplicationStatus.REJECTED
+    || e.application.status === ApplicationStatus.EXPIRED
     || e.application.status === ApplicationStatus.CANCELLED
     || e.application.cancelledAfterConfirm === true,
   );

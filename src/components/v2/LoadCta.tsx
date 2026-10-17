@@ -24,7 +24,7 @@ export function LoadCta({ loadId, onNotice }: { loadId: string; onNotice?: (titl
   const statusPath = `/application/${loadId}${search}`;
   const status = application?.status;
   const waiting = status === ApplicationStatus.SENT || status === ApplicationStatus.DISPATCHER_REVIEW || status === ApplicationStatus.CUSTOMER_REVIEW;
-  const canReapply = status === ApplicationStatus.CANCELLED || status === ApplicationStatus.REJECTED;
+  const canReapply = status === ApplicationStatus.CANCELLED || status === ApplicationStatus.REJECTED || status === ApplicationStatus.EXPIRED;
 
   function selectApplication() {
     if (application) store.set(application);
@@ -50,6 +50,14 @@ export function LoadCta({ loadId, onNotice }: { loadId: string; onNotice?: (titl
           <Button label="Application rejected" disabled />
           <Link to={statusPath} onClick={selectApplication} className="text-center text-label-14 text-[var(--color-action-primary)] underline">
             View reason
+          </Link>
+          <Button label="Apply again" onClick={() => setOpen(true)} />
+        </>
+      ) : status === ApplicationStatus.EXPIRED ? (
+        <>
+          <Button label="Application expired" disabled />
+          <Link to={statusPath} onClick={selectApplication} className="text-center text-label-14 text-[var(--color-action-primary)] underline">
+            View status
           </Link>
           <Button label="Apply again" onClick={() => setOpen(true)} />
         </>

@@ -504,7 +504,7 @@ export async function submitApplication(loadId: string) {
 /** Dismiss a load from the feed (decline before apply). Free, reversible, no score impact. */
 export async function dismissLoad(loadId: string) {
   const existing = store.getApplicationForLoad(loadId);
-  if (existing && !existing.dismissed && existing.status !== ApplicationStatus.CANCELLED && existing.status !== ApplicationStatus.REJECTED) {
+  if (existing && !existing.dismissed && existing.status !== ApplicationStatus.CANCELLED && existing.status !== ApplicationStatus.REJECTED && existing.status !== ApplicationStatus.EXPIRED) {
     throw new Error("An applied load cannot be dismissed");
   }
   // Preserve historical cancellation/rejection metadata when hiding an old load.

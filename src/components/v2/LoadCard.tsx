@@ -88,7 +88,8 @@ export function getLoadCardState(application: LoadApplication | null): LoadCardS
     case ApplicationStatus.CUSTOMER_REVIEW: return 'pending';
     case ApplicationStatus.CONFIRMED: return 'booked';
     case ApplicationStatus.REJECTED: return 'rejected';
-    case ApplicationStatus.CANCELLED: return 'cancelled';
+    case ApplicationStatus.CANCELLED:
+    case ApplicationStatus.EXPIRED: return 'cancelled';
     default: return 'available';
   }
 }
