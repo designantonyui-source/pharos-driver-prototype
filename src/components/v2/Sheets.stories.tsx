@@ -55,6 +55,23 @@ export const RouteChange: Story = {
   ),
 };
 
+/** Recent + Popular: one tap recalls a route, no typing. */
+export const RouteRecent: Story = {
+  render: () => (
+    <RouteSheet
+      open
+      value={{ from: '', to: 'Antwerp' }}
+      countFor={(route) =>
+        route.to.trim().toLocaleLowerCase() === 'brussels' ? 2
+        : route.to.trim().toLocaleLowerCase() === 'antwerp' ? 1 : 0}
+      onApply={() => undefined}
+      onClose={() => undefined}
+      cities={['Brussels', 'Antwerp', 'Paris']}
+      recentRoutes={[{ from: 'Paris', to: 'Brussels' }, { from: '', to: 'Antwerp' }]}
+    />
+  ),
+};
+
 export const FilterCatalog: Story = {
   render: () => (
     <ul className="flex flex-col gap-[8px] text-body-14 text-[var(--color-text-primary)]">

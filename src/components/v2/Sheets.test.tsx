@@ -87,4 +87,47 @@ describe('RouteSheet draft semantics', () => {
     expect(box.queryByRole('option', { name: 'Paris, 1 load' })).not.toBeInTheDocument();
     expect(box.getByRole('option', { name: 'Brussels, 1 load' })).toBeVisible();
   });
+
+  it('recalls recent directions and applies one in one tap', () => {
+    const onApply = vi.fn();
+    render(
+      <MemoryRouter>
+        <RouteSheet
+          open
+          value={{ from: '', to: 'Brussels' }}
+          countFor={() => 1}
+          onApply={onApply}
+          onClose={() => undefined}
+          cities={['Brussels']}
+          recentRoutes={[{ from: 'Paris', to: 'Brussels' }, { from: '', to: 'Brussels' }]}
+        />
+      </MemoryRouter>,
+    );
+    const recent = within(screen.getByRole('region', { name: 'Recent directions' }));
+    // The committed route is not offered back to itself.
+    expect(recent.queryByRole('button', { name: /Anywhere to Brussels/ })).toBeNull();
+    fireEvent.click(recent.getByRole('button', { name: 'Paris to Brussels, 1 load' }));
+    expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
+  });
+
+  it('offers popular destinations with live counts', () => {
+    const onApply = vi.fn();
+    const countFor = (route: { from: string; to: string }) =>
+      route.from === '' && route.to === 'Brussels' ? 2 : 0;
+    render(
+      <MemoryRouter>
+        <RouteSheet
+          open
+          value={{ from: '', to: 'Antwerp' }}
+          countFor={countFor}
+          onApply={onApply}
+          onClose={() => undefined}
+          cities={['Brussels', 'Antwerp']}
+        />
+      </MemoryRouter>,
+    );
+    const popular = within(screen.getByRole('region', { name: 'Popular destinations' }));
+    fireEvent.click(popular.getByRole('button', { name: 'Anywhere to Brussels, 2 loads' }));
+    expect(onApply).toHaveBeenCalledWith({ from: '', to: 'Brussels' });
+  });
 });

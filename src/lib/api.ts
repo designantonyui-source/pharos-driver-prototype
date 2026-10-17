@@ -477,6 +477,23 @@ export async function searchLoads(route: { from: string; to: string }) {
   return { count: 2 };
 }
 
+/** Commit a feed direction and remember it. Recent routes (max 5, most-recent-first,
+ * case-insensitive dedup) power the Recent section of the direction sheet. */
+export const MAX_RECENT_ROUTES = 5;
+
+function sameRoute(a: { from: string; to: string }, b: { from: string; to: string }): boolean {
+  return a.from.trim().toLocaleLowerCase() === b.from.trim().toLocaleLowerCase()
+    && a.to.trim().toLocaleLowerCase() === b.to.trim().toLocaleLowerCase();
+}
+
+export async function commitRoute(route: { from: string; to: string }) {
+  await wait(150);
+  const clean = { from: route.from.trim(), to: route.to.trim() };
+  const rest = store.get().recentRoutes.filter((r) => !sameRoute(r, clean));
+  store.set({ route: clean, recentRoutes: [clean, ...rest].slice(0, MAX_RECENT_ROUTES) });
+  return clean;
+}
+
 export class AlreadyAppliedError extends Error {
   readonly code = 'ALREADY_APPLIED';
   constructor() { super('ALREADY_APPLIED'); }

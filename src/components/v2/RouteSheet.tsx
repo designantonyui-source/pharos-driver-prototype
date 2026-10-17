@@ -3,12 +3,16 @@
  * direction used to live only on `/search`). Two fields, live count, Apply commits.
  * Each field filters the known cities as the driver types and offers them as an
  * inline suggestion list (count included) — no chip rows, no dead options.
- * props: open, value, countFor, onApply, onClose, cities
- * tokens: color-bg-surface, color-text-primary, color-text-secondary,
- *         color-action-primary, color-action-text-inverse, color-border-default, radius-md
+ * Below the fields: Recent (last applied directions, current excluded) and Popular
+ * (top feed destinations from Anywhere) — one tap applies, no typing (Mobbin:
+ * Transit quick actions + Recent, Lyft recents, Eventbrite destination picks).
+ * props: open, value, countFor, onApply, onClose, cities, recentRoutes
+ * tokens: color-bg-surface, color-bg-subtle, color-text-primary, color-text-secondary,
+ *         color-action-primary, color-action-text-inverse, color-border-default, radius-md, radius-pill
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../Button';
+import { Icon } from '../Icon';
 import { Sheet } from './Sheet';
 
 function matchesFor(cities: string[], query: string): string[] {
@@ -133,6 +137,7 @@ export function RouteSheet({
   onApply,
   onClose,
   cities = [],
+  recentRoutes = [],
 }: {
   open: boolean;
   /** Committed destination — snapshotted into the draft on open, never mutated. */
@@ -143,6 +148,8 @@ export function RouteSheet({
   onClose: () => void;
   /** Known cities for one-tap suggestions — derived from the feed. */
   cities?: string[];
+  /** Last applied directions, most-recent-first — current route is excluded. */
+  recentRoutes?: { from: string; to: string }[];
 }) {
   const [fromDraft, setFromDraft] = useState(value.from);
   const [toDraft, setToDraft] = useState(value.to);
@@ -152,6 +159,21 @@ export function RouteSheet({
     if (open) { setFromDraft(value.from); setToDraft(value.to); setOpenField(null); }
   }, [open, value.from, value.to]);
   const visible = countFor({ from: fromDraft, to: toDraft });
+
+  const norm = (s: string) => s.trim().toLocaleLowerCase();
+  const recents = useMemo(() => recentRoutes
+    .filter((r) => !(norm(r.from) === norm(value.from) && norm(r.to) === norm(value.to)))
+    .map((route) => ({ route, matches: countFor(route) })),
+  // countFor is re-created by the owner each render; sections mirror the draft snapshot.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [open, recentRoutes, value.from, value.to]);
+  const popular = useMemo(() => cities
+    .map((city) => ({ city, matches: countFor({ from: '', to: city }) }))
+    .filter((p) => p.matches > 0)
+    .sort((a, b) => b.matches - a.matches)
+    .slice(0, 3),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [open, cities]);
 
   return (
     <Sheet open={open} onClose={onClose} label="Change direction">
@@ -184,6 +206,65 @@ export function RouteSheet({
           onPick={setToDraft}
         />
       </div>
+      {(recents.length > 0 || popular.length > 0) && (
+        <div className="mt-[16px] flex flex-col gap-[16px]">
+          {recents.length > 0 && (
+            <section aria-label="Recent directions">
+              <h3 className="text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">Recent</h3>
+              <ul className="mt-[8px] flex flex-col gap-[4px]">
+                {recents.map(({ route, matches }) => {
+                  const dead = matches === 0;
+                  const fromLabel = route.from.trim() || 'Anywhere';
+                  return (
+                    <li key={`${route.from}→${route.to}`}>
+                      <button
+                        type="button"
+                        disabled={dead}
+                        onClick={() => onApply({ from: route.from, to: route.to })}
+                        aria-label={`${fromLabel} to ${route.to}, ${dead ? 'no loads' : `${matches} ${matches === 1 ? 'load' : 'loads'}`}`}
+                        className={`flex min-h-[44px] w-full items-center gap-[8px] rounded-[var(--radius-md)] px-[12px] text-left text-body-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
+                          dead
+                            ? 'cursor-not-allowed text-[var(--color-text-disabled)]'
+                            : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)] active:bg-[var(--color-bg-subtle)]'
+                        }`}
+                      >
+                        <Icon name="clock" size="sm" className="shrink-0 text-[var(--color-text-secondary)]" />
+                        <span className="min-w-0 flex-1 truncate">{fromLabel} → {route.to}</span>
+                        <span className="shrink-0 text-caption-12 text-[var(--color-text-secondary)]">
+                          {dead ? 'No loads' : `${matches} ${matches === 1 ? 'load' : 'loads'}`}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+          {popular.length > 0 && (
+            <section aria-label="Popular destinations">
+              <h3 className="text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">Popular</h3>
+              <ul className="mt-[8px] flex flex-col gap-[4px]">
+                {popular.map(({ city, matches }) => (
+                  <li key={city}>
+                    <button
+                      type="button"
+                      onClick={() => onApply({ from: '', to: city })}
+                      aria-label={`Anywhere to ${city}, ${matches} ${matches === 1 ? 'load' : 'loads'}`}
+                      className="flex min-h-[44px] w-full items-center gap-[8px] rounded-[var(--radius-md)] px-[12px] text-left text-body-14 text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] active:bg-[var(--color-bg-subtle)]"
+                    >
+                      <Icon name="map-pin" size="sm" className="shrink-0 text-[var(--color-action-primary)]" />
+                      <span className="min-w-0 flex-1 truncate">Anywhere → {city}</span>
+                      <span className="shrink-0 text-caption-12 text-[var(--color-text-secondary)]">
+                        {matches} {matches === 1 ? 'load' : 'loads'}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
+      )}
       <div className="mt-[20px]">
         <Button
           label={visible === 0 ? 'No loads match' : `Show ${visible} ${visible === 1 ? 'load' : 'loads'}`}

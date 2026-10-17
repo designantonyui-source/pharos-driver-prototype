@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { dismissLoad, getLoads, restoreLoad } from '../../lib/api';
+import { dismissLoad, getLoads, restoreLoad, commitRoute } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
-import { store, useStore } from '../../lib/store';
+import { useStore } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
 import { Icon } from '../../components/Icon';
 import { V2Frame } from '../../components/v2/V2Frame';
@@ -155,12 +155,13 @@ export function Home() {
         open={routeOpen}
         value={{ from: state.route.from, to: destination }}
         cities={[...new Set((loads ?? []).flatMap((l) => [l.from, l.to]))].sort()}
+        recentRoutes={state.recentRoutes}
         countFor={(route) => (loads ?? []).filter((l) =>
           (route.to.trim() === '' || l.to.trim().toLocaleLowerCase() === route.to.trim().toLocaleLowerCase()) &&
           (route.from.trim() === '' || l.from.trim().toLocaleLowerCase() === route.from.trim().toLocaleLowerCase()),
         ).length}
         onApply={(route) => {
-          store.set({ route });
+          void commitRoute(route);
           setRouteOpen(false);
         }}
         onClose={() => setRouteOpen(false)}

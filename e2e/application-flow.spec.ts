@@ -98,6 +98,29 @@ test('route suggestions carry live counts and the dead end recovers', async ({ p
   await expect(sheet).toHaveCount(0);
 });
 
+test('recent routes recall the last direction in one tap', async ({ page }) => {
+  await page.goto('/#/v2');
+  // First apply: Paris → Brussels.
+  await page.getByRole('button', { name: 'Direction: Anywhere → Brussels, 2 of 6 loads. Activate to change.' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Change direction' });
+  await sheet.getByLabel('Origin city').fill('Paris');
+  await expect(sheet.getByRole('button', { name: 'Show 1 load' })).toBeEnabled();
+  await sheet.getByRole('button', { name: 'Show 1 load' }).click();
+  await expect(page.getByRole('button', { name: 'Direction: Paris → Brussels, 1 of 6 loads. Activate to change.' })).toBeVisible();
+  // Second apply: Anywhere → Antwerp. Now Paris → Brussels is a recent.
+  await page.getByRole('button', { name: 'Direction: Paris → Brussels, 1 of 6 loads. Activate to change.' }).click();
+  await sheet.getByLabel('Origin city').fill('');
+  await sheet.getByLabel('Destination city').fill('Antwerp');
+  await expect(sheet.getByRole('button', { name: 'Show 1 load' })).toBeEnabled();
+  await sheet.getByRole('button', { name: 'Show 1 load' }).click();
+  await expect(page.getByRole('button', { name: 'Direction: Anywhere → Antwerp, 1 of 6 loads. Activate to change.' })).toBeVisible();
+  // Reopen: Recent offers Paris → Brussels back in one tap.
+  await page.getByRole('button', { name: 'Direction: Anywhere → Antwerp, 1 of 6 loads. Activate to change.' }).click();
+  await expect(sheet.getByRole('region', { name: 'Recent directions' })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Paris to Brussels, 1 load' }).click();
+  await expect(page.getByRole('button', { name: 'Direction: Paris → Brussels, 1 of 6 loads. Activate to change.' })).toBeVisible();
+});
+
 test('driver submits, sees a status update and cancels an application', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));

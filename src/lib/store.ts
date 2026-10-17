@@ -47,6 +47,8 @@ export type AppState = {
   chatMessages: ChatMessage[];
   applications: Record<string, LoadApplication>;
   route: { from: string; to: string };
+  /** Last applied directions, most-recent-first (max 5). Powers the Recent section. */
+  recentRoutes: { from: string; to: string }[];
   loadId: string | null;
   status: ApplicationStatus | null;
   submittedAt: string | null;
@@ -63,6 +65,7 @@ const initial: AppState = {
   chatMessages: [],
   applications: {},
   route: { from: '', to: '' },
+  recentRoutes: [],
   loadId: null,
   status: null,
   submittedAt: null,
@@ -100,6 +103,12 @@ function isLedgerEntry(value: unknown): value is LedgerEntry {
   return false;
 }
 
+function isRoute(value: unknown): value is { from: string; to: string } {
+  if (typeof value !== 'object' || value === null) return false;
+  const route = value as Record<string, unknown>;
+  return typeof route.from === 'string' && typeof route.to === 'string';
+}
+
 function isChatMessage(value: unknown): value is ChatMessage {
   if (typeof value !== 'object' || value === null) return false;
   const m = value as Record<string, unknown>;
@@ -134,11 +143,12 @@ function read(): AppState {
     } catch { /* Ignore malformed prototype payout data without losing the journey. */ }
     const ledger = Array.isArray(saved.ledger) ? saved.ledger.filter(isLedgerEntry) : [];
     const chatMessages = Array.isArray(saved.chatMessages) ? saved.chatMessages.filter(isChatMessage) : [];
+    const recentRoutes = Array.isArray(saved.recentRoutes) ? saved.recentRoutes.filter(isRoute).slice(0, 5) : [];
     const payoutSchedule = normalizeSchedule(saved.payoutSchedule);
     const scheduledRuns = Array.isArray(saved.scheduledRuns)
       ? saved.scheduledRuns.filter((r): r is ScheduledRun => typeof r === 'object' && r !== null && typeof (r as ScheduledRun).id === 'string')
       : [];
-    return { ...initial, ...saved, applications, status, contactProfile, payoutMethods, payoutMethod: undefined, ledger, payoutSchedule, scheduledRuns, chatMessages };
+    return { ...initial, ...saved, applications, status, contactProfile, payoutMethods, payoutMethod: undefined, ledger, payoutSchedule, scheduledRuns, chatMessages, recentRoutes };
   } catch {
     return initial;
   }
@@ -173,6 +183,8 @@ export const store = {
     catch { next.payoutSchedule = { mode: 'off' }; }
     if (!Array.isArray(next.scheduledRuns)) next.scheduledRuns = [];
     if (!Array.isArray(next.chatMessages)) next.chatMessages = [];
+    if (!Array.isArray(next.recentRoutes)) next.recentRoutes = [];
+    else next.recentRoutes = next.recentRoutes.filter(isRoute).slice(0, 5);
     localStorage.setItem(KEY, JSON.stringify(next));
     memory = next;
     listeners.forEach((listener) => listener(memory));

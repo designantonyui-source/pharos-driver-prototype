@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { acceptDemoPod, advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, customerPaysDemoTrip, dismissLoad, earningsStateFor, getTripDetails, markWithdrawalDelayed, markWithdrawalFailed, markWithdrawalPaid, rejectDemoPod, requestWithdrawal, restoreLoad, returnWithdrawalFunds, setEnRoute, submitApplication, submitProofOfDelivery } from './api';
+import { acceptDemoPod, advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, commitRoute, customerPaysDemoTrip, dismissLoad, earningsStateFor, getTripDetails, markWithdrawalDelayed, markWithdrawalFailed, markWithdrawalPaid, rejectDemoPod, requestWithdrawal, restoreLoad, returnWithdrawalFunds, setEnRoute, submitApplication, submitProofOfDelivery } from './api';
 import { ApplicationStatus } from './models';
 import { store } from './store';
 
@@ -468,6 +468,30 @@ describe('application lifecycle', () => {
     const assertion = expect(cancelApplication('nordcargo')).rejects.toThrow('This application can no longer be cancelled');
     await vi.advanceTimersByTimeAsync(300);
     await assertion;
+  });
+
+  it('commits the route and remembers it recent-first', async () => {
+    const first = commitRoute({ from: ' Paris ', to: 'Brussels' });
+    await vi.advanceTimersByTimeAsync(150);
+    await expect(first).resolves.toEqual({ from: 'Paris', to: 'Brussels' });
+    expect(store.get().route).toEqual({ from: 'Paris', to: 'Brussels' });
+    expect(store.get().recentRoutes).toEqual([{ from: 'Paris', to: 'Brussels' }]);
+
+    const second = commitRoute({ from: 'paris', to: 'brussels' });
+    await vi.advanceTimersByTimeAsync(150);
+    await second;
+    // Case-insensitive re-apply moves to front instead of duplicating.
+    expect(store.get().recentRoutes).toEqual([{ from: 'paris', to: 'brussels' }]);
+  });
+
+  it('caps recent routes at five', async () => {
+    for (let i = 0; i < 6; i++) {
+      const run = commitRoute({ from: '', to: `City${i}` });
+      await vi.advanceTimersByTimeAsync(150);
+      await run;
+    }
+    expect(store.get().recentRoutes).toHaveLength(5);
+    expect(store.get().recentRoutes[0]).toEqual({ from: '', to: 'City5' });
   });
 
 });
