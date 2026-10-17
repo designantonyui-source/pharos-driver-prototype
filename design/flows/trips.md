@@ -8,6 +8,7 @@
 - EXPIRED — терминальный статус заявки (`models.ts`): трекер показывает `Application expired` + `Needed both approvals by {approvalsBy}` + `Back to loads`; Cancel скрыт, Dispute нет, re-apply разрешён. Картка фида — нейтральный `cancelled`-стиль, `LoadCta` — `Application expired` + `View status` + `Apply again`. Хаб Trips — секция Past с чипом `Expired` (нейтральный, не danger). Демо: кнопка `→ expired` в DemoPanel.
 - Проверки: unit 174/174, `pnpm check` чистый.
 - Нотификации: банер `/v2` — только живые (waiting + confirmed mini-player); ended → null, состояние несут пилюля карточки + Trips Past. `Step 4 of 4` удалён. Toast — только success/info; ошибки — инлайн; подтверждения — Sheet. Висяк — Dispute-тост (№3).
+- Хедер направления: `Anywhere → Brussels` (пустой origin больше не голая точка), пилюля `2 of 6` (visible of total), саблайн — фильтры словами / `No filters` (убраны дубль-счётчик и min-€/km). E2E-имена обновлены; cancelled-степ теперь ассертит пилюлю, а не банер. Mobbin iOS: Uber Where-to, Grab From/To, BlaBlaCar recents.
 
 - Portfolio happy path: `Loads → Apply → Confirmed → Trip (en-route → arrived → loaded → en-route → delivered) → Balance (pending payout)`. `advanceTripStage(delivered)` пишет `trip`-запись `pending` в ledger (без дублей); payout-строка в TripDetails — ссылка в Balance; E2E `portfolio happy path: apply to payout` 9/9.
 - RouteSheet: чипов нет — inline-подсказки в инпуте (combobox + listbox, фильтр по вводу, count/`No loads`, один список за раз, закрытие на blur/Escape/скролл/тап-снаружи). Шит короче вдвое.
