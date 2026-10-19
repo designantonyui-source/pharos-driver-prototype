@@ -9,7 +9,7 @@ export function DemoToggle() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      {open && <DemoPanel />}
+      {open && <DemoPanel offset />}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}

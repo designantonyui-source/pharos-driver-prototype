@@ -24,7 +24,7 @@ const SCENARIOS: Array<{ id: DemoScenarioId; label: string; to: string }> = [
 
 const POD_FILE = { filename: 'signed-pod.pdf', mimeType: 'application/pdf', dataUrl: 'data:application/pdf;base64,AAAA' };
 
-export function DemoPanel() {
+export function DemoPanel({ offset = false }: { offset?: boolean }) {
   const { state, setStatus, reset } = useStore();
   const navigate = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
@@ -54,7 +54,7 @@ export function DemoPanel() {
 
   const wid = lastWithdrawalId();
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-h-[70vh] w-[280px] overflow-y-auto rounded-xl border border-[var(--color-border-default)] bg-white p-3 text-[12px] shadow-lg">
+    <div className={`fixed ${offset ? 'bottom-[7.5rem]' : 'bottom-4'} right-4 z-50 max-h-[70vh] w-[280px] overflow-y-auto rounded-xl border border-[var(--color-border-default)] bg-white p-3 text-[12px] shadow-lg`}>
       <div className="mb-2 font-semibold">Payments case · {state.status ?? 'none'}</div>
       <div className="mb-2 flex flex-col gap-1">
         {SCENARIOS.map((s) => (

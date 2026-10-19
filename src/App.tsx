@@ -1,6 +1,5 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { DEMO_ENABLED } from './lib/demo';
-import { DemoPanel } from './components/DemoPanel';
 import { Search } from './screens/Search';
 import { Home as HomeV2 } from './screens/v2/Home';
 import { ApplicationTracker } from './screens/v2/ApplicationTracker';
@@ -27,43 +26,42 @@ import { BlProfile } from './screens/bl/Profile';
  */
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/v2" replace />} />
-      <Route path="/screens" element={<Index />} />
-      <Route path="/search" element={<Search />} />
-      <Route
-        path="/v2"
-        element={
-          <>
-            <HomeV2 />
-            {DEMO_ENABLED && <DemoToggle />}
-          </>
-        }
-      />
-      <Route path="/application/:id" element={<ApplicationTracker />} />
-      <Route path="/trip/:id" element={<TripDetails />} />
-      <Route path="/trip/:id/chat" element={<TripChat />} />
-      <Route path="/v2/trips" element={<Trips />} />
-      <Route path="/v2/account" element={<Account />} />
-      <Route path="/v2/account/profile" element={<Account detail />} />
-      <Route path="/v2/account/profile/edit" element={<EditContact />} />
-      <Route path="/v2/account/dismissed" element={<DismissedLoads />} />
-      <Route path="/v2/account/balance" element={<Balance />} />
-      <Route path="/v2/account/balance/method" element={<PayoutMethodScreen />} />
-      <Route path="/v2/account/balance/cashout" element={<CashOut />} />
-      <Route path="/v2/account/balance/withdrawals/:id" element={<WithdrawalDetails />} />
-      <Route path="/v2/account/balance/history" element={<BalanceHistory />} />
-      <Route path="/v2/account/balance/invoices" element={<InvoiceList />} />
-      <Route path="/v2/account/balance/invoices/:id" element={<InvoiceDetails />} />
-      <Route path="/v2/account/balance/schedules" element={<Schedules />} />
-      <Route path="/bl" element={<BlHome />} />
-      <Route path="/bl/start" element={<BlStart />} />
-      <Route path="/bl/search" element={<BlSearch />} />
-      <Route path="/bl/list" element={<BlList />} />
-      <Route path="/bl/route" element={<BlRoute />} />
-      <Route path="/bl/profile" element={<BlProfile />} />
-      <Route path="*" element={<Navigate to="/v2" replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Navigate to="/v2" replace />} />
+        <Route path="/screens" element={<Index />} />
+        <Route path="/search" element={<Search />} />
+        <Route path="/v2" element={<HomeV2 />} />
+        <Route path="/application/:id" element={<ApplicationTracker />} />
+        <Route path="/trip/:id" element={<TripDetails />} />
+        <Route path="/trip/:id/chat" element={<TripChat />} />
+        <Route path="/v2/trips" element={<Trips />} />
+        <Route path="/v2/account" element={<Account />} />
+        <Route path="/v2/account/profile" element={<Account detail />} />
+        <Route path="/v2/account/profile/edit" element={<EditContact />} />
+        <Route path="/v2/account/dismissed" element={<DismissedLoads />} />
+        <Route path="/v2/account/balance" element={<Balance />} />
+        <Route path="/v2/account/balance/method" element={<PayoutMethodScreen />} />
+        <Route path="/v2/account/balance/cashout" element={<CashOut />} />
+        <Route path="/v2/account/balance/withdrawals/:id" element={<WithdrawalDetails />} />
+        <Route path="/v2/account/balance/history" element={<BalanceHistory />} />
+        <Route path="/v2/account/balance/invoices" element={<InvoiceList />} />
+        <Route path="/v2/account/balance/invoices/:id" element={<InvoiceDetails />} />
+        <Route path="/v2/account/balance/schedules" element={<Schedules />} />
+        <Route path="/bl" element={<BlHome />} />
+        <Route path="/bl/start" element={<BlStart />} />
+        <Route path="/bl/search" element={<BlSearch />} />
+        <Route path="/bl/list" element={<BlList />} />
+        <Route path="/bl/route" element={<BlRoute />} />
+        <Route path="/bl/profile" element={<BlProfile />} />
+        <Route path="*" element={<Navigate to="/v2" replace />} />
+      </Routes>
+      {/* Walkthrough controls follow the presenter across every screen: the money
+          loop needs "customer paid" on the balance screen and payout outcomes on
+          the history screen, not only on the loads feed. Collapsed to a pill so
+          it never covers a CTA; only rendered when the URL asks for it (?demo=1). */}
+      {DEMO_ENABLED && <DemoToggle />}
+    </>
   );
 }
 
@@ -93,7 +91,6 @@ function Index() {
           </li>
         ))}
       </ul>
-      {DEMO_ENABLED && <DemoPanel />}
     </div>
   );
 }
