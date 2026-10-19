@@ -91,6 +91,60 @@ it('sets default and removes methods, keeping one default', async () => {
   expect(methods.filter(m => m.isDefault).length).toBe(1);
 });
 
+/**
+ * Removing a payout method must be confirmed.
+ *
+ * The bug this locks down: the X button deleted the method on a single tap, with
+ * no confirmation — and if it was the only method, the driver was left unable
+ * to cash out with no explanation.
+ */
+it('asks for confirmation before removing a payout method', async () => {
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business account' });
+  setup('/v2/account/balance/method');
+  await screen.findByText(/1 saved/);
+
+  fireEvent.click(screen.getByRole('button', { name: /Remove Business account/ }));
+  await screen.findByText('Remove this payout method?');
+  // The only method → the sheet must say cash out is blocked afterwards.
+  expect(screen.getByText(/This is your only payout method/)).toBeTruthy();
+  expect(screen.getByText(/will not be able to cash out/)).toBeTruthy();
+
+  // Nothing is deleted until the driver confirms.
+  expect((await api.getPayoutMethods()).length).toBe(1);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Keep method' }));
+  await waitFor(() => expect(screen.queryByText('Remove this payout method?')).toBeNull());
+  expect((await api.getPayoutMethods()).length).toBe(1);
+});
+
+it('removes the payout method once the confirmation is accepted', async () => {
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business account' });
+  setup('/v2/account/balance/method');
+  await screen.findByText(/1 saved/);
+
+  fireEvent.click(screen.getByRole('button', { name: /Remove Business account/ }));
+  await screen.findByText('Remove this payout method?');
+  fireEvent.click(screen.getByRole('button', { name: 'Remove method' }));
+
+  await waitFor(async () => expect((await api.getPayoutMethods()).length).toBe(0));
+  await screen.findByText('No payout methods yet');
+});
+
+it('warns that another method becomes the default when the default is removed', async () => {
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'First' });
+  const tok = (await import('../../lib/profile')).tokeniseCard(VALID_CARD);
+  await api.addCardMethod({ ...tok, label: 'Second' });
+  setup('/v2/account/balance/method');
+  await screen.findByText(/2 saved/);
+
+  const methods = await api.getPayoutMethods();
+  const def = methods.find(m => m.isDefault)!;
+  fireEvent.click(screen.getByRole('button', { name: new RegExp(`Remove ${def.label}`) }));
+  await screen.findByText('Remove this payout method?');
+  expect(screen.getByText(/This is your default method/)).toBeTruthy();
+  expect(screen.getByText(/Another saved method becomes the default/)).toBeTruthy();
+});
+
 it('blocks cash out without method and completes SEPA withdrawal', async () => {
   setup('/v2/account/balance/cashout');
   await screen.findByText('Add a payout method first');
@@ -184,6 +238,51 @@ it('dismisses only dismissed feed entries and never touches the ledger', async (
   setup('/v2/account/balance');
   await screen.findByText('Available balance');
   expect((await api.getBalance()).available).toBeCloseTo(500, 2);
+});
+
+/**
+ * The balance must follow the money, not the mount.
+ *
+ * The bug this locks down: the screen fetched once on mount, so when the
+ * customer paid while the screen was already open, the card kept showing
+ * "EUR 360.00 pending" and EUR 500 available — the single most important beat
+ * of the demo appeared to do nothing.
+ */
+it('refreshes the balance when the customer pays while the screen is open', async () => {
+  const now = new Date().toISOString();
+  store.set({
+    ledger: [
+      { kind: 'trip', id: 't-belroute', loadId: 'belroute', company: 'BelRoute', from: 'Ghent', to: 'Antwerp', amount: 210, status: 'available', paidAt: now, day: 'Sat' },
+      { kind: 'trip', id: 't-calais', loadId: 'calais-lille', company: 'Côte Fret', from: 'Calais', to: 'Lille', amount: 290, status: 'available', paidAt: now, day: 'Sun' },
+      { kind: 'trip', id: 't-nordcargo', loadId: 'nordcargo', company: 'NordCargo', from: 'Lille', to: 'Brussels', amount: 360, status: 'pending', paidAt: null, day: 'Mon' },
+    ],
+    applications: {
+      nordcargo: {
+        loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED, submittedAt: now,
+        tripId: 'TR-nordcargo', tripStage: 'delivered',
+        pod: { status: 'approved', filename: 'signed-pod.pdf', mimeType: 'application/pdf', dataUrl: 'data:application/pdf;base64,AAAA', uploadedAt: now },
+      },
+    },
+  });
+  setup('/v2/account/balance');
+  await screen.findByText('Available balance');
+  expect(screen.getByText(/EUR 500\.00/)).toBeTruthy();
+  expect(screen.getByText(/EUR 360\.00 pending/)).toBeTruthy();
+
+  // The customer pays → the money moves from pending to available.
+  await api.customerPaysDemoTrip('nordcargo');
+
+  await waitFor(() => expect(screen.getByText(/EUR 860\.00/)).toBeTruthy());
+});
+
+it('refreshes the history list when a payout outcome lands', async () => {
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business account' });
+  setup('/v2/account/balance/history');
+  await screen.findAllByText('Activity');
+  expect(screen.queryByText(/Cash out to/)).toBeNull();
+
+  await api.requestWithdrawal(100);
+  await waitFor(() => expect(screen.getByText(/Cash out to/)).toBeTruthy());
 });
 
 it('shows a row-shaped loading skeleton and an empty method illustration', async () => {

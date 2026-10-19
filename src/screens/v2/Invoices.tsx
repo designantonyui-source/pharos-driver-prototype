@@ -20,6 +20,7 @@ import { V2BackBar } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { getInvoice, getInvoices, invoicesToCsv, type Invoice, type InvoiceStatus } from '../../lib/invoices';
 import { downloadInvoicePdf, formatEuro } from '../../lib/invoicePdf';
+import { useLedger } from '../../lib/store';
 
 function InvoiceFrame({ title, backTo, children }: { title: string; backTo?: string; children: ReactNode }) {
   return <V2Frame active="Account">
@@ -73,12 +74,15 @@ export function InvoiceList() {
   const [invoices, setInvoices] = useState<Invoice[] | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // An invoice flips to paid when the customer pays — that is a ledger change,
+  // and the list must not keep showing the old status.
+  const ledgerVersion = useLedger();
   useEffect(() => {
     let live = true;
     setError(false);
     getInvoices().then(v => { if (live) setInvoices(v); }).catch(() => { if (live) setError(true); });
     return () => { live = false; };
-  }, [attempt]);
+  }, [attempt, ledgerVersion]);
   if (error || !invoices) {
     return <InvoiceFrame title="Invoices" backTo="/v2/account/balance"><StatusBlock error={error} retry={() => setAttempt(v => v + 1)} label="invoices" /></InvoiceFrame>;
   }

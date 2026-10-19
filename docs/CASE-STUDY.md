@@ -223,10 +223,10 @@ set and **fails the build** on an undefined reference.
 | API error | Inline `Alert` with a working **Retry** that re-runs the loader |
 | Screen reader on the progress list | `aria-current="step"`, and `ProgressStep` **is** the `<li>` — no invalid nested list items |
 
-### 6.1 Three real defects the case-study pass found
+### 6.1 Five real defects the case-study pass found
 
-Writing the case study forced me to walk the money loop screen by screen, and three things turned
-out to be wrong. I fixed all three and locked each one with a test — a case study is not worth
+Writing the case study forced me to walk the money loop screen by screen, and five things turned
+out to be wrong. I fixed all five and locked each one with a test — a case study is not worth
 much if the thing it describes is quietly broken.
 
 **The sticky action kept asking for a document the customer had already accepted.**
@@ -241,13 +241,31 @@ The same panel said *"Upload a signed delivery document"* under a POD the custom
 approved. It now has one message per POD status, including *"The customer rejected this document ·
 Upload a corrected one below."*
 
+**Removing a payout method took one tap and asked nothing.**
+The X button deleted the saved method immediately — and if it was the only one, the driver was
+left unable to cash out, with no warning and no way back. There is now a `RemoveMethodSheet` that
+states the consequence before the driver commits: removing the only method says *"You will not be
+able to cash out until you add another one"*, removing the default says *"Another saved method
+becomes the default"*. The confirm button is a danger button; the escape hatch is "Keep method".
+This was the one destructive action in the app without a confirmation — cancelling a trip and
+cancelling an application already had sheets, and hiding a load is reversible with Restore + Undo.
+
+**The balance did not follow the money.**
+The money screens fetched once on mount, so when the customer paid while the balance screen was
+already open, the card kept showing *"EUR 360.00 pending"* and EUR 500 available. The single most
+important beat of the demo appeared to do nothing. The screens now refetch when the ledger
+changes — and only then, via a stable ledger reference, so unrelated store writes (chat, profile,
+dismissed loads) do not trigger a refetch.
+
 **The progress list was invalid HTML.**
 `ApplicationProgress` wrapped `ProgressStep` in an `<li>`, and `ProgressStep` renders its own
 `<li>` — so the accessibility tree contained `<li> cannot contain a nested <li>`. The step now *is*
 the list item, and callers pass list-item attributes (`aria-current`) straight through.
 
-The first two were only visible by actually walking the flow; the third only appeared because the
-E2E run surfaced a console error that nobody was reading.
+The first two were only visible by actually walking the flow; the fourth only appeared because
+the presenter pressed "customer paid" while sitting on the balance screen; the third was spotted by
+using the app; the fifth only appeared because the E2E run surfaced a console error that nobody was
+reading.
 
 ---
 
@@ -256,7 +274,7 @@ E2E run surfaced a console error that nobody was reading.
 | Gate | What it covers | Result |
 |---|---|---|
 | `pnpm check` | token audit → `tsc --noEmit` → production build | clean |
-| `pnpm test` | Vitest + Testing Library | **189 passing** |
+| `pnpm test` | Vitest + Testing Library | **194 passing** |
 | `pnpm test:e2e` | Playwright at 402×874 — the money loop as a user walks it | **16 passing** |
 | `pnpm capture:case-study` | regenerates the screenshot set from the running app | 23 screens |
 

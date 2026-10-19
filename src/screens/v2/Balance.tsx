@@ -26,6 +26,7 @@ import { V2BackBar } from '../../components/layout/NavigationBar';
 import { Toast, useToast } from '../../components/v2/Toast';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { Sheet } from '../../components/v2/Sheet';
+import { RemoveMethodSheet } from '../../components/v2/RemoveMethodSheet';
 import {
   PAYOUT_POLICY, addCardMethod, addIbanMethod, adjustmentLabel, detectCardBrand, evaluateSchedule, formatCardExpiry,
   formatCardNumber, getBalance, getLedger, getPayoutMethods, getWithdrawal, maskCard,
@@ -35,6 +36,7 @@ import {
   type BalanceSummary, type LedgerEntry, type PayoutMethod,
 } from '../../lib/api';
 import { getInvoices } from '../../lib/invoices';
+import { useLedger } from '../../lib/store';
 
 export function formatEuro(amount: number): string {
   return `EUR ${amount.toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -162,6 +164,9 @@ export function Balance() {
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const navigate = useNavigate();
+  // Money moved somewhere else in the app (a payout outcome, the customer
+  // paying) → this screen refetches instead of showing a stale number.
+  const ledgerVersion = useLedger();
   useEffect(() => {
     let live = true;
     setError(false);
@@ -182,7 +187,7 @@ export function Balance() {
           .catch(() => { if (live) setError(true); });
       });
     return () => { live = false; };
-  }, [attempt]);
+  }, [attempt, ledgerVersion]);
   if (error || !summary || !methods || !recent) {
     return <BalanceFrame title="Balance"><StatusBlock error={error} retry={() => setAttempt(v => v + 1)} label="balance" /></BalanceFrame>;
   }
@@ -239,6 +244,10 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
   const [cardTouched, setCardTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  // Removing a payout method is destructive → confirm before it happens.
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const [removing, setRemoving] = useState(false);
   const { toast, show, dismiss } = useToast();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -305,8 +314,30 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
   async function makeDefault(id: string) {
     setMethods(await setDefaultMethod(id));
   }
-  async function remove(id: string) {
-    setMethods(await removeMethod(id));
+  /** Open the confirmation sheet — nothing is deleted on the first tap. */
+  function askRemove(id: string) {
+    setRemoveError(null);
+    setRemovingId(id);
+  }
+  function closeRemove() {
+    if (removing) return;
+    setRemovingId(null);
+    setRemoveError(null);
+  }
+  async function confirmRemove() {
+    if (!removingId || removing) return;
+    setRemoving(true);
+    setRemoveError(null);
+    try {
+      const left = await removeMethod(removingId);
+      setMethods(left);
+      setRemovingId(null);
+      show({ tone: 'success', title: 'Payout method removed' });
+    } catch {
+      setRemoveError('Could not remove this method. Please try again.');
+    } finally {
+      setRemoving(false);
+    }
   }
   return <BalanceFrame title="Payout methods" backTo="/v2/account/balance">
     {methods.length === 0
@@ -319,7 +350,7 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
           <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{methodDetail(m)}</span>
         </span>
         {!m.isDefault && <button type="button" onClick={() => void makeDefault(m.id)} className="shrink-0 rounded-[var(--radius-sm)] border border-[var(--color-action-border)] px-[var(--spacing-8)] py-[var(--spacing-8)] text-label-12 text-[var(--color-action-text)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]">Default</button>}
-        <button type="button" aria-label={`Remove ${m.label || methodLabel(m)}`} onClick={() => void remove(m.id)} className="flex h-[var(--size-control-mobile)] w-[var(--size-control-mobile)] shrink-0 items-center justify-center text-[var(--color-text-secondary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"><Icon name="x" size="sm" /></button>
+        <button type="button" aria-label={`Remove ${m.label || methodLabel(m)}`} onClick={() => askRemove(m.id)} className="flex h-[var(--size-control-mobile)] w-[var(--size-control-mobile)] shrink-0 items-center justify-center text-[var(--color-text-secondary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"><Icon name="x" size="sm" /></button>
       </div>)}
       </Section>}
     <Section label="Add method">
@@ -343,6 +374,15 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
       </form>}
     </Section>
     {saveError && <div className="mt-[var(--spacing-16)]" role="alert"><Alert type="error" title="Could not save the method">Check your connection and try again.</Alert></div>}
+    <RemoveMethodSheet
+      open={removingId !== null}
+      method={methods.find(m => m.id === removingId) ?? null}
+      remainingCount={methods.filter(m => m.id !== removingId).length}
+      removing={removing}
+      error={removeError}
+      onConfirm={() => void confirmRemove()}
+      onClose={closeRemove}
+    />
   </BalanceFrame>;
 }
 
@@ -359,6 +399,9 @@ export function CashOut() {
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const navigate = useNavigate();
+  // The withdrawable amount can change while this screen is open (a payout
+  // landed, a fee was charged) — the cap must never be stale.
+  const ledgerVersion = useLedger();
   useEffect(() => {
     let live = true;
     setError(false);
@@ -371,7 +414,7 @@ export function CashOut() {
       })
       .catch(() => { if (live) setError(true); });
     return () => { live = false; };
-  }, [attempt]);
+  }, [attempt, ledgerVersion]);
   if (error || !summary || !methods) {
     return <BalanceFrame title="Cash out" backTo="/v2/account/balance"><StatusBlock error={error} retry={() => setAttempt(v => v + 1)} label="cash out" /></BalanceFrame>;
   }
@@ -491,6 +534,7 @@ export function BalanceHistory() {
   const [invoiceByLoad, setInvoiceByLoad] = useState<Record<string, string>>({});
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const ledgerVersion = useLedger();
   useEffect(() => {
     let live = true;
     setError(false);
@@ -504,7 +548,7 @@ export function BalanceHistory() {
       })
       .catch(() => { if (live) setError(true); });
     return () => { live = false; };
-  }, [attempt]);
+  }, [attempt, ledgerVersion]);
   if (error || !ledger) {
     return <BalanceFrame title="Activity" backTo="/v2/account/balance"><StatusBlock error={error} retry={() => setAttempt(v => v + 1)} label="activity" /></BalanceFrame>;
   }
@@ -535,13 +579,16 @@ export function WithdrawalDetails() {
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const navigate = useNavigate();
+  // The payout outcome (delayed → failed → refunded) changes the ledger, and
+  // this screen is the place the driver reads it.
+  const ledgerVersion = useLedger();
   useEffect(() => {
     let live = true;
     setError(false);
     setEntry(undefined);
     getWithdrawal(withdrawalId).then((w) => { if (live) setEntry(w); }).catch(() => { if (live) setError(true); });
     return () => { live = false; };
-  }, [withdrawalId, attempt]);
+  }, [withdrawalId, attempt, ledgerVersion]);
   if (error || entry === undefined) {
     return <BalanceFrame title="Cash out" backTo="/v2/account/balance/history"><StatusBlock error={error} retry={() => setAttempt(v => v + 1)} label="withdrawal" /></BalanceFrame>;
   }

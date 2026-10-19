@@ -1,6 +1,8 @@
 import { CancelApplicationSheet } from './CancelApplicationSheet';
 import { CancelTripSheet } from './CancelTripSheet';
+import { RemoveMethodSheet } from './RemoveMethodSheet';
 import { V2_LOADS } from '../../lib/v2/loads';
+import type { PayoutMethod } from '../../lib/profile';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { MemoryRouter } from 'react-router-dom';
 import { FILTERS, FiltersSheet } from './FiltersSheet';
@@ -95,4 +97,30 @@ export const CancelTripLoading: Story = {
 };
 export const CancelTripError: Story = {
   render: () => <CancelTripSheet open load={V2_LOADS[0]} penalty="warning" cancelling={false} error="Could not cancel this trip. Please try again." onConfirm={() => undefined} onClose={() => undefined} />,
+};
+
+const IBAN_METHOD: PayoutMethod = {
+  kind: 'iban', id: 'iban-1', iban: 'DE89370400440532013000', label: 'Business account', isDefault: true, verified: true,
+};
+const CARD_METHOD: PayoutMethod = {
+  kind: 'card', id: 'card-1', last4: '4242', brand: 'Visa', label: 'Fuel card', isDefault: false, verified: true,
+};
+
+/** The only saved method — removing it blocks cash out. */
+export const RemoveMethodOnlyOne: Story = {
+  render: () => <RemoveMethodSheet open method={IBAN_METHOD} remainingCount={0} removing={false} onConfirm={() => undefined} onClose={() => undefined} />,
+};
+/** The default method — another saved method takes over. */
+export const RemoveMethodDefault: Story = {
+  render: () => <RemoveMethodSheet open method={IBAN_METHOD} remainingCount={1} removing={false} onConfirm={() => undefined} onClose={() => undefined} />,
+};
+/** A card, and a non-default method — the other methods stay available. */
+export const RemoveMethodCard: Story = {
+  render: () => <RemoveMethodSheet open method={CARD_METHOD} remainingCount={2} removing={false} onConfirm={() => undefined} onClose={() => undefined} />,
+};
+export const RemoveMethodLoading: Story = {
+  render: () => <RemoveMethodSheet open method={IBAN_METHOD} remainingCount={1} removing onConfirm={() => undefined} onClose={() => undefined} />,
+};
+export const RemoveMethodError: Story = {
+  render: () => <RemoveMethodSheet open method={IBAN_METHOD} remainingCount={1} removing={false} error="Could not remove this method. Please try again." onConfirm={() => undefined} onClose={() => undefined} />,
 };

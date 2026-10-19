@@ -211,6 +211,24 @@ export function useStore() {
   };
 }
 
+/**
+ * The current ledger, as a stable reference.
+ *
+ * `store.set` keeps the same array instance unless the ledger itself changed,
+ * so this can be used directly as an effect dependency: a money screen refetches
+ * exactly when money moved, and not on unrelated store writes (chat, profile,
+ * dismissed loads).
+ *
+ * Without it, a screen that mounts before the money arrives keeps showing the
+ * old number — which is how "customer paid" could leave the balance card
+ * stuck at EUR 500 with EUR 360 still pending.
+ */
+export function useLedger(): AppState['ledger'] {
+  const [ledger, setLedger] = useState<AppState['ledger']>(memory.ledger);
+  useEffect(() => store.subscribe((s) => setLedger(s.ledger)) as unknown as () => void, []);
+  return ledger;
+}
+
 export function getApplicationForLoad(loadId: string): LoadApplication | null {
   const found = memory.applications[loadId] ?? null;
   if (!found) return null;
