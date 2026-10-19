@@ -73,10 +73,15 @@ test('route suggestions carry live counts and the dead end recovers', async ({ p
   // A bare focus shows no catalog — suggestions appear only while typing.
   await sheet.getByLabel('To', { exact: true }).click();
   await expect(sheet.getByTestId('route-destination-suggestions')).toHaveCount(0);
+  // Fast field switching must not kill the new list: the blurred field's
+  // 150ms close timer is scoped to itself.
+  await sheet.getByLabel('From', { exact: true }).click();
   // Typing filters the feed's cities; every option carries its live count —
   // dead ends read "No loads", a live one shows its count, never promising an empty feed.
   await sheet.getByLabel('To', { exact: true }).fill('B');
   const suggestions = sheet.getByTestId('route-destination-suggestions');
+  await expect(suggestions).toBeVisible();
+  await page.waitForTimeout(300);
   await expect(suggestions).toBeVisible();
   await expect(suggestions.getByRole('option', { name: 'Brussels, 2 loads' })).toBeEnabled();
   // Tapping the option fills the field — one commit path stays: Show.

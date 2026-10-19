@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { FiltersSheet } from './FiltersSheet';
@@ -99,6 +99,60 @@ describe('RouteSheet draft semantics', () => {
     expect(screen.queryByTestId('route-destination-suggestions')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('To'), { target: { value: 'par' } });
     expect(screen.getByTestId('route-destination-suggestions')).toBeInTheDocument();
+  });
+
+  it('a stale blur timer of the other field cannot close the open list', () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <MemoryRouter>
+          <RouteSheet open value={{ from: '', to: '' }} countFor={() => 1} onApply={() => undefined} onClose={() => undefined} cities={['Paris']} />
+        </MemoryRouter>,
+      );
+      fireEvent.focus(screen.getByLabelText('From'));
+      // Leaving From schedules its 150ms close — then the driver types in To.
+      fireEvent.blur(screen.getByLabelText('From'));
+      fireEvent.change(screen.getByLabelText('To'), { target: { value: 'par' } });
+      expect(screen.getByTestId('route-destination-suggestions')).toBeInTheDocument();
+      act(() => vi.advanceTimersByTime(300));
+      // The stale From timer fires here; the To list must survive.
+      expect(screen.getByTestId('route-destination-suggestions')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('refocusing the same field cancels its stale close timer', () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <MemoryRouter>
+          <RouteSheet open value={{ from: '', to: '' }} countFor={() => 1} onApply={() => undefined} onClose={() => undefined} cities={['Paris']} />
+        </MemoryRouter>,
+      );
+      const to = screen.getByLabelText('To');
+      fireEvent.focus(to);
+      fireEvent.blur(to);
+      fireEvent.focus(to); // focus cancels the pending close
+      fireEvent.change(to, { target: { value: 'par' } });
+      expect(screen.getByTestId('route-destination-suggestions')).toBeInTheDocument();
+      act(() => vi.advanceTimersByTime(300));
+      expect(screen.getByTestId('route-destination-suggestions')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('hides the list once the query exactly matches a city — the CTA owns that tap', () => {
+    render(
+      <MemoryRouter>
+        <RouteSheet open value={{ from: '', to: '' }} countFor={() => 1} onApply={() => undefined} onClose={() => undefined} cities={['Paris', 'Brussels']} />
+      </MemoryRouter>,
+    );
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'Bru' } });
+    expect(screen.getByTestId('route-destination-suggestions')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'Brussels' } });
+    expect(screen.queryByTestId('route-destination-suggestions')).not.toBeInTheDocument();
   });
 
   it('recalls recent directions by filling the draft, then Show commits', () => {

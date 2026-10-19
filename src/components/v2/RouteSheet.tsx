@@ -55,6 +55,7 @@ function CityField({
   /** Only one suggestion list at a time; lists appear while typing, never on a bare focus. */
   open: boolean;
   onOpen: () => void;
+  /** Scoped to this field: a stale blur timer of the other field must be a no-op. */
   onClose: () => void;
   onChange: (value: string) => void;
   onPick: (city: string) => void;
@@ -64,6 +65,7 @@ function CityField({
   edge: 'top' | 'bottom';
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
+  const closeTimer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     if (!open) return;
@@ -78,10 +80,14 @@ function CityField({
       document.removeEventListener('pointerdown', onPointerDown);
       sheet?.removeEventListener('scroll', onScroll, true);
     };
-  }, [open, onClose ]);
+  }, [open, onClose]);
 
+  const query = value.trim().toLocaleLowerCase();
+  // A query that exactly equals a known city resolves itself: the CTA already carries
+  // the count, and an option floating over the commit button would steal its tap.
+  const exactCity = query !== '' && cities.some((city) => city.trim().toLocaleLowerCase() === query);
   // Open only while there is a query — a bare focus must not dump an alphabetical catalog.
-  const options = value.trim() === '' ? [] : matchesFor(cities, value).slice(0, 6);
+  const options = query === '' || exactCity ? [] : matchesFor(cities, value).slice(0, 6);
 
   return (
     <div ref={boxRef} className="relative">
@@ -108,9 +114,17 @@ function CityField({
             aria-controls={`${id}-suggestions`}
             value={value}
             onChange={(event) => { onChange(event.target.value); if (event.target.value.trim() === '') onClose(); else onOpen(); }}
+            onFocus={() => {
+              // Cancel a stale close from this field's earlier blur — refocusing must not
+              // kill the list the driver is about to read.
+              if (closeTimer.current !== undefined) {
+                window.clearTimeout(closeTimer.current);
+                closeTimer.current = undefined;
+              }
+            }}
             onBlur={() => {
               // Let the option tap land first (pointerdown fires before blur).
-              window.setTimeout(() => onClose(), 150);
+              closeTimer.current = window.setTimeout(() => onClose(), 150);
             }}
             onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }}
             placeholder={placeholder}
@@ -219,7 +233,7 @@ export function RouteSheet({
           countFor={(city) => countFor({ from: city, to: toDraft })}
           open={openField === 'from'}
           onOpen={() => setOpenField('from')}
-          onClose={closeSuggestions}
+          onClose={() => setOpenField((cur) => (cur === 'from' ? null : cur))}
           onChange={setFromDraft}
           onPick={setFromDraft}
           marker="from"
@@ -235,7 +249,7 @@ export function RouteSheet({
           countFor={(city) => countFor({ from: fromDraft, to: city })}
           open={openField === 'to'}
           onOpen={() => setOpenField('to')}
-          onClose={closeSuggestions}
+          onClose={() => setOpenField((cur) => (cur === 'to' ? null : cur))}
           onChange={setToDraft}
           onPick={setToDraft}
           marker="to"
