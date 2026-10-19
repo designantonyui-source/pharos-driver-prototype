@@ -26,7 +26,7 @@
  *         text-body-14
  * TODO(token): none — every value above resolves to an existing token.
  */
-import type { ReactNode } from 'react';
+import type { LiHTMLAttributes, ReactNode } from 'react';
 
 export type ProgressState = 'done' | 'current' | 'next';
 
@@ -59,6 +59,7 @@ export function ProgressStep({
   status,
   showConnector = false,
   lineTone = 'bg-[var(--color-border-default)]',
+  ...liProps
 }: {
   state: ProgressState;
   /** Figma text property `Number` — the 1-based position in the list. */
@@ -71,9 +72,19 @@ export function ProgressStep({
   showConnector?: boolean;
   /** Connector colour (token class). */
   lineTone?: string;
-}) {
+  /**
+   * Extra props for the list item this component renders.
+   *
+   * The step IS the `<li>` — wrapping it in another `<li>` produces invalid
+   * nesting (`<li> cannot contain a nested <li>` in the a11y tree), so callers
+   * that own an `<ol>`/`<ul>` pass list-item attributes straight through.
+   */
+} & Omit<LiHTMLAttributes<HTMLLIElement>, 'children' | 'className'>) {
   return (
-    <li className="relative flex w-full shrink-0 items-start gap-[var(--spacing-12)] pb-[var(--spacing-12)] last:pb-0">
+    <li
+      {...liProps}
+      className="relative flex w-full shrink-0 items-start gap-[var(--spacing-12)] pb-[var(--spacing-12)] last:pb-0"
+    >
       {showConnector && (
         <span
           aria-hidden

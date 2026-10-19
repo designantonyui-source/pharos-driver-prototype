@@ -86,9 +86,13 @@ export function ApplicationProgress({
         aria-label={`${label}: step ${position} of ${rows.length}`}
       >
         {rows.map(([state, title], i) => (
-          <li key={title} aria-current={state === 'current' ? 'step' : undefined}>
-            <ProgressStep state={state} number={i + 1} label={title} />
-          </li>
+          <ProgressStep
+            key={title}
+            state={state}
+            number={i + 1}
+            label={title}
+            aria-current={state === 'current' ? 'step' : undefined}
+          />
         ))}
       </ol>
     </div>
