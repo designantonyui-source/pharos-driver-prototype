@@ -12,6 +12,7 @@
     "build-storybook": "storybook build -o storybook-static",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "capture:case-study": "node tools/capture-case-study.mjs",
     "tokens": "node tools/export-tokens.mjs",
     "lint:tokens": "node tools/audit-tokens.mjs",
     "check": "node tools/audit-tokens.mjs && tsc --noEmit -p tsconfig.json && vite build"
