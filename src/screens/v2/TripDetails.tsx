@@ -276,10 +276,22 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
   // immediate physical deed. Before the driver has left, that is "navigate" — the
   // arrival milestone still only appears once en route (see `arrivalAction`).
   const notLeftYet = (tripStage === 'confirmed' || tripStage === 'loaded') && !enRouteActive;
+  // After delivery the deed is no longer physical, it is financial — so the bar
+  // follows the POD: upload → wait for review → (if rejected) upload again →
+  // (if accepted) the money action. A bar that still said "Upload POD" after the
+  // document was approved would offer to re-upload an approved document.
+  const podStatus = state.applications[load.id]?.pod?.status;
+  const earningsAvailable = state.ledger.some(e => e.kind === 'trip' && e.loadId === load.id && e.status === 'available');
   const stickyPrimary: { label: string; onClick: () => void; disabled?: boolean; loading?: boolean; icon?: ReactNode } | null =
     cancelled ? null
       : notLeftYet ? { label: `Navigate to ${navigateTarget}`, icon: <Icon name="map-pin" size="sm" />, onClick: () => { void goNavigate(navigateStop.key, navigateStop.mapsQuery); } }
-      : tripStage === 'delivered' ? { label: uploadingPod ? 'Saving document…' : 'Upload POD', disabled: uploadingPod, loading: uploadingPod, onClick: () => podInputRef.current?.click() }
+      : tripStage === 'delivered' && podStatus === 'approved' && earningsAvailable
+        ? { label: 'Cash out earnings', icon: <Icon name="wallet" size="sm" />, onClick: () => { navigate('/v2/account/balance'); } }
+      : tripStage === 'delivered' && podStatus === 'approved'
+        ? { label: 'Awaiting customer payment', disabled: true, onClick: () => {} }
+      : tripStage === 'delivered' && podStatus === 'submitted'
+        ? { label: 'POD under review', disabled: true, onClick: () => {} }
+      : tripStage === 'delivered' ? { label: uploadingPod ? 'Saving document…' : podStatus === 'rejected' ? 'Upload a corrected document' : 'Upload POD', disabled: uploadingPod, loading: uploadingPod, onClick: () => podInputRef.current?.click() }
       : enRouteActive && arrivalAction ? { label: arrivalAction.label, disabled: updatingStage, loading: updatingStage, onClick: () => { void confirmMilestone(); } }
       : nextAction ? { label: nextAction.label, disabled: updatingStage || (tripStage === 'at-delivery' && !handoverConfirmed), loading: updatingStage, onClick: () => { void confirmMilestone(); } }
       : null;
@@ -446,6 +458,10 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
             <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
               {state.applications[load.id]?.pod?.status === 'submitted'
                 ? 'Document submitted · Awaiting review. Payment is tracked separately.'
+                : state.applications[load.id]?.pod?.status === 'approved'
+                ? 'Document accepted by the customer. Payment is tracked separately.'
+                : state.applications[load.id]?.pod?.status === 'rejected'
+                ? 'The customer rejected this document · Upload a corrected one below.'
                 : 'Upload a signed delivery document. This does not automatically approve payment.'}
             </p>
             {state.applications[load.id]?.pod && <p className="mt-[8px] text-body-14">{state.applications[load.id].pod?.filename}</p>}

@@ -70,3 +70,55 @@ it('never leaves the driver without a primary action before departure', async ()
   // The arrival milestone must NOT be offered before the driver has left.
   expect(screen.queryByRole('button', { name: "I've arrived at pickup" })).toBeNull();
 });
+
+/**
+ * After delivery the primary action is no longer physical, it is financial.
+ *
+ * The bug this locks down: the sticky bar said "Upload POD" for every delivered
+ * trip, including one whose POD had already been submitted or approved — so it
+ * offered to re-upload a document the customer had already accepted.
+ */
+function setupDelivered(pod: { status: 'submitted' | 'approved' | 'rejected'; filename: string }) {
+  const submittedAt = new Date().toISOString();
+  store.set({
+    loadId: 'nordcargo',
+    status: ApplicationStatus.CONFIRMED,
+    submittedAt,
+    applications: {
+      nordcargo: {
+        loadId: 'nordcargo', status: ApplicationStatus.CONFIRMED, submittedAt,
+        tripId: 'TR-4821', tripStage: 'delivered',
+        pod: {
+          status: pod.status,
+          filename: pod.filename,
+          mimeType: 'application/pdf',
+          dataUrl: 'data:application/pdf;base64,AAAA',
+          uploadedAt: submittedAt,
+        },
+      },
+    },
+  });
+  setup('/trip/nordcargo');
+}
+
+it('does not offer to upload a POD that is already under review', async () => {
+  setupDelivered({ status: 'submitted', filename: 'signed-pod.pdf' });
+  await screen.findAllByText(/TR-4821/);
+  expect(screen.getByRole('button', { name: 'POD under review' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Upload POD' })).toBeNull();
+});
+
+it('does not offer to upload a POD that the customer already approved', async () => {
+  setupDelivered({ status: 'approved', filename: 'signed-pod.pdf' });
+  await screen.findAllByText(/TR-4821/);
+  expect(screen.getByRole('button', { name: 'Awaiting customer payment' })).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Upload POD' })).toBeNull();
+  // The copy must not keep asking for a document the customer already accepted.
+  expect(screen.getByText(/Document accepted by the customer/)).toBeTruthy();
+});
+
+it('asks for a corrected document when the customer rejected the POD', async () => {
+  setupDelivered({ status: 'rejected', filename: 'unreadable.pdf' });
+  await screen.findAllByText(/TR-4821/);
+  expect(screen.getByRole('button', { name: 'Upload a corrected document' })).toBeTruthy();
+});
