@@ -1,90 +1,22 @@
 name: Pharos driver validation
 
-# Runs on every push to the default branch and on every pull request, so the
-# badge in the README reflects reality instead of a branch that no longer exists.
 on:
   push:
-    branches: [master]
-  pull_request:
+    branches: [pharos-latest-case-study]
   workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   validate:
-    name: Tokens, types, build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
         with:
-          version: 12
+          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # `pnpm check` = token audit + tsc --noEmit + production build
       - run: pnpm check
-
-  unit:
-    name: Unit tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 12
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
       - run: pnpm test
-
-  e2e:
-    name: End-to-end (payments money loop)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 12
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Install Chrome
-        # playwright.config.ts pins `channel: 'chrome'` (real Chrome, not the
-        # bundled Chromium) so local runs and CI render identically.
-        run: pnpm exec playwright install --with-deps chrome
-      - run: pnpm test:e2e
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
-
-  storybook:
-    name: Build component library
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 12
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build-storybook
-      - uses: actions/upload-artifact@v4
-        with:
-          name: storybook-static
-          path: storybook-static/
-          retention-days: 30

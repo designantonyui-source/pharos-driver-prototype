@@ -244,6 +244,30 @@ pnpm test:e2e      # 16 Playwright tests (needs Chrome)
 pnpm capture:case-study   # regenerate docs/screens/ from the running app
 ```
 
+### One-time CI setup
+
+The validation pipeline lives at
+[`design/pharos-validation.workflow.yml`](design/pharos-validation.workflow.yml) rather than in
+`.github/workflows/`, because GitHub refuses changes to that directory from a token without the
+`workflow` scope — and the Contents API answers `404` rather than `403`, so it cannot be uploaded
+that way either.
+
+To enable it, install the file (needs a token with the `workflow` scope):
+
+```bash
+mkdir -p .github/workflows \
+  && git mv design/pharos-validation.workflow.yml .github/workflows/pharos-validation.yml \
+  && git commit -m "ci: enable validation on master and pull requests" \
+  && git push
+```
+
+…or paste the file into `.github/workflows/pharos-validation.yml` in the GitHub web UI, which needs
+no special scope.
+
+Until then, the workflow already in `.github/workflows/` is the older one and triggers only on a
+branch that no longer exists — so it never runs. The same gates pass locally with the commands
+above.
+
 ---
 
 ## Repository map

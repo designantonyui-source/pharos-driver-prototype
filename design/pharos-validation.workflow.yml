@@ -1,0 +1,111 @@
+# Validation pipeline: token audit + typecheck + build, unit tests, Playwright e2e,
+# and a Storybook build — four jobs, on every push and every pull request.
+#
+# WHY THIS FILE IS NOT IN `.github/workflows/`
+# GitHub refuses to accept changes to files under `.github/workflows/` from a token
+# without the `workflow` scope:
+#   "refusing to allow an OAuth App to create or update workflow … without 'workflow' scope"
+# The same rule applies to the Contents API (it answers 404 rather than 403). So the
+# workflow is kept here, in the repository, and installed with one command:
+#
+#   mkdir -p .github/workflows \
+#     && git mv design/pharos-validation.workflow.yml .github/workflows/pharos-validation.yml \
+#     && git commit -m "ci: enable validation on master and pull requests" \
+#     && git push          # needs a token with the `workflow` scope
+#
+# Or paste the contents into `.github/workflows/pharos-validation.yml` in the GitHub
+# web UI, which needs no special scope at all.
+#
+# Until that happens, the workflow already in `.github/workflows/` is the older one
+# and only triggers on a branch that no longer exists — so it never runs. Run the
+# same gates locally with `pnpm check && pnpm test && pnpm test:e2e`.
+name: Pharos driver validation
+
+# Runs on every push to the default branch and on every pull request, so the
+# badge in the README reflects reality instead of a branch that no longer exists.
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Tokens, types, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # `pnpm check` = token audit + tsc --noEmit + production build
+      - run: pnpm check
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  e2e:
+    name: End-to-end (payments money loop)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chrome
+        # playwright.config.ts pins `channel: 'chrome'` (real Chrome, not the
+        # bundled Chromium) so local runs and CI render identically.
+        run: pnpm exec playwright install --with-deps chrome
+      - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  storybook:
+    name: Build component library
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build-storybook
+      - uses: actions/upload-artifact@v4
+        with:
+          name: storybook-static
+          path: storybook-static/
+          retention-days: 30
