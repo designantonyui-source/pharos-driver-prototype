@@ -34,7 +34,7 @@ export function CancelApplicationSheet({
       </p>
       {error && <p role="alert" className="mt-[var(--spacing-8)] text-body-14 text-[var(--color-text-danger)]">{error}</p>}
       <div className="mt-[var(--spacing-20)] flex flex-col gap-[var(--spacing-8)]">
-        <Button label="Withdraw application" loading={cancelling} disabled={cancelling} onClick={onConfirm} />
+        <Button label="Withdraw application" appearance="danger" loading={cancelling} disabled={cancelling} onClick={onConfirm} />
         <Button label="Keep application" appearance="secondary" disabled={cancelling} onClick={onClose} />
       </div>
     </Sheet>
