@@ -50,20 +50,26 @@ function TripStepper({ steps }: { steps: { done: boolean; current: boolean; labe
   const currentIdx = steps.findIndex((s) => s.current);
   const current = steps[currentIdx]?.label ?? '';
   // A progress bar says where the driver is; naming the next step says what to do next.
+  // The count lives in the accessible name only: nobody counts ordinals in the
+  // driver's face (Deel anchors stages in time, not numbers) — the bar already
+  // shows scope visually.
   const next = steps[currentIdx + 1]?.label;
   return (
     <div>
-      <div className="flex items-center gap-[6px]" role="img" aria-label={`Trip progress: ${current}`}>
+      <div className="flex items-center gap-[6px]" role="img" aria-label={`Trip progress: step ${currentIdx + 1} of ${steps.length}, ${current}${next ? `, next ${next}` : ''}`}>
         {steps.map((s) => (
           <span
             key={s.label}
-            className={`h-[4px] flex-1 rounded-full ${s.done || s.current ? 'bg-[var(--color-action-primary)]' : 'bg-[var(--color-border-default)]'}`}
-            title={s.done ? `${s.label}: done` : s.current ? `${s.label}: current` : s.label}
+            // Three states, three paints: done is solid, current is the same hue
+            // at reduced opacity, upcoming is the track colour. Done and current
+            // used to share one fill, so step 3 of 5 read as "finished 3".
+            // No title tooltips: hover-only affordances are dead on the driver's phone.
+            className={`h-[4px] flex-1 rounded-full ${s.done ? 'bg-[var(--color-action-primary)]' : s.current ? 'bg-[var(--color-action-primary)] opacity-40' : 'bg-[var(--color-border-default)]'}`}
           />
         ))}
       </div>
       <p className="mt-[6px] text-caption-12 text-[var(--color-text-secondary)]">
-        {current} · step {currentIdx + 1} of {steps.length}{next ? ` · Next: ${next}` : ''}
+        {current}{next ? ` → ${next}` : ''}
       </p>
     </div>
   );
