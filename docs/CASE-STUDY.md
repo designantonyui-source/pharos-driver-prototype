@@ -298,7 +298,7 @@ eighth was visible only because the E2E run surfaced a console error that nobody
 | Gate | What it covers | Result |
 |---|---|---|
 | `pnpm check` | token audit → `tsc --noEmit` → production build | clean |
-| `pnpm test` | Vitest + Testing Library | **200 passing** |
+| `pnpm test` | Vitest + Testing Library | **206 passing** |
 | `pnpm test:e2e` | Playwright at 402×874 — the money loop as a user walks it | **16 passing** |
 | `pnpm capture:case-study` | regenerates the screenshot set from the running app | 23 screens |
 

@@ -12,7 +12,7 @@
 - Методы: список `id/kind/isDefault/verified`, Wave-0 IBAN мигрирует на чтении. IBAN: mod-97 + mask `DE89 .... 3000`. Карта: Luhn + brand + MM/YY + CVC → `tokeniseCard`. Новые методы `verified:false` → `true` после mock round-trip; cash out unverified не даёт.
 - Кейс-статья: `docs/CASE-STUDY.md` (нарратив + решения), `docs/DEMO-SCRIPT.md` (скрипт показа). Скриншоты кейса (402px, 23 шт., генерируются скриптом): `docs/screens/` — `pnpm capture:case-study`.
 - Walkthrough-панель доступна на **всех** экранах (`?demo=1` → пилюля «Walkthrough» в углу), а не только на `/v2` и `/screens` — деньгам нужно управлять с экрана баланса и истории, а не с ленты.
-- Проверки: 200 unit, 16/16 e2e, `pnpm check` чистый (см. ниже).
+- Проверки: 206 unit, 16/16 e2e, `pnpm check` чистый (см. ниже).
 
 ## История
 
