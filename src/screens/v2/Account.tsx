@@ -30,7 +30,11 @@ function AccountFrame({ title, backTo, toast, children }: { title: string; backT
     <div className="absolute inset-x-0 top-0 z-20">
       {backTo
         ? <V2BackBar title={title} fallback={backTo} />
-        : <NavigationBar type="home" title={title} avatar="AK" />}
+        // No avatar here: the page opens with the DriverProfile identity card
+        // carrying the same initials. The nav-bar avatar is the persistent
+        // identity marker for the other tabs (Trips) — on Account it would be
+        // the same "AK" twice, one of them decorative.
+        : <NavigationBar type="home" title={title} />}
     </div>
     <main className="absolute inset-x-0 top-[var(--nav-bar-h)] bottom-[calc(var(--tab-bar-h)+var(--home-indicator-h))] overflow-y-auto px-[var(--spacing-16)] pb-[var(--spacing-24)] pt-[var(--spacing-8)] text-[var(--color-text-primary)]">
       <h1 className="sr-only">{title}</h1>
