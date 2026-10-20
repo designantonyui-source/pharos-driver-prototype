@@ -86,12 +86,18 @@ stateDiagram-v2
 Состояния выдачи: loading · results · **empty** ❌ · **error/offline** ❌ · filters applied (бейдж).
 
 Нелогичности, найденные сейчас:
-- ⚠️ **Destination «optional»** на `/search`, но в Bottom sheet подсказка «Choose pickup and destination —
+- ✅ **Destination «optional»** на `/search`, но в Bottom sheet подсказка «Choose pickup and destination —
   the button activates when both are set», и кнопка зовётся **«Show loads»**, а на экране — **«Find loads»**.
-  *Предложение:* единое правило — достаточно Start; Destination необязателен; единое название «Find loads».
+  *Решено 2026-10-20:* в v2-шите направления destination **не** обязателен — пустой значит дефолтный
+  (Brussels), лента всегда ограничена направлением. Название кнопки — **«Show N loads»**: счётка полезнее
+  безликого «Find loads», и считает её та же лента (одно правило на оба экрана). `/search` — Figma-экран,
+  его «Find loads» не трогаем (правило: Figma-экраны не меняем).
 - ⚠️ На скриншоте 01 «Destination chosen first» кнопка disabled, пока не выбран Start — оправданно, но
   нужен текст-причина («Choose where you start»).
-- ❌ Пустая выдача: предлагать «Widen radius / Remove filters / Change date».
+- ✅ **Пустая выдача: предлагать «Widen radius / Remove filters / Change date».**
+  *Решено 2026-10-20:* в v2-шите направления ноль — это не тупик, а восстановимое состояние:
+  «No loads on Antwerp → Paris.» + кнопка «Show 1 load toward Paris» (сбросить начало, оставить
+  направление). В FiltersSheet — то же пояснение плюс уже имеющаяся кнопка Clear.
 
 ### F3. Заявка на груз  🟡
 **Решено эпиком** [`pharos-driver-flow-stories.md`](file:///Users/antonybozhatarnyk/pharos-driver-flow-stories.md)

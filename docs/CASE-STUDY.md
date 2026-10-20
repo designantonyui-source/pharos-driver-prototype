@@ -222,12 +222,41 @@ set and **fails the build** on an undefined reference.
 | Empty ledger, empty methods, no invoices | Icon + headline + one-sentence explainer — never a bare row |
 | API error | Inline `Alert` with a working **Retry** that re-runs the loader |
 | Screen reader on the progress list | `aria-current="step"`, and `ProgressStep` **is** the `<li>` — no invalid nested list items |
+| A filter or direction matches nothing | The sheet names what does not match and offers the tap that recovers — never a disabled button with no way out |
+| Any count shown on a button | Computed with the same rules the feed applies, so the number is the number you get |
 
-### 6.1 Five real defects the case-study pass found
+### 6.1 Eight real defects the case-study pass found
 
-Writing the case study forced me to walk the money loop screen by screen, and five things turned
-out to be wrong. I fixed all five and locked each one with a test — a case study is not worth
+Writing the case study forced me to walk the money loop screen by screen, and eight things turned
+out to be wrong. I fixed all eight and locked each one with a test — a case study is not worth
 much if the thing it describes is quietly broken.
+
+**A count on a button is a promise, and the feed did not keep it.**
+The direction sheet said *"Show 6 loads"* and the feed then showed 2. Two different rules for an
+empty destination: the feed resolved it to the default one, the sheet counted it as *every*
+destination. Both now go through one resolver, so the count cannot drift from the result. The
+filters sheet had the same shape — it counted the whole catalogue (4) while the feed applied the
+committed direction (2). A number on a button is a promise; it has to be computed with the rules
+the feed applies.
+
+**Zero matches was a dead end.**
+The sheet offered a disabled *"No loads match"* button and no way out except clearing a field by
+hand. It now says what does not match — *"No loads on Antwerp → Paris"* — and offers the tap that
+recovers: *"Show 1 load toward Paris"*. The filters sheet gets the same explanation.
+
+**The progress list was invalid HTML.**
+`ApplicationProgress` wrapped `ProgressStep` in an `<li>`, and `ProgressStep` renders its own
+`<li>` — so the accessibility tree contained `<li> cannot contain a nested <li>`. The step now *is*
+the list item, and callers pass list-item attributes (`aria-current`) straight through.
+
+**The visible title and the accessible name were different strings.**
+The sheet read *"Loads towards"* to the eye and *"Change direction"* to a screen reader — and the
+title described only the destination of a sheet that edits both ends. They now match.
+
+**The optional field looked disabled.**
+The browser's default placeholder is 50% alpha of the text colour, so the empty origin sat next to
+the filled destination looking greyed out — as if it could not be edited. It now reads *"Anywhere"*,
+the same word the feed header uses, at a legible contrast.
 
 **The sticky action kept asking for a document the customer had already accepted.**
 On a delivered trip the primary button read "Upload POD" unconditionally, so after the customer
@@ -257,15 +286,10 @@ important beat of the demo appeared to do nothing. The screens now refetch when 
 changes — and only then, via a stable ledger reference, so unrelated store writes (chat, profile,
 dismissed loads) do not trigger a refetch.
 
-**The progress list was invalid HTML.**
-`ApplicationProgress` wrapped `ProgressStep` in an `<li>`, and `ProgressStep` renders its own
-`<li>` — so the accessibility tree contained `<li> cannot contain a nested <li>`. The step now *is*
-the list item, and callers pass list-item attributes (`aria-current`) straight through.
-
-The first two were only visible by actually walking the flow; the fourth only appeared because
-the presenter pressed "customer paid" while sitting on the balance screen; the third was spotted by
-using the app; the fifth only appeared because the E2E run surfaced a console error that nobody was
-reading.
+None of these were found by reading the code. The first three were found by *using* the app, the
+fourth and fifth by looking at a screenshot, the sixth and seventh by walking the money loop, and
+the last one because the presenter pressed "customer paid" while sitting on the balance screen. The
+eighth was visible only because the E2E run surfaced a console error that nobody was reading.
 
 ---
 
@@ -274,7 +298,7 @@ reading.
 | Gate | What it covers | Result |
 |---|---|---|
 | `pnpm check` | token audit → `tsc --noEmit` → production build | clean |
-| `pnpm test` | Vitest + Testing Library | **194 passing** |
+| `pnpm test` | Vitest + Testing Library | **200 passing** |
 | `pnpm test:e2e` | Playwright at 402×874 — the money loop as a user walks it | **16 passing** |
 | `pnpm capture:case-study` | regenerates the screenshot set from the running app | 23 screens |
 
