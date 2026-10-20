@@ -223,8 +223,10 @@ test('confirmed application opens trip details and demo actions', async ({ page,
   await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/#\/trip\/nordcargo$/);
-  // Arrival is not offered before navigation — the driver has not left yet.
-  await expect(page.getByRole('button', { name: "I've arrived at pickup", exact: true })).toHaveCount(0);
+  // Both pre-departure deeds are offered: Navigate for the road, "I'm already
+  // here" for the driver standing at the gate. (Not tapped here — the Navigate
+  // path below covers the common flow; the portfolio run covers this one.)
+  await expect(page.getByRole('button', { name: "I'm already at pickup", exact: true })).toBeVisible();
 
   await page.getByRole('button', { name: /Documents \(/, exact: false }).click();
   const docs = page.getByRole('dialog', { name: /Documents for trip/ });
@@ -275,13 +277,8 @@ test('portfolio happy path: apply to payout', async ({ page, context }) => {
   // Loading complete, en-route to delivery, arrive, hand over, complete.
   await page.getByRole('button', { name: 'Confirm loading complete', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('Loaded');
-  const navigateDelivery = page.getByRole('button', { name: 'Navigate to delivery', exact: true });
-  const [mapsDelivery] = await Promise.all([
-    context.waitForEvent('page', { timeout: 8000 }).catch(() => null),
-    navigateDelivery.click(),
-  ]);
-  await mapsDelivery?.close().catch(() => undefined);
-  await page.getByRole('button', { name: "I've arrived at delivery", exact: true }).click();
+  // Already at the dock: no Maps tab opens, the stage still advances.
+  await page.getByRole('button', { name: "I'm already at delivery", exact: true }).click();
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('At delivery');
   await page.getByRole('checkbox', { name: 'Cargo handed over' }).check();
   await page.getByRole('button', { name: 'Complete delivery', exact: true }).click();

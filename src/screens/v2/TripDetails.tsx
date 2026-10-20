@@ -234,9 +234,12 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
   ];
   const navigateTarget: 'pickup' | 'delivery' = tripStage === 'confirmed' || tripStage === 'at-pickup' ? 'pickup' : 'delivery';
   const navigateStop = stops.find((stop) => stop.key === navigateTarget) ?? stops[0];
-  // Arrival CTA lives ONLY in the sticky bar and ONLY once en-route to its leg.
-  // Before Navigate the driver has not left yet — there is nothing to arrive from
-  // (this is what the E2E asserts: toHaveCount(0) before Navigate).
+  // The arrival deed lives in the sticky bar. Before Navigate it is joined by a
+  // second deed — "I'm already here". The old rule gated arrival behind the
+  // Navigate tap ("nothing to arrive from"), which forced a Maps app-switch
+  // to prove you left: repeat lane, parked before opening the app, no data —
+  // the driver standing at Gate B with a packed car had no way to say so.
+  // The wording is the friction against accidental taps now, not a detour.
   const legArrival = navigateTarget === 'pickup' ? nextStage.confirmed : nextStage.loaded;
   const arrivalAction = enRouteTo === navigateTarget ? legArrival ?? null : null;
   const enRouteActive = !cancelled && enRouteTo === navigateTarget
@@ -280,8 +283,9 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
   }
 
   // The sticky bar is never empty while the trip is active: it always names the
-  // immediate physical deed. Before the driver has left, that is "navigate" — the
-  // arrival milestone still only appears once en route (see `arrivalAction`).
+  // immediate physical deed. Before the driver has left, that is "navigate" —
+  // plus an explicit "I'm already here": the arrival deed is offered up front,
+  // and the wording (not a detour through Maps) is what guards it.
   const notLeftYet = (tripStage === 'confirmed' || tripStage === 'loaded') && !enRouteActive;
   // After delivery the deed is no longer physical, it is financial — so the bar
   // follows the POD: upload → wait for review → (if rejected) upload again →
@@ -302,6 +306,12 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
       : enRouteActive && arrivalAction ? { label: arrivalAction.label, disabled: updatingStage, loading: updatingStage, onClick: () => { void confirmMilestone(); } }
       : nextAction ? { label: nextAction.label, disabled: updatingStage || (tripStage === 'at-delivery' && !handoverConfirmed), loading: updatingStage, onClick: () => { void confirmMilestone(); } }
       : null;
+  // Already at the gate: confirm the arrival directly. In exactly these two
+  // states nextAction IS the arrival deed, so this reuses confirmMilestone —
+  // no new state machine, just a second door into the same room.
+  const alreadyHere = !cancelled && notLeftYet && nextAction
+    ? { label: `I'm already at ${navigateTarget}`, onClick: () => { void confirmMilestone(); } }
+    : null;
 
   return (
     <V2Frame active="Trips">
@@ -312,7 +322,11 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
             box they sat outside the scroller and the sticky bar covered the last one
             (`Cancel trip` was unreachable). `pb` reserves the sticky bar's height so the
             final button can always be scrolled clear of it. */}
-        <div className="flex min-h-0 flex-1 flex-col gap-[12px] overflow-y-auto bg-[var(--color-bg-canvas)] px-[16px] pb-[calc(var(--sticky-bar-h)+16px)] pt-[12px] [&>*]:shrink-0">
+        {/* The bottom padding reserves the sticky bar's height so the last in-flow
+            button can always be scrolled clear of it. When both pre-departure
+            deeds show, the bar grows by one button + gap (44 + 8 = 52px), so the
+            reservation grows with it — otherwise the taller bar covers Cancel trip. */}
+        <div className={`flex min-h-0 flex-1 flex-col gap-[12px] overflow-y-auto bg-[var(--color-bg-canvas)] px-[16px] pt-[12px] [&>*]:shrink-0 ${alreadyHere ? 'pb-[calc(var(--sticky-bar-h)+68px)]' : 'pb-[calc(var(--sticky-bar-h)+16px)]'}`}>
         <h1 className="sr-only">Trip details</h1>
 
         {/* Summary — status + money hero. The route art is gone: it was aria-hidden,
@@ -539,12 +553,14 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
         </div>
       </div>
 
-      {/* Sticky primary action above the tab bar. It is never empty while the trip is
-          active: before the driver leaves it carries Navigate, once en route it carries
-          the arrival milestone, and after delivery it carries the POD capture. */}
-      {stickyPrimary && (
-        <div className="absolute inset-x-0 bottom-[117px] z-20 border-t border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-[16px] pb-[12px] pt-[8px]">
-          <Button label={stickyPrimary.label} appearance="primary" icon={stickyPrimary.icon} disabled={stickyPrimary.disabled} loading={stickyPrimary.loading} onClick={stickyPrimary.onClick} />
+      {/* Sticky action above the tab bar. It is never empty while the trip is
+          active: before the driver leaves it carries Navigate plus an explicit
+          "I'm already here", once en route it carries the arrival milestone,
+          and after delivery it carries the POD capture. */}
+      {(stickyPrimary || alreadyHere) && (
+        <div className="absolute inset-x-0 bottom-[117px] z-20 flex flex-col gap-[8px] border-t border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-[16px] pb-[12px] pt-[8px]">
+          {stickyPrimary && <Button label={stickyPrimary.label} appearance="primary" icon={stickyPrimary.icon} disabled={stickyPrimary.disabled} loading={stickyPrimary.loading} onClick={stickyPrimary.onClick} />}
+          {alreadyHere && <Button label={alreadyHere.label} appearance="secondary" disabled={updatingStage} loading={updatingStage} onClick={alreadyHere.onClick} />}
         </div>
       )}
 
