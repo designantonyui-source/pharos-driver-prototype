@@ -83,6 +83,23 @@ export function pickupTimestamp(isoDate: string, window: string): string {
   return date.toISOString();
 }
 
+/**
+ * Company mark initials: first letters of the words, splitting CamelCase, max two.
+ * NordCargo → NC · Flandre Express → FE · Kuehne+Nagel → KN.
+ * Used for the square company mark — circle means a person in this app.
+ */
+export function companyInitials(name: string): string {
+  const words = name
+    .replace(/[^A-Za-z0-9 ]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 0);
+  const starts = words.flatMap((w) => w.split(/(?=[A-Z])/)).filter((p) => p.length > 0);
+  return starts
+    .map((p) => p[0].toLocaleUpperCase())
+    .join('')
+    .slice(0, 2);
+}
+
 export const V2_LOADS: V2Load[] = [
   {
     id: 'nordcargo',

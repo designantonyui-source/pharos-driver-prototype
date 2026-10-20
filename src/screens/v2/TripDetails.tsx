@@ -4,7 +4,7 @@ import { Button, ButtonLink } from '../../components/Button';
 import { Icon } from '../../components/Icon';
 import { StatusPill, type Tone } from '../../components/StatusPill';
 import { type ProgressState } from '../../components/ProgressStep';
-import { V2BackBar, useV2Back } from '../../components/layout/NavigationBar';
+import { AvatarInitials, V2BackBar, useV2Back } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { CancelTripSheet } from '../../components/v2/CancelTripSheet';
 import { Sheet } from '../../components/v2/Sheet';
@@ -13,7 +13,7 @@ import { Toast, useToast } from '../../components/v2/Toast';
 import { TRIP_STAGE_STEPS, advanceTripStage, cancelTrip, cancellationPenalty, getDefaultMethod, getTripDetails, methodLabel, minutesSince, reportDelay, setEnRoute, submitProofOfDelivery, type PayoutMethod, type TripStage } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore, type LoadApplication } from '../../lib/store';
-import { dayLabel, type V2Load } from '../../lib/v2/loads';
+import { dayLabel, companyInitials, type V2Load } from '../../lib/v2/loads';
 
 /**
  * Payout row: shows the REAL payout method from the store, never the static load mock.
@@ -395,7 +395,10 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
                       {stop.site.address}
                     </p>
                     <p className="mt-[2px] text-caption-12 text-[var(--color-text-secondary)]">
-                      {dayLabel(stop.date)} · {stop.window} · {stop.site.note}
+                      {dayLabel(stop.date)} · {stop.window} · {stop.site.note} ·{' '}
+                      {/* The dial target reads in the row: the icon alone hid it, and the
+                          teal ties the number to the call button on its right. */}
+                      <span className="text-[var(--color-action-primary)]">{stop.site.contact}</span>
                     </p>
                     {isHere && (
                       <p className="mt-[4px] text-caption-12 text-[var(--color-action-primary)]" role="status">
@@ -419,22 +422,29 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
           </section>
 
           {/* Customer + the dispatcher you talk to about this trip.
-              The action is labelled on purpose: the unlabelled back-bar chat icon that replaced
-              it was a guessing game, and the labelled button before that only fired a "not
-              connected" toast. The wording is the one the driver already knew; the icon carries
-              the channel — this opens a thread, it does not dial. */}
+              The button names the channel, not just the person: the unlabelled back-bar chat icon that replaced
+              it was a guessing game, and "Contact dispatcher" read as a duplicate of the per-stop call icons —
+              this opens a thread, it does not dial. */}
           <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card">
             <h2 className="text-label-14 text-[var(--color-text-secondary)]">Customer</h2>
-            <p className="mt-[8px] text-heading-20 text-[var(--color-text-primary)]">
-              {load.company}
-            </p>
-            <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
-              Customer rating: {load.rating.toFixed(1)} / 5
-            </p>
+            {/* Company mark, not a face: square reads as an organisation the way the
+                circle reads as the driver on the Account card. Initials, never a
+                fake logo. */}
+            <div className="mt-[8px] flex items-center gap-[12px]">
+              <AvatarInitials initials={companyInitials(load.company)} shape="square" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-heading-20 text-[var(--color-text-primary)]">
+                  {load.company}
+                </p>
+                <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
+                  Customer rating: {load.rating.toFixed(1)} / 5
+                </p>
+              </div>
+            </div>
             {!cancelled && (
               <div className="mt-[12px]">
                 <Button
-                  label="Contact dispatcher"
+                  label="Message dispatcher"
                   appearance="secondary"
                   icon={<Icon name="message-square" size="sm" />}
                   onClick={() => navigate(`/trip/${load.id}/chat`)}

@@ -65,7 +65,7 @@ describe('ApplicationTrackerView notices', () => {
         />
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Contact dispatcher' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Message dispatcher' }));
     expect(onContact).toHaveBeenCalledTimes(1);
   });
 

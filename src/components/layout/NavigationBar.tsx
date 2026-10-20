@@ -13,6 +13,11 @@ import { Icon } from '../Icon';
  *
  * tokens: color-bg-canvas, color-text-primary, color-avatar-bg, color-avatar-text, color-bg-disabled, radius-pill
  *
+ * The avatar is initials-only on purpose: the Figma nav bar hides the profile slot,
+ * so the prototype fills it with a neutral mark instead of inventing a photo.
+ * shape="square" is the company twin of the person pill — same fill, same type,
+ * hard corners so a company never reads as a person.
+ *
  * Back behaviour convention (all v2 screens): history back when the stack allows it,
  * otherwise a sensible fallback route. Use `V2BackBar` below instead of wiring
  * `navigate(-1)` by hand — it keeps every back button identical.
@@ -69,9 +74,9 @@ export function NavigationBar({
 }
 
 /** The Profile frame of Type=Home and the trailing pill of Type=Back, 44 tall, radius pill. */
-export function AvatarInitials({ initials, label }: { initials: string; label?: string }) {
+export function AvatarInitials({ initials, label, shape = 'pill' }: { initials: string; label?: string; shape?: 'pill' | 'square' }) {
   return (
-    <span className="flex h-[44px] min-w-[44px] items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-avatar-bg)] px-[12px] text-label-14 text-[var(--color-avatar-text)]">
+    <span className={`flex h-[44px] min-w-[44px] items-center justify-center px-[12px] text-label-14 text-[var(--color-avatar-text)] ${shape === 'square' ? 'rounded-[var(--radius-md)] bg-[var(--color-bg-subtle)]' : 'rounded-[var(--radius-pill)] bg-[var(--color-avatar-bg)]'}`}>
       {label ?? initials}
     </span>
   );

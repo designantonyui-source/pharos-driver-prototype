@@ -151,7 +151,7 @@ export function ApplicationTrackerView({
           ) : null}
           {positive ? <Button label="View trip" onClick={onViewTrip} /> : null}
           <Button
-            label="Contact dispatcher"
+            label="Message dispatcher"
             appearance="secondary"
             icon={<Icon name="user-round" size="sm" />}
             onClick={onContactDispatcher}

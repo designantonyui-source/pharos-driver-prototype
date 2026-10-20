@@ -217,8 +217,8 @@ test('confirmed application opens trip details and demo actions', async ({ page,
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('TR-nordcargo');
   await expect(page.getByRole('region', { name: 'Cargo' })).toContainText('Curtainsider');
   await expect(page.getByRole('region', { name: 'Trip progress' })).toContainText('Confirmed');
-  await expect(page.getByRole('button', { name: 'Contact dispatcher', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Contact dispatcher', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Message dispatcher', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Message dispatcher', exact: true }).click();
   await expect(page).toHaveURL(/#\/trip\/nordcargo\/chat$/);
   await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeVisible();
   await page.goBack();

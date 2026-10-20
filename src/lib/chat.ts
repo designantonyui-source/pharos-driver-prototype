@@ -4,7 +4,7 @@
  * tokens: n/a (no UI)
  *
  * Threads are PER TRIP, not one global inbox: the conversation is about one cargo,
- * which is what makes the entry point cheap ("Contact dispatcher" on the trip) and
+ * which is what makes the entry point cheap ("Message dispatcher" on the trip) and
  * removes the need to pick a thread. Rate negotiation (`ChatRateOffer`) is a later
  * message type on the same thread, not a second inbox.
  *
