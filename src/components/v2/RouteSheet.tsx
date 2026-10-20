@@ -7,9 +7,15 @@
  * (count included) — no chip rows, no dead options.
  * Below: Recent (last applied, current excluded, with relative time) — tap fills the
  * draft fields, Show commits. One commit path: the sheet never applies behind your back
- * (Mobbin: Lyft/Grab recents fill, Transit quick actions). Suggestions open only while
- * typing — a bare focus must not dump a catalog (measured: 5 of 6 options dead). No
- * Popular block: the feed behind the sheet is already the supply list (measured: its
+ * (Mobbin: Lyft/Grab recents fill, Transit quick actions).
+ *
+ * Tapping a field opens a PICKER, not a catalogue: the towns that actually carry loads
+ * for that half of the route, each with its live count. The earlier "no catalog on a
+ * bare focus" rule measured 5 of 6 alphabetical options dead — a list of towns with
+ * nothing behind them. A list of towns with loads is the opposite of that: every row
+ * changes the direction to something real. Typing narrows the same list and may show a
+ * town with no loads (greyed, "No loads") — the driver asked for it by name.
+ * No Popular block: the feed behind the sheet is already the supply list (measured: its
  * top row equalled the current direction — a no-op tap).
  * Day is NOT picked here: pickup dates live on the loads themselves
  * (`V2Load.date`, shown on every card) — the feed shows all days.
@@ -23,12 +29,7 @@ import { Button } from '../Button';
 import { Icon } from '../Icon';
 import { Sheet } from './Sheet';
 import { timeAgo } from '../../lib/v2/loads';
-
-function matchesFor(cities: string[], query: string): string[] {
-  const q = query.trim().toLocaleLowerCase();
-  if (!q) return cities;
-  return cities.filter((city) => city.toLocaleLowerCase().includes(q));
-}
+import { KNOWN_CITIES } from '../../lib/v2/cities';
 
 function CityField({
   id,
@@ -42,6 +43,7 @@ function CityField({
   onClose,
   onChange,
   onPick,
+  onPickAnywhere,
   marker,
   edge,
 }: {
@@ -59,6 +61,8 @@ function CityField({
   onClose: () => void;
   onChange: (value: string) => void;
   onPick: (city: string) => void;
+  /** "Anywhere" — back to no origin. Only the origin field has one. */
+  onPickAnywhere?: () => void;
   /** Route marker: filled origin dot, hollow destination ring (one neutral hue — red reads as an error). */
   marker: 'from' | 'to';
   /** Each row owns its connector half: top row extends below its dot, bottom row above its ring — they always meet. */
@@ -66,6 +70,9 @@ function CityField({
 }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<number | undefined>(undefined);
+  // Tapping a field is not typing. The two lists are different: a tap opens the
+  // picker (what you can change to), typing narrows by what you wrote.
+  const [typing, setTyping] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -83,11 +90,32 @@ function CityField({
   }, [open, onClose]);
 
   const query = value.trim().toLocaleLowerCase();
+  const scored = cities.map((city) => ({ city, matches: countFor(city) }));
   // A query that exactly equals a known city resolves itself: the CTA already carries
   // the count, and an option floating over the commit button would steal its tap.
   const exactCity = query !== '' && cities.some((city) => city.trim().toLocaleLowerCase() === query);
-  // Open only while there is a query — a bare focus must not dump an alphabetical catalog.
-  const options = query === '' || exactCity ? [] : matchesFor(cities, value).slice(0, 6);
+
+  // Typed: everything the query can reach. Live towns first, dead ones after — the
+  // driver asked for them by name, so "No loads" is information, not a dead row.
+  const typed = typing && query !== '' && !exactCity
+    ? scored
+      .filter((c) => c.city.toLocaleLowerCase().includes(query))
+      .sort((a, b) => (b.matches > 0 ? 1 : 0) - (a.matches > 0 ? 1 : 0) || a.city.localeCompare(b.city))
+      .slice(0, 6)
+    : [];
+
+  // Tapped: the picker. Only towns that carry loads for this half of the route —
+  // every row is a direction change to something real. The town already selected is
+  // left out: tapping it would be a no-op.
+  const picker = !typing
+    ? scored
+      .filter((c) => c.matches > 0)
+      .filter((c) => c.city.trim().toLocaleLowerCase() !== query)
+      .sort((a, b) => b.matches - a.matches || a.city.localeCompare(b.city))
+    : [];
+
+  const options = typing ? typed : picker;
+  const showPickerLabel = !typing && picker.length > 0;
 
   return (
     <div ref={boxRef} className="relative">
@@ -113,14 +141,19 @@ function CityField({
             aria-autocomplete="list"
             aria-controls={`${id}-suggestions`}
             value={value}
-            onChange={(event) => { onChange(event.target.value); if (event.target.value.trim() === '') onClose(); else onOpen(); }}
-            onFocus={() => {
+            onChange={(event) => { setTyping(true); onChange(event.target.value); onOpen(); }}
+            onFocus={(event) => {
               // Cancel a stale close from this field's earlier blur — refocusing must not
               // kill the list the driver is about to read.
               if (closeTimer.current !== undefined) {
                 window.clearTimeout(closeTimer.current);
                 closeTimer.current = undefined;
               }
+              // A tap opens the picker. Selecting the text means typing replaces the
+              // town instead of appending to it.
+              setTyping(false);
+              event.currentTarget.select();
+              onOpen();
             }}
             onBlur={() => {
               // Let the option tap land first (pointerdown fires before blur).
@@ -146,15 +179,35 @@ function CityField({
           </button>
         )}
       </div>
-      {open && options.length > 0 && (
+      {open && (options.length > 0 || (onPickAnywhere && value.trim() !== '' && !typing)) && (
         <ul
           id={`${id}-suggestions`}
           data-testid={`${id}-suggestions`}
           role="listbox"
+          aria-label={`${label} options`}
           className="absolute inset-x-0 top-full z-10 mt-[4px] max-h-[216px] overflow-y-auto rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] py-[4px] shadow-card"
         >
-          {options.map((city) => {
-            const matches = countFor(city);
+          {showPickerLabel && (
+            <li role="presentation" className="px-[12px] pb-[4px] pt-[6px] text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">
+              Towns with loads
+            </li>
+          )}
+          {!typing && onPickAnywhere && value.trim() !== '' && (
+            <li role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={false}
+                aria-label="Anywhere, any origin"
+                onClick={() => { onPickAnywhere(); onClose(); }}
+                className="flex min-h-[44px] w-full items-center justify-between gap-[8px] px-[12px] text-left text-body-14 text-[var(--color-text-primary)] hover:bg-[var(--color-bg-subtle)] active:bg-[var(--color-bg-subtle)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+              >
+                <span aria-hidden>Anywhere</span>
+                <span aria-hidden className="shrink-0 text-caption-12 text-[var(--color-text-secondary)]">Any origin</span>
+              </button>
+            </li>
+          )}
+          {options.map(({ city, matches }) => {
             const dead = matches === 0;
             return (
               <li key={city} role="presentation">
@@ -191,7 +244,7 @@ export function RouteSheet({
   countFor,
   onApply,
   onClose,
-  cities = [],
+  cities = [...KNOWN_CITIES],
   recentRoutes = [],
 }: {
   open: boolean;
@@ -201,7 +254,7 @@ export function RouteSheet({
   countFor: (route: { from: string; to: string }) => number;
   onApply: (route: { from: string; to: string }) => void;
   onClose: () => void;
-  /** Known cities for type-ahead suggestions — derived from the feed. */
+  /** Known cities for the picker and the type-ahead — predefined, plus the feed's own. */
   cities?: string[];
   /** Last applied directions, most-recent-first — current route is excluded. */
   recentRoutes?: { from: string; to: string; at?: string }[];
@@ -253,6 +306,7 @@ export function RouteSheet({
           onClose={() => setOpenField((cur) => (cur === 'from' ? null : cur))}
           onChange={setFromDraft}
           onPick={setFromDraft}
+          onPickAnywhere={() => setFromDraft('')}
           marker="from"
           edge="top"
         />
@@ -261,7 +315,11 @@ export function RouteSheet({
           id="route-destination"
           label="To"
           value={toDraft}
-          placeholder="Search city"
+          // An empty draft keeps the current destination on apply
+          // (toDraft.trim() || value.to) — so the placeholder says what empty
+          // means, the way "Anywhere" does for the origin. Untouched, the sheet
+          // reads "Anywhere → Brussels", exactly like the header behind it.
+          placeholder={value.to.trim() || 'Search city'}
           cities={cities}
           countFor={(city) => countFor({ from: fromDraft, to: city })}
           open={openField === 'to'}

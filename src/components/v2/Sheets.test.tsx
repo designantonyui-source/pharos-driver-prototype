@@ -95,6 +95,18 @@ describe('RouteSheet draft semantics', () => {
     expect(screen.getByLabelText('From')).toHaveProperty('placeholder', 'Anywhere');
   });
 
+  it('states that an empty destination keeps the current one', () => {
+    const countFor = () => 1;
+    render(
+      <MemoryRouter>
+        <RouteSheet open value={{ from: '', to: 'Brussels' }} countFor={countFor} onApply={() => undefined} onClose={() => undefined} />
+      </MemoryRouter>,
+    );
+    // Empty To applies value.to (toDraft.trim() || value.to) — the placeholder
+    // must say so instead of prompting a "search" that clearing never performs.
+    expect(screen.getByLabelText('To')).toHaveProperty('placeholder', 'Brussels');
+  });
+
   it('suggests cities while typing, with live counts', () => {
     const onApply = vi.fn();
     // Origin Paris leaves only paris-brussels for Brussels: every other
@@ -131,16 +143,84 @@ describe('RouteSheet draft semantics', () => {
     expect(box.getByRole('option', { name: 'Brussels, 1 load' })).toBeVisible();
   });
 
-  it('shows no catalog on a bare focus — suggestions only while typing', () => {
+  it('opens a picker of the towns that carry loads when a field is tapped', () => {
+    // The real lanes: Lille→Brussels, Ghent→Antwerp, Calais→Lille,
+    // Paris→Brussels, Brussels→Amsterdam, Lille→Paris.
+    const LANES: [string, string][] = [
+      ['Lille', 'Brussels'], ['Ghent', 'Antwerp'], ['Calais', 'Lille'],
+      ['Paris', 'Brussels'], ['Brussels', 'Amsterdam'], ['Lille', 'Paris'],
+    ];
+    const countFor = (route: { from: string; to: string }) => LANES.filter(([from, to]) =>
+      (route.from.trim() === '' || route.from.trim().toLocaleLowerCase() === from.toLocaleLowerCase()) &&
+      (route.to.trim() === '' || route.to.trim().toLocaleLowerCase() === to.toLocaleLowerCase()),
+    ).length;
     render(
       <MemoryRouter>
-        <RouteSheet open value={{ from: '', to: '' }} countFor={() => 1} onApply={() => undefined} onClose={() => undefined} cities={['Paris', 'Brussels']} />
+        <RouteSheet open value={{ from: '', to: 'Brussels' }} countFor={countFor} onApply={() => undefined} onClose={() => undefined} cities={['Paris', 'Brussels', 'Lille']} />
       </MemoryRouter>,
     );
+    // A tap opens the picker: the towns you can actually change to.
     fireEvent.focus(screen.getByLabelText('To'));
-    expect(screen.queryByTestId('route-destination-suggestions')).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'par' } });
-    expect(screen.getByTestId('route-destination-suggestions')).toBeInTheDocument();
+    const box = within(screen.getByTestId('route-destination-suggestions'));
+    expect(box.getByRole('option', { name: 'Paris, 1 load' })).toBeEnabled();
+    expect(box.getByRole('option', { name: 'Lille, 1 load' })).toBeEnabled();
+    // The town already selected is left out — tapping it would change nothing.
+    expect(box.queryByRole('option', { name: 'Brussels, no loads' })).toBeNull();
+    // A town with no loads is not offered: the picker never lists a dead row.
+    expect(box.queryByRole('option', { name: 'Ghent, no loads' })).toBeNull();
+  });
+
+  it('the picker starts from the origin field and offers the towns that start a load', () => {
+    const LANES: [string, string][] = [
+      ['Lille', 'Brussels'], ['Ghent', 'Antwerp'], ['Calais', 'Lille'],
+      ['Paris', 'Brussels'], ['Brussels', 'Amsterdam'], ['Lille', 'Paris'],
+    ];
+    const countFor = (route: { from: string; to: string }) => LANES.filter(([from, to]) =>
+      (route.from.trim() === '' || route.from.trim().toLocaleLowerCase() === from.toLocaleLowerCase()) &&
+      (route.to.trim() === '' || route.to.trim().toLocaleLowerCase() === to.toLocaleLowerCase()),
+    ).length;
+    render(
+      <MemoryRouter>
+        <RouteSheet open value={{ from: '', to: 'Brussels' }} countFor={countFor} onApply={() => undefined} onClose={() => undefined} cities={['Paris', 'Brussels', 'Lille']} />
+      </MemoryRouter>,
+    );
+    fireEvent.focus(screen.getByLabelText('From'));
+    const box = within(screen.getByTestId('route-origin-suggestions'));
+    expect(box.getByRole('option', { name: 'Paris, 1 load' })).toBeEnabled();
+    expect(box.getByRole('option', { name: 'Lille, 1 load' })).toBeEnabled();
+    // Tapping an option fills the draft — it does not apply behind your back.
+    fireEvent.click(box.getByRole('option', { name: 'Paris, 1 load' }));
+    expect(screen.getByLabelText('From')).toHaveValue('Paris');
+  });
+
+  it('the picker offers Anywhere to drop the origin', () => {
+    const onApply = vi.fn();
+    const countFor = (route: { from: string; to: string }) =>
+      route.from.trim() === '' ? 2 : 0;
+    render(
+      <MemoryRouter>
+        <RouteSheet open value={{ from: 'Paris', to: 'Brussels' }} countFor={countFor} onApply={onApply} onClose={() => undefined} cities={['Paris', 'Brussels']} />
+      </MemoryRouter>,
+    );
+    fireEvent.focus(screen.getByLabelText('From'));
+    const box = within(screen.getByTestId('route-origin-suggestions'));
+    expect(box.getByRole('option', { name: 'Anywhere, any origin' })).toBeEnabled();
+    fireEvent.click(box.getByRole('option', { name: 'Anywhere, any origin' }));
+    expect(screen.getByLabelText('From')).toHaveValue('');
+  });
+
+  it('narrows to what you typed, and a town with no loads reads No loads', () => {
+    render(
+      <MemoryRouter>
+        <RouteSheet open value={{ from: '', to: '' }} countFor={() => 1} onApply={() => undefined} onClose={() => undefined} cities={['Paris', 'Brussels', 'Lille']} />
+      </MemoryRouter>,
+    );
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'a' } });
+    const box = within(screen.getByTestId('route-destination-suggestions'));
+    expect(box.getByRole('option', { name: 'Paris, 1 load' })).toBeVisible();
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'bru' } });
+    expect(box.queryByRole('option', { name: 'Paris, 1 load' })).not.toBeInTheDocument();
+    expect(box.getByRole('option', { name: 'Brussels, 1 load' })).toBeVisible();
   });
 
   it('a stale blur timer of the other field cannot close the open list', () => {

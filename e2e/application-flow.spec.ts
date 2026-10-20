@@ -75,13 +75,19 @@ test('route suggestions carry live counts and the dead end recovers', async ({ p
   await page.getByRole('button', { name: 'Direction: Anywhere → Brussels, 2 of 6 loads. Activate to change.' }).click();
   const sheet = page.getByRole('dialog', { name: 'Change direction' });
   await expect(sheet).toBeVisible();
-  // A bare focus shows no catalog — suggestions appear only while typing.
+  // A tap opens the picker: the towns that actually carry loads for this half
+  // of the route, each with its live count. The town already selected is left
+  // out — tapping it would change nothing.
   await sheet.getByLabel('To', { exact: true }).click();
-  await expect(sheet.getByTestId('route-destination-suggestions')).toHaveCount(0);
+  const picker = sheet.getByTestId('route-destination-suggestions');
+  await expect(picker).toBeVisible();
+  await expect(picker.getByRole('option', { name: 'Paris, 1 load' })).toBeEnabled();
+  await expect(picker.getByRole('option', { name: 'Lille, 1 load' })).toBeEnabled();
+  await expect(picker.getByRole('option', { name: 'Brussels, no loads' })).toHaveCount(0);
   // Fast field switching must not kill the new list: the blurred field's
   // 150ms close timer is scoped to itself.
   await sheet.getByLabel('From', { exact: true }).click();
-  // Typing filters the feed's cities; every option carries its live count —
+  // Typing filters the cities; every option carries its live count —
   // dead ends read "No loads", a live one shows its count, never promising an empty feed.
   await sheet.getByLabel('To', { exact: true }).fill('B');
   const suggestions = sheet.getByTestId('route-destination-suggestions');

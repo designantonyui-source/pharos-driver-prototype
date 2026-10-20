@@ -4,6 +4,7 @@ import { dismissLoad, getLoads, restoreLoad, commitRoute } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
+import { mergeCities } from '../../lib/v2/cities';
 import { Icon } from '../../components/Icon';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { LoadSheet } from '../../components/v2/LoadSheet';
@@ -113,6 +114,16 @@ export function Home() {
   const status = state.status;
   const open = loads?.find((l) => l.id === openId) ?? null;
   const activeLabels = FILTERS.filter((f) => on.includes(f.id)).map((f) => f.label);
+  /**
+   * Loads the app still holds — the catalogue minus the ones the driver dismissed.
+   * The direction badge says "N of M": the denominator has to be the number of loads
+   * that actually exist. It used to be the raw catalogue, so dismissing one load left
+   * the badge reading "1 of 6" while five loads remained.
+   */
+  const inFeed = useMemo(
+    () => (loads ?? []).filter((l) => !dismissedIds.includes(l.id)),
+    [loads, dismissedIds],
+  );
 
   return (
     <V2Frame active="Loads">
@@ -120,7 +131,7 @@ export function Home() {
         <button
           type="button"
           onClick={() => setRouteOpen(true)}
-          aria-label={`Direction: ${routeLabel}, ${visible.length} of ${loads?.length ?? 0} loads. Activate to change.`}
+          aria-label={`Direction: ${routeLabel}, ${visible.length} of ${inFeed.length} loads. Activate to change.`}
           className="flex items-center justify-between gap-[8px] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[12px] text-left shadow-card focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
         >
           <span className="flex min-w-0 items-start gap-[8px] text-[var(--color-text-primary)]">
@@ -129,7 +140,7 @@ export function Home() {
               <span className="flex min-w-0 items-center gap-[8px]">
                 <span className="text-heading-14 truncate">{routeLabel}</span>
                 <span className="shrink-0 rounded-[var(--radius-pill)] bg-[var(--color-action-primary)] px-[8px] py-[2px] text-label-12 text-[var(--color-action-text-inverse)]">
-                  {loads ? `${visible.length} of ${loads.length}` : '…'}
+                  {loads ? `${visible.length} of ${inFeed.length}` : '…'}
                 </span>
               </span>
               <span className="text-caption-12 truncate text-[var(--color-text-secondary)]">
@@ -180,12 +191,14 @@ export function Home() {
       <RouteSheet
         open={routeOpen}
         value={{ from: state.route.from, to: destination }}
-        cities={[...new Set((loads ?? []).flatMap((l) => [l.from, l.to]))].sort()}
+        cities={mergeCities([...new Set((loads ?? []).flatMap((l) => [l.from, l.to]))])}
         recentRoutes={state.recentRoutes}
-        // Same rule the feed applies — an empty destination is the default one,
-        // so the count on the button always matches the feed behind it.
+        // An empty draft keeps the committed destination on apply
+        // (toDraft.trim() || value.to) — so the count must do the same.
+        // Resolving '' to the global default here promised Brussels loads
+        // while Show applied Amsterdam ("Show 2 loads" over a "1 of 6" feed).
         countFor={(route) => {
-          const to = resolveDestination(route.to);
+          const to = route.to.trim() || destination;
           const from = route.from.trim();
           return (loads ?? []).filter((l) =>
             l.to.trim().toLocaleLowerCase() === to.toLocaleLowerCase() &&
