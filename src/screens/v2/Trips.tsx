@@ -31,7 +31,7 @@ import { pickupTimestamp, dayLabel, type V2Load } from '../../lib/v2/loads';
 function TripsFrame({ toast, children }: { toast?: ReactNode; children: ReactNode }) {
   return <V2Frame active="Trips">
     <div className="absolute inset-x-0 top-0 z-20">
-      <NavigationBar type="home" title="Trips" avatar="AK" />
+      <NavigationBar type="home" title="Trips" />
     </div>
     <main className="absolute inset-x-0 top-[var(--nav-bar-h)] bottom-[calc(var(--tab-bar-h)+var(--home-indicator-h))] overflow-y-auto px-[var(--spacing-16)] pb-[var(--spacing-24)] pt-[var(--spacing-8)] text-[var(--color-text-primary)]">
       <h1 className="sr-only">Trips</h1>
