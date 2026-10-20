@@ -85,6 +85,18 @@ export function FiltersSheet({
       </div>
 
       <div className="mt-[20px]">
+        {visible === 0 && (
+          // Say why the feed is empty and where the way out is — the "Clear"
+          // action sits right above, but a disabled button alone reads as a bug.
+          <div role="alert" className="mb-[12px] rounded-[var(--radius-md)] bg-[var(--color-status-warning-bg)] p-[12px]">
+            <p className="text-body-14 text-[var(--color-status-warning-text)]">
+              These filters match no loads on your route.
+            </p>
+            <p className="mt-[4px] text-body-14 text-[var(--color-status-warning-text)]">
+              Clear them, or change the direction to see loads again.
+            </p>
+          </div>
+        )}
         <Button
           label={visible === 0 ? 'No loads match' : `Show ${visible} ${visible === 1 ? 'load' : 'loads'}`}
           disabled={visible === 0}

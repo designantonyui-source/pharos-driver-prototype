@@ -129,7 +129,10 @@ function CityField({
             onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }}
             placeholder={placeholder}
             autoComplete="off"
-            className="w-full bg-transparent text-body-16 text-[var(--color-text-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+            // The browser's default placeholder is 50% alpha of the text colour, which made the
+            // optional (empty) origin look like a disabled field next to the filled destination.
+            // --color-text-secondary keeps it visibly editable without pretending to be a value.
+            className="w-full bg-transparent text-body-16 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-secondary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
           />
         </div>
         {value.trim() !== '' && (
@@ -220,15 +223,29 @@ export function RouteSheet({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [open, recentRoutes, value.from, value.to]);
 
+  // A zero count used to be a dead end: a disabled "No loads match" button and no
+  // way out except clearing a field by hand. The sheet now says what does not
+  // match and offers the one tap that recovers — drop the origin, or fall back
+  // to the default direction.
+  const fromLabel = fromDraft.trim() || 'Anywhere';
+  const toLabel = toDraft.trim() || value.to;
+  const withoutOrigin = countFor({ from: '', to: toDraft });
+  const defaultRoute = countFor({ from: '', to: value.to });
+  const recovery = withoutOrigin > 0
+    ? { label: `Show ${withoutOrigin} ${withoutOrigin === 1 ? 'load' : 'loads'} toward ${toLabel}`, route: { from: '', to: toDraft.trim() || value.to } }
+    : defaultRoute > 0
+      ? { label: `Show ${defaultRoute} ${defaultRoute === 1 ? 'load' : 'loads'} toward ${value.to}`, route: { from: '', to: value.to } }
+      : null;
+
   return (
     <Sheet open={open} onClose={onClose} label="Change direction">
-      <h2 className="text-heading-20 text-[var(--color-text-primary)]">Loads towards</h2>
+      <h2 className="text-heading-20 text-[var(--color-text-primary)]">Change direction</h2>
       <div className="relative mt-[16px] rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)]">
         <CityField
           id="route-origin"
           label="From"
           value={fromDraft}
-          placeholder="Search city"
+          placeholder="Anywhere"
           cities={cities}
           countFor={(city) => countFor({ from: city, to: toDraft })}
           open={openField === 'from'}
@@ -291,13 +308,31 @@ export function RouteSheet({
           </ul>
         </section>
       )}
-      <div className="mt-[20px]">
-        <Button
-          label={visible === 0 ? 'No loads match' : `Show ${visible} ${visible === 1 ? 'load' : 'loads'}`}
-          disabled={visible === 0}
-          onClick={() => onApply({ from: fromDraft.trim(), to: toDraft.trim() || value.to })}
-        />
-      </div>
+      {visible === 0 ? (
+        // Dead-end with a way out: say what does not match, and offer the tap that recovers.
+        <div className="mt-[20px] flex flex-col gap-[12px]">
+          <div role="alert" className="rounded-[var(--radius-md)] bg-[var(--color-status-warning-bg)] p-[12px]">
+            <p className="text-body-14 text-[var(--color-status-warning-text)]">
+              No loads on {fromLabel} → {toLabel}.
+            </p>
+            {recovery && (
+              <p className="mt-[4px] text-body-14 text-[var(--color-status-warning-text)]">
+                Nothing is lost — drop the origin and keep the direction.
+              </p>
+            )}
+          </div>
+          {recovery && (
+            <Button label={recovery.label} onClick={() => onApply(recovery.route)} />
+          )}
+        </div>
+      ) : (
+        <div className="mt-[20px]">
+          <Button
+            label={`Show ${visible} ${visible === 1 ? 'load' : 'loads'}`}
+            onClick={() => onApply({ from: fromDraft.trim(), to: toDraft.trim() || value.to })}
+          />
+        </div>
+      )}
     </Sheet>
   );
 }

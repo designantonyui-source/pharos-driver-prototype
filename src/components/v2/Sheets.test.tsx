@@ -46,11 +46,53 @@ describe('RouteSheet draft semantics', () => {
     );
     expect(screen.getByRole('button', { name: 'Show 1 load' })).toBeEnabled();
     fireEvent.change(screen.getByLabelText('To'), { target: { value: 'Paris' } });
-    expect(screen.getByRole('button', { name: 'No loads match' })).toBeDisabled();
+    // Zero matches used to be a dead end: a disabled "No loads match" button and
+    // no way out except clearing a field by hand.
+    expect(screen.queryByRole('button', { name: 'No loads match' })).toBeNull();
+    expect(screen.getByText(/No loads on Anywhere → Paris/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Show 1 load toward Brussels/ })).toBeEnabled();
     fireEvent.change(screen.getByLabelText('To'), { target: { value: 'Brussels' } });
     fireEvent.change(screen.getByLabelText('From'), { target: { value: 'Paris' } });
     fireEvent.click(screen.getByRole('button', { name: 'Show 1 load' }));
     expect(onApply).toHaveBeenCalledWith({ from: 'Paris', to: 'Brussels' });
+  });
+
+  it('recovers from a zero-match direction in one tap', () => {
+    const onApply = vi.fn();
+    const countFor = (route: { from: string; to: string }) =>
+      route.from.trim() === '' && route.to.trim().toLocaleLowerCase() === 'brussels' ? 4 : 0;
+    render(
+      <MemoryRouter>
+        <RouteSheet open value={{ from: '', to: 'Brussels' }} countFor={countFor} onApply={onApply} onClose={() => undefined} />
+      </MemoryRouter>,
+    );
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: 'Antwerp' } });
+    expect(screen.getByText(/No loads on Antwerp → Brussels/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Show 4 loads toward Brussels/ }));
+    expect(onApply).toHaveBeenCalledWith({ from: '', to: 'Brussels' });
+  });
+
+  it('shows the same title to the eye and to a screen reader', () => {
+    const countFor = () => 1;
+    render(
+      <MemoryRouter>
+        <RouteSheet open value={{ from: '', to: 'Brussels' }} countFor={countFor} onApply={() => undefined} onClose={() => undefined} />
+      </MemoryRouter>,
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.getAttribute('aria-label')).toBe('Change direction');
+    expect(screen.getByRole('heading', { name: 'Change direction' })).toBeTruthy();
+  });
+
+  it('states that an empty origin means anywhere', () => {
+    const countFor = () => 1;
+    render(
+      <MemoryRouter>
+        <RouteSheet open value={{ from: '', to: 'Brussels' }} countFor={countFor} onApply={() => undefined} onClose={() => undefined} />
+      </MemoryRouter>,
+    );
+    // The feed header says "Anywhere → Brussels"; the field must say the same thing.
+    expect(screen.getByLabelText('From')).toHaveProperty('placeholder', 'Anywhere');
   });
 
   it('suggests cities while typing, with live counts', () => {

@@ -34,6 +34,22 @@ const FILTER_TESTS: Record<string, (l: V2Load) => boolean> = {
   near: (l) => l.pickupKm < 30,
 };
 
+/**
+ * The feed is always scoped to a destination. An empty one means "the default
+ * destination", not "every destination".
+ *
+ * This exists because the two readings used to disagree: the feed resolved an
+ * empty destination to Brussels, while the direction sheet counted an empty
+ * destination as all six loads. So the sheet's button promised "Show 6 loads"
+ * and the feed then showed 2. The count is a promise — it has to be computed
+ * with the same rule the feed applies.
+ */
+export const DEFAULT_DESTINATION = 'Brussels';
+
+export function resolveDestination(to: string): string {
+  return to.trim() || DEFAULT_DESTINATION;
+}
+
 export function Home() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -59,20 +75,31 @@ export function Home() {
     return () => { active = false; };
   }, [loadAttempt]);
 
-  const countFor = (ids: string[]) =>
-    (loads ?? []).filter((l) => FILTERS.every((f) => !ids.includes(f.id) || FILTER_TESTS[f.id](l))).length;
   // Dismissed loads leave the feed but stay restorable (decline is free, never a score input).
   const dismissedIds = useMemo(
     () => Object.values(state.applications).filter((a) => a.dismissed).map((a) => a.loadId),
     [state.applications],
   );
   const origin = state.route.from.trim();
-  const destination = state.route.to.trim() || 'Brussels';
+  const destination = resolveDestination(state.route.to);
   const originLabel = origin || 'Anywhere';
   const routeLabel = `${originLabel} → ${destination}`;
   const routeMatch = (l: V2Load) =>
     (destination === '' || l.to.trim().toLocaleLowerCase() === destination.toLocaleLowerCase()) &&
     (origin === '' || l.from.trim().toLocaleLowerCase() === origin.toLocaleLowerCase());
+  /**
+   * How many loads a filter draft would leave in the feed.
+   *
+   * Scoped to the committed direction and to loads that are still in the feed —
+   * the same set the feed shows. Counting every load in the catalogue made the
+   * button promise "Show 4 loads" and then hand over a feed of 2: the count is a
+   * promise, so it has to be computed with the rules the feed applies.
+   */
+  const countFor = (ids: string[]) =>
+    (loads ?? [])
+      .filter((l) => !dismissedIds.includes(l.id))
+      .filter(routeMatch)
+      .filter((l) => FILTERS.every((f) => !ids.includes(f.id) || FILTER_TESTS[f.id](l))).length;
   const visible = useMemo(
     () => (loads ?? [])
       .filter((l) => !dismissedIds.includes(l.id))
@@ -155,10 +182,16 @@ export function Home() {
         value={{ from: state.route.from, to: destination }}
         cities={[...new Set((loads ?? []).flatMap((l) => [l.from, l.to]))].sort()}
         recentRoutes={state.recentRoutes}
-        countFor={(route) => (loads ?? []).filter((l) =>
-          (route.to.trim() === '' || l.to.trim().toLocaleLowerCase() === route.to.trim().toLocaleLowerCase()) &&
-          (route.from.trim() === '' || l.from.trim().toLocaleLowerCase() === route.from.trim().toLocaleLowerCase()),
-        ).length}
+        // Same rule the feed applies — an empty destination is the default one,
+        // so the count on the button always matches the feed behind it.
+        countFor={(route) => {
+          const to = resolveDestination(route.to);
+          const from = route.from.trim();
+          return (loads ?? []).filter((l) =>
+            l.to.trim().toLocaleLowerCase() === to.toLocaleLowerCase() &&
+            (from === '' || l.from.trim().toLocaleLowerCase() === from.toLocaleLowerCase()),
+          ).length;
+        }}
         onApply={(route) => {
           void commitRoute({ from: route.from, to: route.to });
           setRouteOpen(false);

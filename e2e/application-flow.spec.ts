@@ -23,11 +23,13 @@ test('filters narrow the feed and the empty state recovers', async ({ page }) =>
   await expect(page.getByRole('article', { name: 'Load nordcargo' })).toBeVisible();
   // Load attributes live behind Filters: toggle €3+/km, preview, apply —
   // the badge lands, the Brussels route feed keeps its 2.
+  // The count is scoped to the committed direction, so it names the loads the
+  // feed will actually show (2 toward Brussels) — not every load in the catalogue.
   await page.getByRole('button', { name: 'Filters', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Filters' })).toBeVisible();
   await page.getByRole('button', { name: '€3+/km' }).click();
-  await expect(page.getByRole('button', { name: 'Show 4 loads' })).toBeVisible();
-  await page.getByRole('button', { name: 'Show 4 loads' }).click();
+  await expect(page.getByRole('button', { name: 'Show 2 loads' })).toBeVisible();
+  await page.getByRole('button', { name: 'Show 2 loads' }).click();
   await expect(page.getByRole('button', { name: 'Filters 1' })).toBeVisible();
   await expect(page.getByRole('article', { name: 'Load nordcargo' })).toBeVisible();
   await expect(page.getByRole('article', { name: 'Load paris-brussels' })).toBeVisible();
@@ -38,14 +40,17 @@ test('filters narrow the feed and the empty state recovers', async ({ page }) =>
   await expect(routeSheet).toBeVisible();
   await routeSheet.getByLabel('From', { exact: true }).fill('Antwerp');
   await routeSheet.getByLabel('To', { exact: true }).fill('Paris');
-  await routeSheet.getByRole('heading', { name: 'Loads towards' }).click();
-  await expect(routeSheet.getByRole('button', { name: 'No loads match' })).toBeDisabled();
+  await routeSheet.getByRole('heading', { name: 'Change direction' }).click();
+  // Zero matches is a recoverable state, not a dead end: the sheet says what
+  // does not match and offers the tap that gets the driver out.
+  await expect(routeSheet.getByText(/No loads on Antwerp → Paris/)).toBeVisible();
+  await expect(routeSheet.getByRole('button', { name: /Show 1 load toward Paris/ })).toBeEnabled();
   await page.keyboard.press('Escape');
   await expect(routeSheet).toHaveCount(0);
   // Reopen the filters, clear, apply: the route feed returns, badge hides.
   await page.getByRole('button', { name: 'Filters 1' }).click();
   await page.getByRole('button', { name: 'Clear' }).click();
-  await page.getByRole('button', { name: 'Show 6 loads' }).click();
+  await page.getByRole('button', { name: 'Show 2 loads' }).click();
   await expect(page.getByRole('button', { name: 'Filters', exact: true })).toBeVisible();
   await expect(page.getByRole('article', { name: 'Load nordcargo' })).toBeVisible();
 });
@@ -55,7 +60,7 @@ test('direction changes without leaving the feed', async ({ page }) => {
   await page.getByRole('button', { name: 'Direction: Anywhere → Brussels, 2 of 6 loads. Activate to change.' }).click();
   await expect(page.getByRole('dialog', { name: 'Change direction' })).toBeVisible();
   await page.getByLabel('To', { exact: true }).fill('Antwerp');
-  await page.getByRole('heading', { name: 'Loads towards' }).click();
+  await page.getByRole('heading', { name: 'Change direction' }).click();
   await expect(page.getByRole('button', { name: 'Show 1 load' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Show 1 load' })).toBeEnabled();
   await page.getByRole('button', { name: 'Show 1 load' }).click();
@@ -89,7 +94,7 @@ test('route suggestions carry live counts and the dead end recovers', async ({ p
   await expect(sheet.getByLabel('To', { exact: true })).toHaveValue('Brussels');
   // Type to filter, pick Paris as origin via its own suggestions.
   await sheet.getByLabel('From', { exact: true }).fill('Paris');
-  await sheet.getByRole('heading', { name: 'Loads towards' }).click();
+  await sheet.getByRole('heading', { name: 'Change direction' }).click();
   await expect(sheet.getByRole('button', { name: 'Show 1 load' })).toBeEnabled();
   await sheet.getByRole('button', { name: 'Show 1 load' }).click();
   await expect(page.getByRole('button', { name: 'Direction: Paris → Brussels, 1 of 6 loads. Activate to change.' })).toBeVisible();
@@ -99,11 +104,11 @@ test('route suggestions carry live counts and the dead end recovers', async ({ p
   await expect(sheet).toBeVisible();
   await sheet.getByLabel('From', { exact: true }).fill('Antwerp');
   await sheet.getByLabel('To', { exact: true }).fill('Paris');
-  await sheet.getByRole('heading', { name: 'Loads towards' }).click();
-  await expect(sheet.getByRole('button', { name: 'No loads match' })).toBeDisabled();
-  // No apply possible — close and confirm the entry point is honest instead.
-  await page.keyboard.press('Escape');
-  await expect(sheet).toHaveCount(0);
+  await sheet.getByRole('heading', { name: 'Change direction' }).click();
+  // The dead end now recovers in one tap instead of stranding the driver.
+  await expect(sheet.getByText(/No loads on Antwerp → Paris/)).toBeVisible();
+  await sheet.getByRole('button', { name: /Show 1 load toward Paris/ }).click();
+  await expect(page.getByRole('button', { name: /Direction: Anywhere → Paris/ })).toBeVisible();
 });
 
 test('recent routes recall the last direction in one tap', async ({ page }) => {
