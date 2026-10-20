@@ -97,7 +97,9 @@ export function ApplicationBanner({
         </span>
         <span aria-hidden className="flex w-full gap-[3px] px-[12px] pb-[8px]">
           {TRIP_STAGE_STEPS.map((s, i) => (
-            <span key={s.id} className={`h-[4px] flex-1 rounded-full ${i <= stepIndex ? 'bg-[var(--color-status-match-bg)]' : 'bg-[var(--color-nav-text)] opacity-25'}`} />
+            // Same three states as the trip page list: passed solid, current
+            // dimmed, upcoming faint. Done and current used to share one fill.
+            <span key={s.id} className={`h-[4px] flex-1 rounded-full ${i < stepIndex ? 'bg-[var(--color-status-match-bg)]' : i === stepIndex ? 'bg-[var(--color-status-match-bg)] opacity-40' : 'bg-[var(--color-nav-text)] opacity-25'}`} />
           ))}
         </span>
       </button>
@@ -125,9 +127,11 @@ export function ApplicationBanner({
       </span>
       <span className="flex gap-[4px]" aria-hidden>
         {[1, 2, 3, 4].map((i) => (
+          // Passed solid, current dimmed, upcoming faint — the same three
+          // states as the trip page list.
           <span
             key={i}
-            className={`h-[4px] flex-1 rounded-[var(--radius-pill)] ${i <= step ? 'bg-current' : 'bg-current opacity-20'}`}
+            className={`h-[4px] flex-1 rounded-[var(--radius-pill)] ${i < step ? 'bg-current' : i === step ? 'bg-current opacity-50' : 'bg-current opacity-20'}`}
           />
         ))}
       </span>

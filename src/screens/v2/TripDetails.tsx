@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button, ButtonLink } from '../../components/Button';
 import { Icon } from '../../components/Icon';
 import { StatusPill, type Tone } from '../../components/StatusPill';
-import { type ProgressState } from '../../components/ProgressStep';
+import { type ProgressState, ProgressStep } from '../../components/ProgressStep';
 import { AvatarInitials, V2BackBar, useV2Back } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { CancelTripSheet } from '../../components/v2/CancelTripSheet';
@@ -43,34 +43,35 @@ function PayoutRow({ load, compact = false }: { load: V2Load; compact?: boolean 
 }
 
 /**
- * Horizontal stepper: 5 segments on one line (Postmates-style) with the
- * current step named. Same TRIP_STAGE_STEPS source — only the layout is compact.
+ * Trip progress as a labeled step list — the same Done/Current/Next rows the
+ * application tracker uses, not an abstract bar. The bar said "step 1 of 5"
+ * without saying which one or what finishes it; the rows name every stage
+ * and highlight the current one. The immediate deed still lives in the sticky
+ * bar — this list is the road around it.
  */
 function TripStepper({ steps }: { steps: { done: boolean; current: boolean; label: string }[] }) {
   const currentIdx = steps.findIndex((s) => s.current);
-  const current = steps[currentIdx]?.label ?? '';
-  // A progress bar says where the driver is; naming the next step says what to do next.
-  // The count lives in the accessible name only: nobody counts ordinals in the
-  // driver's face (Deel anchors stages in time, not numbers) — the bar already
-  // shows scope visually.
-  const next = steps[currentIdx + 1]?.label;
+  const doneCount = steps.filter((s) => s.done).length;
+  const position = currentIdx >= 0 ? currentIdx + 1 : doneCount;
   return (
     <div>
-      <div className="flex items-center gap-[6px]" role="img" aria-label={`Trip progress: step ${currentIdx + 1} of ${steps.length}, ${current}${next ? `, next ${next}` : ''}`}>
-        {steps.map((s) => (
-          <span
+      <p className="text-caption-12 text-[var(--color-text-secondary)]">
+        Trip progress · Step {position} of {steps.length}
+      </p>
+      <ol
+        className="mt-[8px] flex list-none flex-col gap-[8px] p-0"
+        aria-label={`Trip progress: step ${position} of ${steps.length}`}
+      >
+        {steps.map((s, i) => (
+          <ProgressStep
             key={s.label}
-            // Three states, three paints: done is solid, current is the same hue
-            // at reduced opacity, upcoming is the track colour. Done and current
-            // used to share one fill, so step 3 of 5 read as "finished 3".
-            // No title tooltips: hover-only affordances are dead on the driver's phone.
-            className={`h-[4px] flex-1 rounded-full ${s.done ? 'bg-[var(--color-action-primary)]' : s.current ? 'bg-[var(--color-action-primary)] opacity-40' : 'bg-[var(--color-border-default)]'}`}
+            state={s.done ? 'done' : s.current ? 'current' : 'next'}
+            number={i + 1}
+            label={s.label}
+            aria-current={s.current ? 'step' : undefined}
           />
         ))}
-      </div>
-      <p className="mt-[6px] text-caption-12 text-[var(--color-text-secondary)]">
-        {current}{next ? ` → ${next}` : ''}
-      </p>
+      </ol>
     </div>
   );
 }
