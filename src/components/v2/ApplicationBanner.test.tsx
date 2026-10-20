@@ -15,7 +15,7 @@ function renderBanner(status: ApplicationStatus) {
 describe('ApplicationBanner — live states only', () => {
   it.each([ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REVIEW, ApplicationStatus.CUSTOMER_REVIEW])('shows a status banner while %s', (status) => {
     const { onOpen } = renderBanner(status);
-    expect(screen.getByText(/Lille → Brussels · €360 · by/)).toBeVisible();
+    expect(screen.getByText(new RegExp(`Lille → Brussels · €${load.rate} · by`))).toBeVisible();
     fireEvent.click(screen.getByRole('button'));
     expect(onOpen).toHaveBeenCalledTimes(1);
   });

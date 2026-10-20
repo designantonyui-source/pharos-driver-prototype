@@ -134,8 +134,9 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
   const badge: Badge | null = state === 'pending' ? { icon: 'clock', label: 'In review' }
     : state === 'booked' ? { icon: 'circle-check', label: `Booked · ${application?.tripId ?? `TR-${load.id}`}` }
       : state === 'rejected' ? { icon: 'circle-x', label: 'Rejected' }
-        : state === 'cancelled' ? { icon: 'x', label: 'Cancelled by you' }
-          : (load.onRoute ?? isOnRoute) ? { icon: null, label: 'On your route' } : null;
+        : state === 'cancelled' && application?.status === ApplicationStatus.EXPIRED ? { icon: 'clock', label: 'Expired' }
+          : state === 'cancelled' ? { icon: 'x', label: 'Cancelled by you' }
+            : (load.onRoute ?? isOnRoute) ? { icon: null, label: 'On your route' } : null;
 
   const canDismiss = !!onDismiss && (state === 'available' || state === 'cancelled' || state === 'rejected');
   const cross = crossBorder(load.from, load.to);
@@ -216,7 +217,7 @@ export function LoadCard({ load, isOnRoute = false, onOpen, onDismiss, onNotice 
       </button>
       <p className="flex flex-wrap items-baseline gap-[8px]">
         <span className="text-metric-28 text-[var(--color-text-primary)]">€{load.rate}</span>
-        <span className="text-label-14 text-[var(--color-text-secondary)]">€{load.perKm.toFixed(2)}/km</span>
+        <span className="text-label-14 text-[var(--color-text-secondary)]">€{load.netPerKm.toFixed(2)}/km net</span>
       </p>
       <p className="truncate text-caption-12 text-[var(--color-text-secondary)]">{load.vehicle}</p>
       <p className="sr-only">{dayLabel(load.date)} {load.window}, {load.km} km loaded, {load.pickupKm} km {load.pickupMin} minutes to pickup</p>

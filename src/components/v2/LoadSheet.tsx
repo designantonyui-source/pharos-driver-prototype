@@ -54,7 +54,7 @@ export function LoadSheet({
       <div className="mt-[12px] flex items-baseline gap-[8px]">
         <span className="text-heading-32 text-[var(--color-offer-text-price)]">€{load.rate}</span>
         <span className="text-body-16 text-[var(--color-text-secondary)]">
-          €{load.perKm.toFixed(2)}/km · {load.km} km loaded
+          €{load.netPerKm.toFixed(2)}/km net · {load.km} km loaded
         </span>
       </div>
 
@@ -66,11 +66,14 @@ export function LoadSheet({
 
       <ul className="mt-[16px] flex flex-col gap-[12px]">
         <Fact icon="clock">
-          {dayLabel(load.date)} · {load.window}
+          Pickup {dayLabel(load.date)} · {load.window}
+        </Fact>
+        <Fact icon="truck">
+          Delivery {dayLabel(load.deliveryDate)} · {load.deliveryWindow}
         </Fact>
         <Fact icon="map-pin">
           <span className="text-[var(--color-offer-text-highlight)]">
-            {load.pickupKm} km to pickup · about {load.pickupMin} min
+            {load.pickupKm} km to pickup · about {load.pickupMin} min · {(load.rate / load.km).toFixed(2)} €/km loaded
           </span>
         </Fact>
         <Fact icon="package">{load.vehicle}</Fact>
@@ -78,7 +81,7 @@ export function LoadSheet({
           <span className="flex flex-wrap items-center gap-x-[6px]">
             <span>{load.company} ·</span>
             <span className="flex items-center gap-[2px]"><Icon name="star" size={12} />{load.rating} ·</span>
-            <span>Verified · {load.paidIn}</span>
+            <span>Verified · {load.paidIn} · expected {load.payoutDate}</span>
           </span>
         </Fact>
       </ul>

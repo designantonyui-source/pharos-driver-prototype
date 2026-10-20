@@ -26,7 +26,7 @@ import { V2Frame } from '../../components/v2/V2Frame';
 import { getLoads } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore, type LoadApplication } from '../../lib/store';
-import { dayLabel, type V2Load } from '../../lib/v2/loads';
+import { dayLabel, deadlineLabel, shortDate, type V2Load } from '../../lib/v2/loads';
 
 function TripsFrame({ toast, children }: { toast?: ReactNode; children: ReactNode }) {
   return <V2Frame active="Trips">
@@ -69,6 +69,22 @@ const REVIEW = new Set([ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REV
 function tripWindow(load: V2Load): string {
   return `${dayLabel(load.date)} · ${load.window}`;
 }
+
+function money(amount: number): string {
+  return `EUR ${amount.toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/** Completed work comes from the ledger, not from an application record. */
+type CompletedEntry = {
+  loadId: string;
+  company: string;
+  from: string;
+  to: string;
+  amount: number;
+  status: 'available' | 'pending';
+  paidAt: string | null;
+  dueAt?: string;
+};
 
 const STATE_TONE: Record<'booked' | 'pending' | 'past' | 'rejected', string> = {
   booked: 'bg-[var(--color-status-success-bg)] text-[var(--color-status-success-text)]',
@@ -139,7 +155,12 @@ export function Trips() {
     || e.application.status === ApplicationStatus.CANCELLED
     || e.application.cancelledAfterConfirm === true,
   );
-  if (entries.length === 0) {
+  // Paid and pending deliveries are completed trips, not applications. Keeping
+  // them in their own section stops Past from mixing "declined" with "earned".
+  const completed: CompletedEntry[] = state.ledger
+    .filter((entry): entry is Extract<typeof entry, { kind: 'trip' }> => entry.kind === 'trip')
+    .sort((a, b) => Date.parse(b.paidAt ?? b.dueAt ?? '') - Date.parse(a.paidAt ?? a.dueAt ?? ''));
+  if (entries.length === 0 && completed.length === 0) {
     return <TripsFrame toast={<Toast toast={toast} onClose={dismiss} />}>
       <div className="mt-[var(--spacing-16)] flex flex-col items-center gap-[var(--spacing-8)] rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] px-[var(--spacing-16)] py-[var(--spacing-24)] text-center">
         <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="truck" size="md" /></span>
@@ -153,20 +174,29 @@ export function Trips() {
     {active.length > 0 && <div className="mt-[var(--spacing-8)] flex flex-col gap-[var(--spacing-12)]">
       <p className="px-[var(--spacing-12)] text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">Active trip{active.length > 1 ? 's' : ''}</p>
       {active.map(({ load }) => <div key={load.id} className="rounded-[var(--radius-md)] bg-[var(--color-nav-bg)] p-[var(--spacing-16)] text-[var(--color-nav-text)]">
-        <p className="text-metric-28 text-[var(--color-text-inverse)]">EUR {load.rate.toFixed(2)}</p>
+        <p className="text-metric-28 text-[var(--color-text-inverse)]">{money(load.rate)}</p>
         <p className="mt-[var(--spacing-4)] text-body-14 opacity-90">{load.from} to {load.to} · {tripWindow(load)}</p>
+        <p className="mt-[var(--spacing-4)] text-caption-12 opacity-80">{load.paidIn} · expected {load.payoutDate}</p>
         <div className="mt-[var(--spacing-16)]"><Button label="Open trip" onClick={() => navigate(`/trip/${load.id}`)} /></div>
       </div>)}
     </div>}
     {review.length > 0 && <Section label={review.length === 1 ? 'In review' : `${review.length} in review`}>
       {review.map(({ load, application }, i) => <TripRow key={load.id} to={`/application/${load.id}`} icon="clock" tone="pending" chip="In review"
-        title={`${load.from} to ${load.to}`} detail={`${application.status === ApplicationStatus.CUSTOMER_REVIEW ? 'Waiting for customer' : 'With the dispatcher'} · decided by ${load.approvalsBy}`}
-        amount={`EUR ${load.rate.toFixed(2)}`} last={i === review.length - 1} />)}
+        title={`${load.from} to ${load.to}`} detail={`${application.status === ApplicationStatus.CUSTOMER_REVIEW ? 'Waiting for customer' : 'With the dispatcher'} · decided by ${deadlineLabel(application.approvalsDeadline ?? load.approvalsAt)}`}
+        amount={money(load.rate)} last={i === review.length - 1} />)}
     </Section>}
-    {past.length > 0 && <Section label="Past">
+    {completed.length > 0 && <Section label="Completed">
+      {completed.map((entry, i) => <TripRow key={entry.loadId} to={`/v2/account/invoices`} icon="truck" tone={entry.status === 'available' ? 'booked' : 'pending'} chip={entry.status === 'available' ? 'Paid' : 'Pending'}
+        title={`${entry.from} to ${entry.to}`}
+        detail={entry.status === 'available'
+          ? `Paid ${entry.paidAt ? shortDate(entry.paidAt) : '—'} · ${entry.company}`
+          : `Due ${entry.dueAt ? shortDate(entry.dueAt) : '—'} · ${entry.company}`}
+        amount={money(entry.amount)} last={i === completed.length - 1} />)}
+    </Section>}
+    {past.length > 0 && <Section label="Past applications">
       {past.map(({ load, application }, i) => { const look = pastLook(application); return <TripRow key={load.id} to={pastTo(load, application)} icon={look.icon} tone={look.tone} chip={look.chip}
-        title={`${load.from} to ${load.to}`} detail={`${tripWindow(load)} · EUR ${load.perKm.toFixed(2)}/km`}
-        amount={`EUR ${load.rate.toFixed(2)}`} last={i === past.length - 1} />; })}
+        title={`${load.from} to ${load.to}`} detail={`${tripWindow(load)} · €${load.netPerKm.toFixed(2)}/km net`}
+        amount={application.cancelledAfterConfirm || application.status === ApplicationStatus.CANCELLED ? 'EUR 0.00' : '—'} last={i === past.length - 1} />; })}
     </Section>}
     {active.length === 0 && review.length === 0 && <div className="mt-[var(--spacing-16)]"><Button label="Find loads" appearance="secondary" onClick={() => navigate('/v2')} /></div>}
   </TripsFrame>;

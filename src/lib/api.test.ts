@@ -131,7 +131,7 @@ describe('driver trip execution', () => {
     await advanceTripStage('nordcargo', 'at-delivery', 'delivered', true);
     const trips = store.get().ledger.filter((entry) => entry.kind === 'trip' && entry.loadId === 'nordcargo');
     expect(trips).toHaveLength(1);
-    expect(trips[0]).toMatchObject({ amount: 360, status: 'pending', company: 'NordCargo' });
+    expect(trips[0]).toMatchObject({ amount: 435, status: 'pending', company: 'NordCargo' });
   });
 
   it('walks the demo earnings pipeline without automatic timers', async () => {
@@ -173,9 +173,9 @@ describe('payout recovery', () => {
   afterEach(() => store.reset());
 
   async function fundedWithdrawal(amount = 100) {
-    const { addIbanMethod } = await import('./api');
-    const method = await addIbanMethod({ iban: IBAN, label: 'Bank' });
-    const { entry } = await requestWithdrawal(amount, method.id);
+    const { addIbanMethod, authorizeSca } = await import('./api');
+    const method = await addIbanMethod({ iban: IBAN, label: 'Bank', scaToken: await authorizeSca('payout-method') });
+    const { entry } = await requestWithdrawal(amount, method.id, await authorizeSca('withdrawal'));
     return entry;
   }
 
@@ -200,7 +200,7 @@ describe('payout recovery', () => {
     expect(failed.status).toBe('failed');
     // Failed payouts do not debit while the outcome is recorded.
     const { getBalance } = await import('./api');
-    expect((await getBalance()).available).toBeCloseTo(500, 2);
+    expect((await getBalance()).available).toBeCloseTo(720, 2);
     // Repeat failure calls are no-ops.
     const again = await markWithdrawalFailed(entry.id, 'Other reason');
     expect(again.status).toBe('failed');
@@ -208,12 +208,12 @@ describe('payout recovery', () => {
     // Return without fee refund: amount back, fee stays debited.
     const returned = await returnWithdrawalFunds(entry.id, false);
     expect(returned.status).toBe('returned');
-    expect((await getBalance()).available).toBeCloseTo(500, 2);
+    expect((await getBalance()).available).toBeCloseTo(720, 2);
     // Double return never refunds twice.
     const replayed = await returnWithdrawalFunds(entry.id, true);
     expect(replayed.status).toBe('returned');
     expect(replayed.feeRefunded).toBe(false);
-    expect((await getBalance()).available).toBeCloseTo(500, 2);
+    expect((await getBalance()).available).toBeCloseTo(720, 2);
   });
 
   it('refuses arrival for terminal states', async () => {

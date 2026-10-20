@@ -1,6 +1,15 @@
 /**
  * Driver v2 — mock load feed. Only `src/lib/api.ts` imports this; screens go through the api.
  * Epic: pharos-driver-flow-stories.md (S2 details-v2 data, S8 two deadlines).
+ *
+ * Time discipline: a feed load is a live offer, not a calendar fixture. Pickup and
+ * delivery windows are generated relative to the moment the prototype boots, so a
+ * 10:00 window can never still accept applications at 16:49. Deadlines are ISO
+ * instants (`approvalsAt`), and the display copy is derived from them.
+ *
+ * Money discipline: `perKm` is the loaded rate; `netPerKm` includes the deadhead to
+ * pickup. The feed filter and the cards use `netPerKm`, because that is the number
+ * that reaches the driver's bank account.
  */
 export type TripSite = {
   address: string;
@@ -13,7 +22,10 @@ export type V2Load = {
   company: string;
   rating: number;
   rate: number;
+  /** Loaded rate per km (rate / km). */
   perKm: number;
+  /** Rate per km after the empty run to pickup (rate / (km + pickupKm)). */
+  netPerKm: number;
   km: number;
   from: string;
   to: string;
@@ -21,23 +33,33 @@ export type V2Load = {
   date: string;
   window: string;
   pickupTime?: string;
+  /** ISO instant the pickup window opens and closes. */
+  pickupAt: string;
+  pickupEndsAt: string;
   onRoute?: boolean;
-  /** Delivery day as an ISO date (fixtures: same day as pickup). */
+  /** Delivery day as an ISO date. */
   deliveryDate: string;
   deliveryWindow: string;
+  /** ISO instant the delivery window opens. */
+  deliveryAt: string;
   pickupKm: number;
   pickupMin: number;
   vehicle: string;
+  /** Contractual payment term after delivery. */
+  paymentTermDays: number;
+  /** Human label for the term: "Paid in 7 days". */
   paidIn: string;
+  /** Expected payout date, derived from delivery + term. */
+  payoutDate: string;
   /** minutes the driver has to decide (S8: the main urgency) */
   decideMin: number;
-  /** shared approvals deadline (S8: second deadline) */
+  /** ISO instant both approvals must be in. */
+  approvalsAt: string;
+  /** Display label for `approvalsAt`: "18:30", "tomorrow 09:00". */
   approvalsBy: string;
   /** Prototype trip-site details (address, contact, gate note). */
   pickupSite: TripSite;
   deliverySite: TripSite;
-  /** Concrete payout date for the trip summary (mock). */
-  payoutDate: string;
   /** Payout destination label (mock). */
   payoutMethod: string;
   /** Trip documents attached to the load (mock). */
@@ -100,27 +122,149 @@ export function companyInitials(name: string): string {
     .slice(0, 2);
 }
 
-export const V2_LOADS: V2Load[] = [
+
+/** Local clock label for an ISO instant: 18:30. */
+export function clockLabel(iso: string): string {
+  return new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+/** Deadline label in the driver's local time: 18:30 / tomorrow 09:00 / Mon 21, 09:00. */
+export function deadlineLabel(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso);
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const day = new Date(date);
+  day.setHours(0, 0, 0, 0);
+  const diff = Math.round((day.getTime() - today.getTime()) / 86_400_000);
+  if (diff === 0) return clockLabel(iso);
+  if (diff === 1) return `tomorrow ${clockLabel(iso)}`;
+  return `${date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}, ${clockLabel(iso)}`;
+}
+
+/** Short payout date: 27 Oct (with the year only when it is not this year). */
+export function shortDate(iso: string, now: Date = new Date()): string {
+  const date = new Date(iso);
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    ...(date.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }),
+  });
+}
+
+export function paymentTermsLabel(days: number): string {
+  return `Paid in ${days} ${days === 1 ? 'day' : 'days'}`;
+}
+
+function roundUpToQuarter(date: Date): Date {
+  const quarter = 15 * 60_000;
+  return new Date(Math.ceil(date.getTime() / quarter) * quarter);
+}
+
+function localDateKey(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function windowLabel(start: Date, durationMin: number): string {
+  const end = new Date(start.getTime() + durationMin * 60_000);
+  return `${clockLabel(start.toISOString())}–${clockLabel(end.toISOString())}`;
+}
+
+type LoadSeed = Omit<
+  V2Load,
+  | 'date'
+  | 'window'
+  | 'pickupTime'
+  | 'pickupAt'
+  | 'pickupEndsAt'
+  | 'deliveryDate'
+  | 'deliveryWindow'
+  | 'deliveryAt'
+  | 'payoutDate'
+  | 'paidIn'
+  | 'approvalsAt'
+  | 'approvalsBy'
+  | 'perKm'
+  | 'netPerKm'
+> & {
+  /** Minutes from the prototype boot to the pickup window's rounded start. */
+  pickupOffsetMin: number;
+  /** Minutes from the prototype boot to the delivery window's rounded start. */
+  deliveryOffsetMin: number;
+  pickupDurationMin?: number;
+  deliveryDurationMin?: number;
+  decideMin: number;
+};
+
+/**
+ * Build a load from relative offsets. The pickup is rounded up to a quarter hour,
+ * the delivery window starts at its own offset, and both approvals are due before
+ * the pickup window opens (never after it).
+ */
+function makeLoad(seed: LoadSeed, now: Date): V2Load {
+  const {
+    pickupOffsetMin,
+    deliveryOffsetMin,
+    pickupDurationMin = 60,
+    deliveryDurationMin = 60,
+    decideMin,
+    ...rest
+  } = seed;
+  const pickupStart = roundUpToQuarter(new Date(now.getTime() + pickupOffsetMin * 60_000));
+  const pickupEnd = new Date(pickupStart.getTime() + pickupDurationMin * 60_000);
+  const deliveryStart = roundUpToQuarter(new Date(now.getTime() + deliveryOffsetMin * 60_000));
+  const deliveryEnd = new Date(deliveryStart.getTime() + deliveryDurationMin * 60_000);
+  const payout = new Date(deliveryEnd.getTime() + rest.paymentTermDays * 86_400_000);
+  const decisionDeadline = new Date(now.getTime() + decideMin * 60_000);
+  const beforePickup = new Date(pickupStart.getTime() - 30 * 60_000);
+  const approvals = new Date(Math.min(decisionDeadline.getTime(), Math.max(now.getTime() + 15 * 60_000, beforePickup.getTime())));
+
+  return {
+    ...rest,
+    decideMin,
+    perKm: Math.round((rest.rate / rest.km) * 100) / 100,
+    netPerKm: Math.round((rest.rate / (rest.km + rest.pickupKm)) * 100) / 100,
+    date: localDateKey(pickupStart),
+    window: windowLabel(pickupStart, pickupDurationMin),
+    pickupTime: pickupStart.toISOString(),
+    pickupAt: pickupStart.toISOString(),
+    pickupEndsAt: pickupEnd.toISOString(),
+    deliveryDate: localDateKey(deliveryStart),
+    deliveryWindow: windowLabel(deliveryStart, deliveryDurationMin),
+    deliveryAt: deliveryStart.toISOString(),
+    paymentTermDays: rest.paymentTermDays,
+    paidIn: paymentTermsLabel(rest.paymentTermDays),
+    payoutDate: shortDate(payout.toISOString(), now),
+    approvalsAt: approvals.toISOString(),
+    approvalsBy: deadlineLabel(approvals.toISOString(), now),
+  };
+}
+
+/**
+ * The six demo offers. Deadhead distances are measured from the driver's current
+ * base near Lille, which is why Paris is 225 km away and Lille is 8 km away.
+ * Net rates include the empty run; the feed filter uses them.
+ */
+const SEEDS: LoadSeed[] = [
   {
     id: 'nordcargo',
     company: 'NordCargo',
     rating: 4.8,
-    rate: 360,
-    perKm: 3.24,
+    rate: 435,
     km: 111,
+    pickupKm: 12,
+    pickupMin: 18,
     from: 'Lille',
     to: 'Brussels',
-    date: isoDayOffset(0),
-    window: '14:00–15:00',
-    pickupTime: pickupTimestamp(isoDayOffset(0), '14:00–15:00'),
-    deliveryDate: isoDayOffset(0),
-    deliveryWindow: '17:00–18:00',
-    pickupKm: 18,
-    pickupMin: 25,
+    pickupOffsetMin: 120,
+    deliveryOffsetMin: 240,
+    pickupDurationMin: 60,
+    deliveryDurationMin: 60,
     vehicle: 'Curtainsider · 12.4 t · 18 pallets',
-    paidIn: 'Paid in 7 days',
-    decideMin: 80,
-    approvalsBy: '11:00',
+    paymentTermDays: 7,
+    decideMin: 240,
+    payoutMethod: 'IBAN ••4821',
     pickupSite: {
       address: 'Rue des Champs 12, 59000 Lille',
       contact: '+33 3 20 11 22 33',
@@ -131,8 +275,6 @@ export const V2_LOADS: V2Load[] = [
       contact: '+32 2 555 01 48',
       note: 'Dock 7 · Ring before entering',
     },
-    payoutDate: '22 Oct',
-    payoutMethod: 'IBAN ••4821',
     documents: [
       { id: 'cmr', name: 'CMR consignment note', detail: 'Prefilled · Sign at pickup' },
       { id: 'instructions', name: 'Loading instructions', detail: 'Rear loading · 18 pallets' },
@@ -142,22 +284,20 @@ export const V2_LOADS: V2Load[] = [
     id: 'belroute',
     company: 'BelRoute',
     rating: 4.6,
-    rate: 210,
-    perKm: 3.1,
-    km: 68,
+    rate: 290,
+    km: 60,
+    pickupKm: 65,
+    pickupMin: 70,
     from: 'Ghent',
     to: 'Antwerp',
-    date: isoDayOffset(0),
-    window: '16:00–17:00',
-    pickupTime: pickupTimestamp(isoDayOffset(0), '16:00–17:00'),
-    deliveryDate: isoDayOffset(0),
-    deliveryWindow: '18:00–19:00',
-    pickupKm: 42,
-    pickupMin: 45,
+    pickupOffsetMin: 180,
+    deliveryOffsetMin: 330,
+    pickupDurationMin: 60,
+    deliveryDurationMin: 60,
     vehicle: 'Curtainsider · 10 t · 14 pallets',
-    paidIn: 'Paid in 14 days',
-    decideMin: 125,
-    approvalsBy: '12:30',
+    paymentTermDays: 14,
+    decideMin: 300,
+    payoutMethod: 'IBAN ••4821',
     pickupSite: {
       address: 'Havenlaan 5, 9000 Ghent',
       contact: '+32 9 210 44 55',
@@ -168,8 +308,6 @@ export const V2_LOADS: V2Load[] = [
       contact: '+32 3 540 78 90',
       note: 'Dock 3 · Report at gate',
     },
-    payoutDate: '29 Oct',
-    payoutMethod: 'IBAN ••4821',
     documents: [
       { id: 'cmr', name: 'CMR consignment note', detail: 'Prefilled · Sign at pickup' },
       { id: 'instructions', name: 'Loading instructions', detail: 'Side loading · 14 pallets' },
@@ -179,22 +317,20 @@ export const V2_LOADS: V2Load[] = [
     id: 'calais-lille',
     company: 'Côte Fret',
     rating: 4.9,
-    rate: 290,
-    perKm: 2.85,
-    km: 102,
+    rate: 430,
+    km: 110,
+    pickupKm: 105,
+    pickupMin: 110,
     from: 'Calais',
     to: 'Lille',
-    date: isoDayOffset(1),
-    window: '08:00–09:00',
-    pickupTime: pickupTimestamp(isoDayOffset(1), '08:00–09:00'),
-    deliveryDate: isoDayOffset(1),
-    deliveryWindow: '11:00–12:00',
-    pickupKm: 64,
-    pickupMin: 55,
+    pickupOffsetMin: 1_560,
+    deliveryOffsetMin: 1_680,
+    pickupDurationMin: 60,
+    deliveryDurationMin: 60,
     vehicle: 'Curtainsider · 12 t · 16 pallets',
-    paidIn: 'Paid in 7 days',
-    decideMin: 600,
-    approvalsBy: 'tomorrow 06:00',
+    paymentTermDays: 7,
+    decideMin: 720,
+    payoutMethod: 'IBAN ••4821',
     pickupSite: {
       address: 'Zone Eurotunnel 8, 62100 Calais',
       contact: '+33 3 21 46 78 90',
@@ -205,8 +341,6 @@ export const V2_LOADS: V2Load[] = [
       contact: '+33 3 20 11 22 33',
       note: 'Gate B · Bay 4',
     },
-    payoutDate: '23 Oct',
-    payoutMethod: 'IBAN ••4821',
     documents: [
       { id: 'cmr', name: 'CMR consignment note', detail: 'Prefilled · Sign at pickup' },
       { id: 'instructions', name: 'Loading instructions', detail: 'Rear loading · 16 pallets' },
@@ -216,22 +350,20 @@ export const V2_LOADS: V2Load[] = [
     id: 'paris-brussels',
     company: 'Seine Freight',
     rating: 4.7,
-    rate: 420,
-    perKm: 3.35,
-    km: 125,
+    rate: 1_150,
+    km: 310,
+    pickupKm: 225,
+    pickupMin: 210,
     from: 'Paris',
     to: 'Brussels',
-    date: isoDayOffset(0),
-    window: '10:00–11:00',
-    pickupTime: pickupTimestamp(isoDayOffset(0), '10:00–11:00'),
-    deliveryDate: isoDayOffset(0),
-    deliveryWindow: '14:00–15:00',
-    pickupKm: 12,
-    pickupMin: 15,
+    pickupOffsetMin: 420,
+    deliveryOffsetMin: 660,
+    pickupDurationMin: 60,
+    deliveryDurationMin: 60,
     vehicle: 'Box · 8 t · 10 pallets',
-    paidIn: 'Paid in 7 days',
-    decideMin: 90,
-    approvalsBy: '09:00',
+    paymentTermDays: 7,
+    decideMin: 480,
+    payoutMethod: 'IBAN ••4821',
     pickupSite: {
       address: 'Rue de Bercy 77, 75012 Paris',
       contact: '+33 1 44 20 55 66',
@@ -242,8 +374,6 @@ export const V2_LOADS: V2Load[] = [
       contact: '+32 2 555 01 48',
       note: 'Dock 7 · Ring before entering',
     },
-    payoutDate: '22 Oct',
-    payoutMethod: 'IBAN ••4821',
     documents: [
       { id: 'cmr', name: 'CMR consignment note', detail: 'Prefilled · Sign at pickup' },
       { id: 'instructions', name: 'Loading instructions', detail: 'Rear loading · 10 pallets' },
@@ -253,22 +383,20 @@ export const V2_LOADS: V2Load[] = [
     id: 'brussels-amsterdam',
     company: 'Lowlands Haul',
     rating: 4.5,
-    rate: 380,
-    perKm: 2.95,
-    km: 129,
+    rate: 760,
+    km: 210,
+    pickupKm: 115,
+    pickupMin: 120,
     from: 'Brussels',
     to: 'Amsterdam',
-    date: isoDayOffset(2),
-    window: '09:00–10:00',
-    pickupTime: pickupTimestamp(isoDayOffset(2), '09:00–10:00'),
-    deliveryDate: isoDayOffset(2),
-    deliveryWindow: '13:00–14:00',
-    pickupKm: 22,
-    pickupMin: 30,
+    pickupOffsetMin: 3_060,
+    deliveryOffsetMin: 3_240,
+    pickupDurationMin: 60,
+    deliveryDurationMin: 60,
     vehicle: 'Curtainsider · 11 t · 15 pallets',
-    paidIn: 'Paid in 14 days',
-    decideMin: 300,
-    approvalsBy: 'tomorrow 07:00',
+    paymentTermDays: 14,
+    decideMin: 1_440,
+    payoutMethod: 'IBAN ••4821',
     pickupSite: {
       address: 'Rue du Port 48, 1000 Brussels',
       contact: '+32 2 555 01 48',
@@ -279,8 +407,6 @@ export const V2_LOADS: V2Load[] = [
       contact: '+31 20 488 12 34',
       note: 'Gate E · Bay 5',
     },
-    payoutDate: '30 Oct',
-    payoutMethod: 'IBAN ••4821',
     documents: [
       { id: 'cmr', name: 'CMR consignment note', detail: 'Prefilled · Sign at pickup' },
       { id: 'instructions', name: 'Loading instructions', detail: 'Side loading · 15 pallets' },
@@ -290,22 +416,20 @@ export const V2_LOADS: V2Load[] = [
     id: 'lille-paris',
     company: 'Flandre Express',
     rating: 4.8,
-    rate: 310,
-    perKm: 3.05,
-    km: 102,
-    from: 'Lille',
-    to: 'Paris',
-    date: isoDayOffset(1),
-    window: '18:00–19:00',
-    pickupTime: pickupTimestamp(isoDayOffset(1), '18:00–19:00'),
-    deliveryDate: isoDayOffset(1),
-    deliveryWindow: '21:00–22:00',
+    rate: 520,
+    km: 225,
     pickupKm: 8,
     pickupMin: 12,
+    from: 'Lille',
+    to: 'Paris',
+    pickupOffsetMin: 1_620,
+    deliveryOffsetMin: 1_800,
+    pickupDurationMin: 60,
+    deliveryDurationMin: 60,
     vehicle: 'Van · 3.5 t · 6 pallets',
-    paidIn: 'Paid in 7 days',
-    decideMin: 60,
-    approvalsBy: '16:00',
+    paymentTermDays: 7,
+    decideMin: 720,
+    payoutMethod: 'IBAN ••4821',
     pickupSite: {
       address: 'Rue des Champs 12, 59000 Lille',
       contact: '+33 3 20 11 22 33',
@@ -316,11 +440,27 @@ export const V2_LOADS: V2Load[] = [
       contact: '+33 1 44 20 55 66',
       note: 'Gate D · Bay 6 · Call on arrival',
     },
-    payoutDate: '22 Oct',
-    payoutMethod: 'IBAN ••4821',
     documents: [
       { id: 'cmr', name: 'CMR consignment note', detail: 'Prefilled · Sign at pickup' },
       { id: 'instructions', name: 'Loading instructions', detail: 'Rear loading · 6 pallets' },
     ],
   },
 ];
+
+const BOOT = new Date();
+export const V2_LOADS: V2Load[] = SEEDS.map((seed) => makeLoad(seed, BOOT));
+
+/** True once the offer cannot be picked up any more. */
+export function isPickupClosed(load: V2Load, now: Date = new Date()): boolean {
+  return Date.parse(load.pickupEndsAt) <= now.getTime();
+}
+
+/** True when the driver cannot physically reach the pickup before the window closes. */
+export function isPickupUnreachable(load: V2Load, now: Date = new Date()): boolean {
+  return now.getTime() + load.pickupMin * 60_000 > Date.parse(load.pickupEndsAt);
+}
+
+/** True once both approvals are impossible — the application must expire. */
+export function isApprovalClosed(load: V2Load, now: Date = new Date()): boolean {
+  return Date.parse(load.approvalsAt) <= now.getTime();
+}

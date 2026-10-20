@@ -9,6 +9,14 @@ export type LoadApplication = {
   loadId: string;
   status: ApplicationStatus;
   submittedAt: string | null;
+  /** When both approvals landed. Cancellation grace is measured from here, not from apply. */
+  confirmedAt?: string;
+  /** The deadline snapshot taken at apply time, so a reload cannot move it. */
+  approvalsDeadline?: string;
+  /** Terminal expiry timestamp. */
+  expiredAt?: string;
+  /** Driver asked the dispatcher to review a declined/expired decision. */
+  dispute?: { message: string; at: string; status: 'sent' };
   tripId?: string;
   /** Driver-controlled operational milestone, separate from dispatcher approval and payment. */
   tripStage?: 'confirmed' | 'at-pickup' | 'loaded' | 'at-delivery' | 'delivered';
@@ -58,7 +66,17 @@ const KEY = 'pharos-driver-prototype';
 
 const initial: AppState = {
   contactProfile: { phone: '', email: '' },
-  payoutMethods: [],
+  // The demo driver has already been paid for two trips, so a verified destination
+  // must exist. Starting with an empty wallet contradicted its own ledger and made
+  // the first application impossible until the driver found Balance.
+  payoutMethods: [{
+    kind: 'iban',
+    id: 'iban-demo-fr',
+    iban: 'FR7630006000011234567890189',
+    label: 'Business account',
+    isDefault: true,
+    verified: true,
+  }],
   ledger: [],
   payoutSchedule: { mode: 'off' },
   scheduledRuns: [],
@@ -167,13 +185,30 @@ export const store = {
     const next = { ...memory, ...patch, applications: { ...memory.applications, ...patch.applications } };
     for (const id of removeApplicationIds) delete next.applications[id];
     if (next.loadId && next.status && !removeApplicationIds.includes(next.loadId)) {
+      const existing = next.applications[next.loadId];
       next.applications[next.loadId] = {
-        ...next.applications[next.loadId],
-        loadId: next.loadId, status: next.status, submittedAt: next.submittedAt,
+        ...existing,
+        loadId: next.loadId,
+        status: next.status,
+        // A status advance must not erase the original submit time with a stale
+        // top-level `submittedAt`; only an explicit patch may replace it.
+        ...('submittedAt' in patch
+          ? { submittedAt: next.submittedAt }
+          : { submittedAt: existing?.submittedAt ?? next.submittedAt }),
         ...(next.status === ApplicationStatus.CONFIRMED
-          ? { tripId: next.applications[next.loadId]?.tripId ?? `TR-${next.loadId}` }
+          ? {
+              tripId: existing?.tripId ?? `TR-${next.loadId}`,
+              confirmedAt: existing?.confirmedAt ?? new Date().toISOString(),
+            }
           : {}),
       };
+    }
+    // A confirmed application gets its confirmation clock even when it arrives in
+    // a bulk `applications` patch (demo controls, multi-application flows).
+    for (const [id, application] of Object.entries(next.applications)) {
+      if (application.status === ApplicationStatus.CONFIRMED && !application.confirmedAt) {
+        next.applications[id] = { ...application, confirmedAt: new Date().toISOString() };
+      }
     }
     next.contactProfile = normalizeContactProfile(next.contactProfile);
     if (Array.isArray(next.payoutMethods)) next.payoutMethods = next.payoutMethods.map(normalizePayoutMethod);

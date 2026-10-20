@@ -352,17 +352,17 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
 
               {cancelled && (
                 <p className="mt-[8px] text-body-14 opacity-80">
-                  This trip is no longer active.
+                  This trip was cancelled. No payout is due.
                 </p>
               )}
 
               <p className="mt-[6px] text-metric-28 text-[var(--color-text-inverse)]">
-                €{load.rate}
+                €{cancelled ? '0' : load.rate}
               </p>
               <p className="text-caption-12 opacity-90">
-                {load.km} km loaded · €{load.perKm.toFixed(2)}/km
+                {cancelled ? 'No payout for a cancelled trip' : `${load.km} km loaded · €${load.netPerKm.toFixed(2)}/km net`}
               </p>
-              <PayoutRow load={load} compact />
+              {!cancelled && <PayoutRow load={load} compact />}
             </section>
           </div>
 
@@ -595,7 +595,7 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
           ))}
         </div>
         {delayError && <p role="alert" className="mt-[12px] text-body-14 text-[var(--color-text-danger)]">{delayError}</p>}
-        <p className="mt-[12px] text-caption-12 text-[var(--color-text-secondary)]">No dispatcher is notified when you cancel here.</p>
+        <p className="mt-[12px] text-caption-12 text-[var(--color-text-secondary)]">Your dispatcher sees the new ETA. The customer is not notified automatically.</p>
         <div className="mt-[16px] flex flex-col gap-[8px]">
           <Button label={savingDelay ? 'Sending…' : 'Send to dispatcher'} loading={savingDelay} onClick={() => { void submitDelay(); }} />
           <Button label="Keep driving" appearance="secondary" disabled={savingDelay} onClick={() => setDelayOpen(false)} />

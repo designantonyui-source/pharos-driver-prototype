@@ -85,6 +85,8 @@ export function ApplicationProgress({
         className="flex w-full list-none flex-col gap-[var(--spacing-8)] p-0"
         aria-label={`${label}: step ${position} of ${rows.length}`}
       >
+        {/* ProgressStep already renders the <li>; wrapping it produced a nested list
+            item (React DOM warning) and doubled the step semantics for screen readers. */}
         {rows.map(([state, title], i) => (
           <ProgressStep
             key={title}

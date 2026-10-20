@@ -13,12 +13,13 @@ import { useEffect, useState } from 'react';
 import { Button } from '../Button';
 import { Icon } from '../Icon';
 import { Sheet } from './Sheet';
+import { FEED_FILTER_LABELS } from '../../lib/v2/feed';
 
 export type FilterId = 'rate' | 'near';
 
 export const FILTERS: { id: FilterId; label: string; section: string }[] = [
-  { id: 'rate', label: '€3+/km', section: 'Minimum rate' },
-  { id: 'near', label: 'Under 30 km', section: 'Pickup distance' },
+  { id: 'rate', label: FEED_FILTER_LABELS.rate, section: 'Minimum rate (after deadhead)' },
+  { id: 'near', label: FEED_FILTER_LABELS.near, section: 'Pickup distance' },
 ];
 
 export function FiltersSheet({

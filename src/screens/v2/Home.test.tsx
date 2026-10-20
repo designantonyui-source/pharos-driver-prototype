@@ -3,20 +3,15 @@
  * tokens: inherited from Home
  *
  * The invariant this file locks down: **a count shown on a button is a
- * promise, and the feed has to keep it.**
- *
- * The bug: the direction sheet counted an empty destination as "every
- * destination" (6 loads) while the feed resolved an empty destination to the
- * default one (2 loads) — so the button said "Show 6 loads" and the feed then
- * showed 2. The filters sheet had the same shape: it counted the whole
- * catalogue (4) and the feed applied the committed direction (2).
+ * promise, and the feed has to keep it.** The feed has one direction model:
+ * an empty route is `Anywhere → Anywhere`, never a hidden home city.
  */
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { store } from '../../lib/store';
 import { ApplicationStatus } from '../../lib/models';
-import { Home, resolveDestination } from './Home';
+import { Home } from './Home';
 
 let router: ReturnType<typeof createMemoryRouter>;
 
@@ -31,46 +26,46 @@ function setup() {
 beforeEach(() => { localStorage.clear(); store.reset(); });
 afterEach(() => { cleanup(); router?.dispose(); localStorage.clear(); store.reset(); });
 
-it('resolves an empty destination to the default one', () => {
-  expect(resolveDestination('')).toBe('Brussels');
-  expect(resolveDestination('   ')).toBe('Brussels');
-  expect(resolveDestination(' Paris ')).toBe('Paris');
+it('empty direction reads Anywhere → Anywhere, never a hidden city', async () => {
+  setup();
+  await screen.findAllByRole('article');
+  expect(screen.getByRole('button', { name: /Direction: Anywhere → Anywhere, 4 of 4 loads/ })).toBeTruthy();
+  expect(screen.getAllByRole('article')).toHaveLength(4);
 });
 
 it('keeps the direction sheet count equal to the loads the feed shows', async () => {
   setup();
-  await screen.findByRole('button', { name: /Direction:/ });
-  const feedCount = () => screen.getAllByRole('article').length;
+  await screen.findAllByRole('article');
 
-  fireEvent.click(screen.getByRole('button', { name: /Direction:/ }));
-  const sheet = await screen.findByRole('dialog', { name: 'Change direction' });
-  // Clearing the destination must not inflate the promise: it falls back to the
-  // default destination, so the count has to fall back with it.
-  fireEvent.change(screen.getByLabelText('To', { exact: true }), { target: { value: '' } });
-  await waitFor(() => {
-    const cta = screen.getByRole('button', { name: /Show \d+ loads?/ });
-    const promised = Number((cta.textContent ?? '').match(/Show (\d+)/)![1]);
-    expect(promised).toBe(feedCount());
-  });
-  expect(sheet).toBeTruthy();
-});
-
-it('keeps the sheet count on a non-default direction when To is cleared', async () => {
-  setup();
-  await screen.findByRole('button', { name: /Direction:/ });
-  // Commit a non-default destination: the previous rule resolved an empty
-  // draft to the global default and promised "Show 2 loads" over a 1-load feed.
   fireEvent.click(screen.getByRole('button', { name: /Direction:/ }));
   await screen.findByRole('dialog', { name: 'Change direction' });
   fireEvent.change(screen.getByLabelText('To', { exact: true }), { target: { value: 'Amsterdam' } });
-  fireEvent.click(screen.getByRole('button', { name: /Show \d+ loads?/ }));
+  fireEvent.click(screen.getByRole('heading', { name: 'Change direction' }));
+  const cta = screen.getByRole('button', { name: 'Show 1 load' });
+  expect(cta).toBeTruthy();
+  fireEvent.click(cta);
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: /Direction: Anywhere → Amsterdam, 1 of 6 loads/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Direction: Anywhere → Amsterdam, 1 of 1 loads/ })).toBeTruthy();
+    expect(screen.getAllByRole('article')).toHaveLength(1);
   });
-  // Reopen, clear To: empty keeps Amsterdam on apply, so the count must be 1.
+});
+
+it('clearing To keeps the committed direction and its one-load count', async () => {
+  setup();
+  await screen.findAllByRole('article');
+  fireEvent.click(screen.getByRole('button', { name: /Direction:/ }));
+  await screen.findByRole('dialog', { name: 'Change direction' });
+  fireEvent.change(screen.getByLabelText('To', { exact: true }), { target: { value: 'Amsterdam' } });
+  fireEvent.click(screen.getByRole('heading', { name: 'Change direction' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Show 1 load' }));
+  await waitFor(() => {
+    expect(screen.getByRole('button', { name: /Direction: Anywhere → Amsterdam, 1 of 1 loads/ })).toBeTruthy();
+  });
+
   fireEvent.click(screen.getByRole('button', { name: /Direction:/ }));
   await screen.findByRole('dialog', { name: 'Change direction' });
   fireEvent.change(screen.getByLabelText('To', { exact: true }), { target: { value: '' } });
+  fireEvent.click(screen.getByRole('heading', { name: 'Change direction' }));
   await waitFor(() => {
     expect(screen.getByRole('button', { name: 'Show 1 load' })).toBeTruthy();
   });
@@ -78,26 +73,22 @@ it('keeps the sheet count on a non-default direction when To is cleared', async 
 
 it('keeps the filters count equal to the loads the feed shows', async () => {
   setup();
-  await screen.findByRole('button', { name: /Direction:/ });
-  const feedCount = () => screen.getAllByRole('article').length;
-
+  await screen.findAllByRole('article');
   fireEvent.click(screen.getByRole('button', { name: 'Filters' }));
   await screen.findByRole('dialog', { name: 'Filters' });
-  fireEvent.click(screen.getByRole('button', { name: '€3+/km' }));
+  fireEvent.click(screen.getByRole('button', { name: '€2.50+/km net' }));
+  const cta = await screen.findByRole('button', { name: 'Show 1 load' });
+  fireEvent.click(cta);
   await waitFor(() => {
-    const cta = screen.getByRole('button', { name: /Show \d+ loads?/ });
-    const promised = Number((cta.textContent ?? '').match(/Show (\d+)/)![1]);
-    expect(promised).toBe(feedCount());
+    expect(screen.getByRole('button', { name: /Direction: Anywhere → Anywhere, 1 of 4 loads/ })).toBeTruthy();
+    expect(screen.getAllByRole('article')).toHaveLength(1);
   });
 });
 
 it('keeps the badge denominator equal to the loads that still exist', async () => {
   setup();
-  await screen.findByRole('button', { name: /Direction:/ });
-  // Two loads on the Brussels direction out of six in the catalogue.
-  expect(screen.getByRole('button', { name: /Direction: Anywhere → Brussels, 2 of 6 loads/ })).toBeTruthy();
-  // Dismiss one of the two: the feed shows 1, and the denominator has to drop
-  // with it. "1 of 6" would claim six loads still exist while five remain.
+  await screen.findAllByRole('article');
+  expect(screen.getByRole('button', { name: /Direction: Anywhere → Anywhere, 4 of 4 loads/ })).toBeTruthy();
   act(() => store.set({
     applications: {
       'paris-brussels': {
@@ -109,6 +100,6 @@ it('keeps the badge denominator equal to the loads that still exist', async () =
     },
   }));
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: /Direction: Anywhere → Brussels, 1 of 5 loads/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Direction: Anywhere → Anywhere, 3 of 3 loads/ })).toBeTruthy();
   });
 });

@@ -14,10 +14,10 @@ describe('FiltersSheet draft semantics', () => {
         <FiltersSheet open active={['rate']} countFor={countFor} onApply={onApply} onClose={() => undefined} />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('button', { name: '€3+/km, selected. Activate to remove.' })).toBeVisible();
+    expect(screen.getByRole('button', { name: '€2.50+/km net, selected. Activate to remove.' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Show 2 loads' })).toBeEnabled();
     // Toggling the draft updates the preview live, before Apply.
-    fireEvent.click(screen.getByRole('button', { name: '€3+/km, selected. Activate to remove.' }));
+    fireEvent.click(screen.getByRole('button', { name: '€2.50+/km net, selected. Activate to remove.' }));
     expect(screen.getByRole('button', { name: 'Show 3 loads' })).toBeEnabled();
     fireEvent.click(screen.getByRole('button', { name: 'Show 3 loads' }));
     expect(onApply).toHaveBeenCalledWith([]);
@@ -294,9 +294,9 @@ describe('RouteSheet draft semantics', () => {
     );
     const recent = within(screen.getByRole('region', { name: 'Recent directions' }));
     // The committed route is not offered back to itself.
-    expect(recent.queryByRole('button', { name: /Anywhere to Brussels/ })).toBeNull();
+    expect(recent.queryByRole('button', { name: /Anywhere → Brussels/ })).toBeNull();
     // Tap fills the fields instead of applying behind your back.
-    fireEvent.click(recent.getByRole('button', { name: 'Paris to Brussels, 1 load' }));
+    fireEvent.click(recent.getByRole('button', { name: 'Paris → Brussels, 1 load' }));
     expect(screen.getByLabelText('From')).toHaveValue('Paris');
     expect(screen.getByLabelText('To')).toHaveValue('Brussels');
     expect(onApply).not.toHaveBeenCalled();

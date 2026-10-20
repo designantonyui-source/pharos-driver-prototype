@@ -22,7 +22,7 @@ beforeEach(() => { store.reset(); });
 afterEach(() => { cleanup(); router?.dispose(); vi.restoreAllMocks(); store.reset(); });
 
 it('saves a threshold rule and fires it on evaluation', async () => {
-  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank' });
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank', scaToken: await api.authorizeSca('payout-method') });
   setup();
   await screen.findByText('Manual only');
   fireEvent.click(screen.getByRole('radio', { name: /Auto at/ }));
@@ -30,21 +30,21 @@ it('saves a threshold rule and fires it on evaluation', async () => {
   expect((await api.getSchedule()).mode).toBe('threshold');
   const run = await api.evaluateSchedule();
   expect(run?.trigger).toBe('threshold');
-  expect(run?.amount).toBeCloseTo(500, 2);
+  expect(run?.amount).toBeCloseTo(720, 2);
   expect((await api.getBalance()).available).toBeCloseTo(0, 2);
   const runs = await api.getScheduledRuns();
   expect(runs.length).toBe(1);
 });
 
 it('does not fire below the threshold and validates the method', async () => {
-  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank' });
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank', scaToken: await api.authorizeSca('payout-method') });
   await api.updateSchedule({ mode: 'threshold', threshold: 5000, methodId: null });
   expect(await api.evaluateSchedule()).toBeNull();
   await expect(api.updateSchedule({ mode: 'threshold', threshold: 100, methodId: 'nope' })).rejects.toThrow('Unknown payout method');
 });
 
 it('fires the weekly rule once per Friday', async () => {
-  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank' });
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank', scaToken: await api.authorizeSca('payout-method') });
   await api.updateSchedule({ mode: 'weekly', weekday: 'friday', methodId: null });
   const friday = new Date(2026, 9, 9, 12, 0, 0);
   const run = await api.evaluateSchedule(friday);
@@ -74,7 +74,7 @@ it('exports the full statement CSV for the accountant', async () => {
 });
 
 it('explains the empty auto-runs state before the first run', async () => {
-  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank' });
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank', scaToken: await api.authorizeSca('payout-method') });
   setup();
   await screen.findByText('Export monthly statement (CSV)');
   expect(screen.getByText(/No auto runs yet/)).toBeTruthy();

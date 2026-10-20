@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApplicationStatus } from '../../lib/models';
 import { store, type LoadApplication } from '../../lib/store';
-import { V2_LOADS } from '../../lib/v2/loads';
+import { V2_LOADS, dayLabel } from '../../lib/v2/loads';
 import { CARD_STATE_STYLES, LoadCard, cityLabel, crossBorder, routeAriaLabel, sortLoadsByApplication } from './LoadCard';
 import { SmartLoadList } from './SmartLoadList';
 
@@ -12,7 +12,7 @@ afterEach(() => { store.reset(); vi.useRealTimers(); });
 const load = { ...V2_LOADS[0], onRoute: true, pickupTime: '2026-10-10T14:00:00Z' };
 
 const cases = [
-  [null, 'available', 'On your route', 'Apply for €360', false],
+  [null, 'available', 'On your route', `Apply for €${load.rate}`, false],
   [ApplicationStatus.SENT, 'pending', 'In review', 'Application sent', true],
   [ApplicationStatus.DISPATCHER_REVIEW, 'pending', 'In review', 'Application sent', true],
   [ApplicationStatus.CUSTOMER_REVIEW, 'pending', 'In review', 'Application sent', true],
@@ -64,12 +64,12 @@ describe('LoadCard states', () => {
     expect(route).toHaveTextContent(load.from);
     expect(route).toHaveTextContent(load.to);
     expect(route).not.toHaveTextContent('FR → BE');
-    expect(screen.getByText(`€${load.perKm.toFixed(2)}/km`)).toBeVisible();
+    expect(screen.getByText(`€${load.netPerKm.toFixed(2)}/km net`)).toBeVisible();
     expect(screen.getByText(`Pickup · ${load.pickupKm} km away`)).toBeVisible();
     expect(screen.getByText(`Drop-off · ${load.km} km`)).toBeVisible();
     expect(screen.getByText(`€${load.rate}`)).toBeVisible();
-    expect(screen.getByText(`Today ${load.window}`)).toBeVisible();
-    expect(screen.getByText('Today 14:00–15:00, 111 km loaded, 18 km 25 minutes to pickup')).toBeInTheDocument();
+    expect(screen.getByText(`${dayLabel(load.date)} ${load.window}`)).toBeVisible();
+    expect(screen.getByText(`${dayLabel(load.date)} ${load.window}, ${load.km} km loaded, ${load.pickupKm} km ${load.pickupMin} minutes to pickup`)).toBeInTheDocument();
     const trust = container.querySelector('article > p.text-label-14');
     expect(trust).toBeVisible();
     expect(screen.getByText('NordCargo')).toHaveClass('font-semibold');
@@ -93,12 +93,13 @@ describe('LoadCard states', () => {
 
   it('far pickup reads semibold warning, near pickup semibold success, mid stays plain', () => {
     const { rerender } = render(<MemoryRouter><LoadCard load={{ ...V2_LOADS[1], onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
-    expect(screen.getByText('Today 16:00–17:00, 68 km loaded, 42 km 45 minutes to pickup')).toBeInTheDocument();
-    const far = screen.getByText('Pickup · 42 km away');
+    const farLoad = V2_LOADS[1];
+    expect(screen.getByText(`${dayLabel(farLoad.date)} ${farLoad.window}, ${farLoad.km} km loaded, ${farLoad.pickupKm} km ${farLoad.pickupMin} minutes to pickup`)).toBeInTheDocument();
+    const far = screen.getByText(`Pickup · ${farLoad.pickupKm} km away`);
     expect(far).toHaveClass('font-semibold');
     expect(far?.className).toMatch(/status-warning-text/);
     rerender(<MemoryRouter><LoadCard load={{ ...load, onRoute: false }} isOnRoute={false} onOpen={() => undefined} /></MemoryRouter>);
-    const near = screen.getByText('Pickup · 18 km away');
+    const near = screen.getByText(`Pickup · ${load.pickupKm} km away`);
     expect(near).toHaveClass('font-semibold');
     expect(near?.className).toMatch(/status-success-text/);
   });
@@ -166,9 +167,9 @@ describe('LoadCard states', () => {
     fireEvent.click(screen.getByRole('article'));
     expect(onOpen).toHaveBeenCalledWith(load);
     onOpen.mockClear();
-    fireEvent.click(screen.getByRole('button', { name: 'Apply for €360' }));
+    fireEvent.click(screen.getByRole('button', { name: `Apply for €${load.rate}` }));
     expect(screen.getByRole('heading', { name: 'Apply for Lille → Brussels' })).toBeVisible();
-    fireEvent.click(screen.getByText('Vehicle matches the load'));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onOpen).not.toHaveBeenCalled();
   });
 });

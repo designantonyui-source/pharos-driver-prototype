@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getLoad } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { getApplicationForLoad, store, useStore } from '../../lib/store';
+import { isPickupClosed, isPickupUnreachable } from '../../lib/v2/loads';
 import { Button } from '../Button';
 import { QuickApplyModal } from './QuickApplyModal';
 
@@ -24,7 +25,17 @@ export function LoadCta({ loadId, onNotice }: { loadId: string; onNotice?: (titl
   const statusPath = `/application/${loadId}${search}`;
   const status = application?.status;
   const waiting = status === ApplicationStatus.SENT || status === ApplicationStatus.DISPATCHER_REVIEW || status === ApplicationStatus.CUSTOMER_REVIEW;
-  const canReapply = status === ApplicationStatus.CANCELLED || status === ApplicationStatus.REJECTED || status === ApplicationStatus.EXPIRED;
+  // EXPIRED is terminal: the approval window is gone, so "Apply again" would be a lie.
+  const canReapply = status === ApplicationStatus.CANCELLED || status === ApplicationStatus.REJECTED;
+  // A live offer can still die while the feed is open — re-render once a minute.
+  const [, setMinute] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => setMinute((n) => n + 1), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const closed = !!load && isPickupClosed(load);
+  const unreachable = !!load && !closed && isPickupUnreachable(load);
+  const blockedReason = closed ? 'Pickup window closed' : unreachable ? 'Can’t reach pickup in time' : null;
 
   function selectApplication() {
     if (application) store.set(application);
@@ -51,7 +62,9 @@ export function LoadCta({ loadId, onNotice }: { loadId: string; onNotice?: (titl
           <Link to={statusPath} onClick={selectApplication} className="text-center text-label-14 text-[var(--color-action-primary)] underline">
             View reason
           </Link>
-          <Button label="Apply again" onClick={() => setOpen(true)} />
+          {blockedReason
+            ? <Button label={blockedReason} disabled />
+            : <Button label="Apply again" onClick={() => setOpen(true)} />}
         </>
       ) : status === ApplicationStatus.EXPIRED ? (
         <>
@@ -59,10 +72,13 @@ export function LoadCta({ loadId, onNotice }: { loadId: string; onNotice?: (titl
           <Link to={statusPath} onClick={selectApplication} className="text-center text-label-14 text-[var(--color-action-primary)] underline">
             View status
           </Link>
-          <Button label="Apply again" onClick={() => setOpen(true)} />
         </>
       ) : (
-        <Button label={canReapply ? 'Apply again' : load ? `Apply for €${load.rate}` : 'Loading load details…'} disabled={!load} onClick={() => setOpen(true)} />
+        <Button
+          label={blockedReason ?? (canReapply ? 'Apply again' : load ? `Apply for €${load.rate}` : 'Loading load details…')}
+          disabled={!load || !!blockedReason}
+          onClick={() => setOpen(true)}
+        />
       )}
       {open && load && createPortal(
         <QuickApplyModal loadId={loadId} load={load} onCancel={() => setOpen(false)} onAlreadyApplied={() => { setOpen(false); notifyAlreadyApplied(); }} onSubmitted={() => { setOpen(false); navigate(statusPath); }} />,

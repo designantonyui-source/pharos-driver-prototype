@@ -12,7 +12,7 @@ export type PayoutMethod =
 
 /** One ledger line: a paid trip, a pending trip, a withdrawal, or an adjustment. */
 export type LedgerEntry =
-  | { kind: 'trip'; id: string; loadId: string; company: string; from: string; to: string; amount: number; status: 'available' | 'pending'; paidAt: string | null; day: string }
+  | { kind: 'trip'; id: string; loadId: string; company: string; from: string; to: string; amount: number; status: 'available' | 'pending'; paidAt: string | null; day: string; dueAt?: string; paymentTermDays?: number }
   | { kind: 'withdrawal'; id: string; amount: number; fee: number; methodLabel: string; rail: 'sepa' | 'instant-card'; status: 'processing' | 'delayed' | 'done' | 'failed' | 'returned'; createdAt: string; expectedAt?: string; idempotencyKey?: string; failReason?: string; feeRefunded?: boolean }
   | { kind: 'adjustment'; id: string; amount: number; reason: 'dispute' | 'damage' | 'bonus' | 'correction'; note: string; relatedLoadId: string | null; status: 'applied'; createdAt: string };
 

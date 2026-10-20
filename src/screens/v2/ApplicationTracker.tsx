@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ApplicationProgress, type ApplicationStage } from '../../components/ApplicationProgress';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/Icon';
 import { V2BackBar } from '../../components/layout/NavigationBar';
 import { CancelApplicationSheet } from '../../components/v2/CancelApplicationSheet';
+import { Sheet } from '../../components/v2/Sheet';
 import { Toast, useToast } from '../../components/v2/Toast';
 import { V2Frame } from '../../components/v2/V2Frame';
-import { advanceStatus, cancelApplication, getLoads } from '../../lib/api';
+import { cancelApplication, disputeApplication, getLoads } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
-import { store, useStore } from '../../lib/store';
-import { dayLabel, type V2Load } from '../../lib/v2/loads';
+import { useStore } from '../../lib/store';
+import { dayLabel, deadlineLabel, type V2Load } from '../../lib/v2/loads';
 
 /**
  * v2 · ApplicationTracker — one status screen for every application outcome (replaces Pending screens).
@@ -69,10 +70,13 @@ const CANCELLABLE = new Set<ApplicationStatus>([
 export function ApplicationTrackerView({
   status,
   load,
+  approvalsBy,
+  disputeSent = false,
   onCancel,
   onViewTrip,
   onSimilarLoads,
   onContactDispatcher,
+  onDispute = async () => undefined,
   listPath = '/v2',
   cancelling = false,
   cancelError = null,
@@ -80,10 +84,14 @@ export function ApplicationTrackerView({
 }: {
   status: ApplicationStatus;
   load: V2Load;
+  /** Snapshot taken at apply time; falls back to the load for legacy applications. */
+  approvalsBy?: string;
+  disputeSent?: boolean;
   onCancel: () => void;
   onViewTrip: () => void;
   onSimilarLoads: () => void;
   onContactDispatcher: () => void;
+  onDispute?: (message: string) => Promise<void>;
   listPath?: string;
   cancelling?: boolean;
   cancelError?: string | null;
@@ -94,9 +102,31 @@ export function ApplicationTrackerView({
   const positive = status === ApplicationStatus.CONFIRMED;
   const rejected = status === ApplicationStatus.REJECTED;
   const expired = status === ApplicationStatus.EXPIRED;
+  const deadline = approvalsBy ?? deadlineLabel(load.approvalsAt);
   const { toast, show, dismiss } = useToast();
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [disputeOpen, setDisputeOpen] = useState(false);
+  const [disputeText, setDisputeText] = useState('');
+  const [disputeSending, setDisputeSending] = useState(false);
+  const [disputeError, setDisputeError] = useState<string | null>(null);
+  const disputeId = useId();
   const closeCancel = useCallback(() => { if (!cancelling) setCancelOpen(false); }, [cancelling]);
+
+  async function sendDispute() {
+    if (disputeSending) return;
+    setDisputeError(null);
+    setDisputeSending(true);
+    try {
+      await onDispute(disputeText);
+      setDisputeOpen(false);
+      setDisputeText('');
+      show({ tone: 'success', title: 'Dispute sent', detail: 'A dispatcher will review the decision.' });
+    } catch (error) {
+      setDisputeError(error instanceof Error ? error.message : 'Could not send the dispute.');
+    } finally {
+      setDisputeSending(false);
+    }
+  }
 
   return (
     <V2Frame active="Loads">
@@ -129,12 +159,18 @@ export function ApplicationTrackerView({
 
           {waiting ? (
             <p className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-subtle)] p-[12px] text-body-14 text-[var(--color-text-secondary)]">
-              Average response time: ~15 min · Application closes unless both approve by {load.approvalsBy}.
+              Average response time: ~15 min · Application closes unless both approve by {deadline}.
             </p>
           ) : null}
           {expired ? (
             <p className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-subtle)] p-[12px] text-body-14 text-[var(--color-text-secondary)]">
-              Needed both approvals by {load.approvalsBy}. You can apply again or find a similar load.
+              Needed both approvals by {deadline}. This application is closed; the load itself is no longer available.
+              You can find a similar load.
+            </p>
+          ) : null}
+          {disputeSent ? (
+            <p className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-status-success-bg)] p-[12px] text-body-14 text-[var(--color-status-success-text)]" role="status">
+              Dispute sent. A dispatcher will review the decision.
             </p>
           ) : null}
         </main>
@@ -143,11 +179,14 @@ export function ApplicationTrackerView({
           {rejected ? (
             <>
               <Button label="Back to loads" onClick={onSimilarLoads} />
-              <Button label="Dispute decision" appearance="secondary" onClick={() => show({ tone: 'info', title: 'Disputing a decision is not connected yet.' })} />
+              {!disputeSent && <Button label="Dispute decision" appearance="secondary" onClick={() => setDisputeOpen(true)} />}
             </>
           ) : null}
           {expired ? (
-            <Button label="Back to loads" onClick={onSimilarLoads} />
+            <>
+              <Button label="Find similar loads" onClick={onSimilarLoads} />
+              {!disputeSent && <Button label="Dispute decision" appearance="secondary" onClick={() => setDisputeOpen(true)} />}
+            </>
           ) : null}
           {positive ? <Button label="View trip" onClick={onViewTrip} /> : null}
           <Button
@@ -178,6 +217,28 @@ export function ApplicationTrackerView({
         onConfirm={onCancel}
         onClose={closeCancel}
       />
+      <Sheet open={disputeOpen} onClose={() => { if (!disputeSending) setDisputeOpen(false); }} label="Dispute decision">
+        <h2 className="text-heading-20 text-[var(--color-text-primary)]">Dispute this decision</h2>
+        <p className="mt-[8px] text-body-14 text-[var(--color-text-secondary)]">
+          Tell the dispatcher what should be reviewed. This does not reopen the load or change the decision by itself.
+        </p>
+        <label htmlFor={disputeId} className="mt-[16px] block text-label-14 text-[var(--color-text-primary)]">
+          What should the dispatcher review?
+        </label>
+        <textarea
+          id={disputeId}
+          value={disputeText}
+          onChange={(event) => setDisputeText(event.target.value)}
+          rows={4}
+          placeholder="For example: the dispatcher approved but the customer never confirmed."
+          className="mt-[8px] w-full resize-none rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-bg-surface)] p-[12px] text-body-14 text-[var(--color-text-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+        />
+        {disputeError && <p className="mt-[8px] text-body-14 text-[var(--color-text-danger)]" role="alert">{disputeError}</p>}
+        <div className="mt-[20px] flex flex-col gap-[8px]">
+          <Button label="Send dispute" loading={disputeSending} disabled={disputeSending || !disputeText.trim()} onClick={sendDispute} />
+          <Button label="Cancel" appearance="secondary" disabled={disputeSending} onClick={() => setDisputeOpen(false)} />
+        </div>
+      </Sheet>
       <Toast toast={toast} onClose={dismiss} />
     </V2Frame>
   );
@@ -204,28 +265,12 @@ export function ApplicationTracker() {
     return () => { active = false; };
   }, [loadAttempt]);
 
-  const status = state.applications[id]?.status ?? (state.loadId === id ? state.status : null);
+  const application = state.applications[id] ?? null;
+  const status = application?.status ?? (state.loadId === id ? state.status : null);
   const load = loads?.find((item) => item.id === id);
-
-  useEffect(() => {
-    if (state.loadId !== id || !status) return;
-
-    const nextStatus = status === ApplicationStatus.SENT
-      ? ApplicationStatus.DISPATCHER_REVIEW
-      : status === ApplicationStatus.DISPATCHER_REVIEW
-        ? (scenario === 'reject' ? ApplicationStatus.REJECTED : ApplicationStatus.CONFIRMED)
-        : null;
-    if (!nextStatus) return;
-
-    // Production integration point: replace this demo timer with a WebSocket/Firebase subscription.
-    const timer = window.setTimeout(() => {
-      const current = store.get();
-      if (current.loadId !== id || current.status !== status) return;
-      void advanceStatus(nextStatus, id, status);
-    }, 5000);
-
-    return () => window.clearTimeout(timer);
-  }, [id, state.loadId, status, scenario]);
+  // Status moves only through the presenter controls (Demo panel) or a real
+  // dispatcher event. The old 5-second timer confirmed a load while the driver
+  // was still reading the screen — a prototype artifact, not a product behaviour.
 
   async function handleCancel() {
     if (cancelling) return;
@@ -242,7 +287,21 @@ export function ApplicationTracker() {
   }
 
   if (status && load) {
-    return <ApplicationTrackerView status={status} load={load} onCancel={handleCancel} cancelError={cancelError} canCancel={state.loadId === id} listPath={listPath} onSimilarLoads={() => navigate(listPath)} onViewTrip={() => navigate(`/trip/${id}`)} onContactDispatcher={() => navigate(`/trip/${id}/chat`)} cancelling={cancelling} />;
+    return <ApplicationTrackerView
+      status={status}
+      load={load}
+      approvalsBy={application?.approvalsDeadline ? deadlineLabel(application.approvalsDeadline) : load.approvalsBy}
+      disputeSent={application?.dispute?.status === 'sent'}
+      onCancel={handleCancel}
+      cancelError={cancelError}
+      canCancel
+      listPath={listPath}
+      onSimilarLoads={() => navigate(listPath)}
+      onViewTrip={() => navigate(`/trip/${id}`)}
+      onContactDispatcher={() => navigate(`/trip/${id}/chat`)}
+      onDispute={(message) => disputeApplication(id, message).then(() => undefined)}
+      cancelling={cancelling}
+    />;
   }
 
   return (

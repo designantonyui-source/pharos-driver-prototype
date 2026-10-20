@@ -8,7 +8,7 @@
  */
 import { ApplicationStatus } from './models';
 import { store, type LoadApplication, type Status } from './store';
-import { V2_LOADS, type V2Load } from './v2/loads';
+import { V2_LOADS, isPickupClosed, isPickupUnreachable, type V2Load } from './v2/loads';
 import { BL_ORDERS, type BlOrder } from './bl/logic';
 import { createDemoInvoice } from './invoices';
 import { aiDispatcherReply, chatId, seedThread, type ChatMessage } from './chat';
@@ -35,7 +35,7 @@ export const payoutProvider: PayoutProvider = new MockPayoutProvider();
  */
 export const OWNER_DRIVER_ASSUMPTION = Object.freeze({
   role: 'owner-driver',
-  carrier: 'Northway Freight SPRL',
+  carrier: 'Northway Freight SAS',
   note: 'Assumption: the driver receives trip revenue and manages payout details.',
 });
 
@@ -69,8 +69,8 @@ function seedLedger(): LedgerEntry[] {
   const now = Date.now();
   const iso = (ms: number) => new Date(ms).toISOString();
   return [
-    { kind: 'trip', id: 'trip-belroute-1184', loadId: 'belroute', company: 'BelRoute', from: 'Ghent', to: 'Antwerp', amount: 210, status: 'available', paidAt: iso(now - 6 * DAY_MS), day: 'Sat' },
-    { kind: 'trip', id: 'trip-calais-0932', loadId: 'calais-lille', company: 'Côte Fret', from: 'Calais', to: 'Lille', amount: 290, status: 'available', paidAt: iso(now - 9 * DAY_MS), day: 'Sun' },
+    { kind: 'trip', id: 'trip-belroute-1184', loadId: 'belroute', company: 'BelRoute', from: 'Ghent', to: 'Antwerp', amount: 290, status: 'available', paidAt: iso(now - 6 * DAY_MS), day: 'Sat', paymentTermDays: 14, dueAt: iso(now - 6 * DAY_MS) },
+    { kind: 'trip', id: 'trip-calais-0932', loadId: 'calais-lille', company: 'Côte Fret', from: 'Calais', to: 'Lille', amount: 430, status: 'available', paidAt: iso(now - 9 * DAY_MS), day: 'Sun', paymentTermDays: 7, dueAt: iso(now - 9 * DAY_MS) },
   ];
 }
 
@@ -82,7 +82,7 @@ function ensureLedger(): LedgerEntry[] {
   return store.get().ledger;
 }
 
-export type BalanceSummary = { available: number; pending: number; currency: 'EUR' };
+export type BalanceSummary = { available: number; pending: number; pendingDueAt: string | null; currency: 'EUR' };
 
 /** Available = settled trips ± adjustments minus active withdrawals.
  * Returned payouts give the amount back; the fee stays debited unless feeRefunded. */
@@ -91,10 +91,14 @@ export async function getBalance(): Promise<BalanceSummary> {
   const ledger = ensureLedger();
   let available = 0;
   let pending = 0;
+  let pendingDueAt: string | null = null;
   for (const entry of ledger) {
     if (entry.kind === 'trip') {
       if (entry.status === 'available') available += entry.amount;
-      else pending += entry.amount;
+      else {
+        pending += entry.amount;
+        if (entry.dueAt && (!pendingDueAt || Date.parse(entry.dueAt) < Date.parse(pendingDueAt))) pendingDueAt = entry.dueAt;
+      }
     } else if (entry.kind === 'withdrawal') {
       if (entry.status === 'returned') {
         available -= entry.feeRefunded ? 0 : entry.fee;
@@ -105,7 +109,7 @@ export async function getBalance(): Promise<BalanceSummary> {
       available += entry.amount;
     }
   }
-  return { available: Math.max(0, available), pending, currency: 'EUR' };
+  return { available: Math.max(0, available), pending, pendingDueAt, currency: 'EUR' };
 }
 
 export async function getLedger(): Promise<LedgerEntry[]> {
@@ -121,7 +125,7 @@ export async function getPayoutMethods(): Promise<PayoutMethod[]> {
 }
 
 export async function getDefaultMethod(): Promise<PayoutMethod | null> {
-  const methods = await getPayoutMethods();
+  const methods = (await getPayoutMethods()).filter(m => m.verified);
   return methods.find(m => m.isDefault) ?? methods[0] ?? null;
 }
 
@@ -135,8 +139,33 @@ function newId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
 }
 
-/** Add an IBAN method (verifying -> verified after a mock check). */
-export async function addIbanMethod(input: { iban: string; label: string }) {
+/**
+ * SCA (PSD2 strong customer authentication) prototype.
+ *
+ * Real SCA is a bank challenge bound to one operation: a fresh, single-use token.
+ * Here `authorizeSca` stands in for Face ID / bank-app approval and returns an
+ * operation-scoped token; the sensitive API calls refuse to proceed without one.
+ * The UI must show the ScaSheet before calling it. A recurring auto-withdraw runs
+ * under a standing mandate (`sca_standing_mandate`), not a per-run challenge.
+ */
+export type ScaPurpose = 'payout-method' | 'withdrawal';
+
+export function isScaToken(token: string | undefined): boolean {
+  return typeof token === 'string' && /^sca_[a-z_-]+_\d+$/.test(token);
+}
+
+export function scaRequired(): PayoutError {
+  return new PayoutError('SCA_REQUIRED', 'Confirm this change with your bank first.');
+}
+
+export async function authorizeSca(purpose: ScaPurpose): Promise<string> {
+  await wait(650);
+  return `sca_${purpose}_${Date.now()}`;
+}
+
+/** Add an IBAN method (verifying -> verified after a mock check). SCA-gated. */
+export async function addIbanMethod(input: { iban: string; label: string; scaToken?: string }) {
+  if (!isScaToken(input.scaToken)) throw scaRequired();
   await wait(300);
   const compact = input.iban.replace(/[\s-]/g, '').toUpperCase();
   const method: PayoutMethod = normalizePayoutMethod({
@@ -151,8 +180,9 @@ export async function addIbanMethod(input: { iban: string; label: string }) {
   return (await getPayoutMethods()).find(m => m.id === method.id)!;
 }
 
-/** Add a card from a one-time token (PAN never stored — see profile.tokeniseCard). */
-export async function addCardMethod(input: { token: string; last4: string; brand: string; label: string }) {
+/** Add a card from a one-time token (PAN never stored — see profile.tokeniseCard). SCA-gated. */
+export async function addCardMethod(input: { token: string; last4: string; brand: string; label: string; scaToken?: string }) {
+  if (!isScaToken(input.scaToken)) throw scaRequired();
   await wait(300);
   if (!input.token || !/^\d{4}$/.test(input.last4) || !input.brand) throw new Error('Invalid card token');
   const method: PayoutMethod = normalizePayoutMethod({
@@ -181,7 +211,8 @@ export async function removeMethod(id: string): Promise<PayoutMethod[]> {
 }
 
 /** Legacy single-IBAN writer — kept so old callers keep compiling during Wave 1. */
-export async function updatePayoutMethod(input: { iban: string; label: string }) {
+export async function updatePayoutMethod(input: { iban: string; label: string; scaToken?: string }) {
+  if (!isScaToken(input.scaToken)) throw scaRequired();
   await wait(100);
   const compact = input.iban.replace(/[\s-]/g, '').toUpperCase();
   if (!compact) {
@@ -261,7 +292,9 @@ export async function evaluateSchedule(now = new Date()): Promise<ScheduledRun |
   }
   if (!due) return null;
   const amount = Math.floor(available * 100) / 100;
-  const { entry } = await requestWithdrawal(amount, method.id);
+  // Auto-withdraw runs under the standing mandate the driver set up with SCA;
+  // a per-run challenge would make the schedule useless.
+  const { entry } = await requestWithdrawal(amount, method.id, 'sca_standing_mandate_0');
   const run: ScheduledRun = {
     id: `run-${Date.now().toString(36)}`,
     at: new Date().toISOString(),
@@ -332,7 +365,7 @@ export function ledgerToCsv(ledger: LedgerEntry[]): string {
 }
 
 export class PayoutError extends Error {
-  readonly code: 'NO_METHOD' | 'BELOW_MINIMUM' | 'INSUFFICIENT' | 'INVALID_AMOUNT';
+  readonly code: 'NO_METHOD' | 'BELOW_MINIMUM' | 'INSUFFICIENT' | 'INVALID_AMOUNT' | 'SCA_REQUIRED';
   constructor(code: PayoutError['code'], message: string) {
     super(message);
     this.code = code;
@@ -349,7 +382,8 @@ export function maxWithdrawalFor(available: number, fee: number): number {
  *  executes via the provider, appends a `processing` ledger line.
  *  The fee counts toward the balance: amount + fee must fit available.
  *  No real money moves — the mock returns `mock_sepa_*` / `mock_card_*` refs. */
-export async function requestWithdrawal(amount: number, methodId?: string) {
+export async function requestWithdrawal(amount: number, methodId?: string, scaToken?: string) {
+  if (!isScaToken(scaToken)) throw scaRequired();
   const rounded = Math.round(amount * 100) / 100;
   if (!Number.isFinite(rounded) || rounded <= 0) throw new PayoutError('INVALID_AMOUNT', 'Enter an amount greater than EUR 0.');
   const methods = await getPayoutMethods();
@@ -464,11 +498,18 @@ export async function updateDriverProfile(contact: ContactProfile) {
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Driver v2: loads near the driver, already sorted by what pays best per km. */
+/** Driver v2: loads near the driver, sorted by net rate after the empty run. */
 let loadsCache: Promise<V2Load[]> | null = null;
-export function getLoads(): Promise<V2Load[]> {
-  loadsCache ??= wait(300).then(() => [...V2_LOADS].sort((a, b) => b.perKm - a.perKm));
-  return loadsCache;
+export async function getLoads(): Promise<V2Load[]> {
+  loadsCache ??= wait(300).then(() => [...V2_LOADS].sort((a, b) => b.netPerKm - a.netPerKm));
+  const loads = await loadsCache;
+  // A live feed read is the natural point to reconcile deadlines. Without this,
+  // an application whose approval window passed would still say "Awaiting".
+  expireApplications();
+  // Paid trips are not inventory. Seed the demo ledger here so BelRoute/Côte Fret
+  // leave the feed even when the driver never opened Balance first.
+  ensureLedger();
+  return loads;
 }
 
 export async function searchLoads(route: { from: string; to: string }) {
@@ -499,8 +540,59 @@ export class AlreadyAppliedError extends Error {
   constructor() { super('ALREADY_APPLIED'); }
 }
 
+export type ApplicationErrorCode =
+  | 'NO_PAYOUT_METHOD'
+  | 'PICKUP_CLOSED'
+  | 'PICKUP_UNREACHABLE'
+  | 'APPROVALS_CLOSED';
+
+export class ApplicationError extends Error {
+  readonly code: ApplicationErrorCode;
+  constructor(code: ApplicationErrorCode, message: string) {
+    super(message);
+    this.code = code;
+  }
+}
+
 export function getLoad(loadId: string): V2Load | null {
   return V2_LOADS.find((load) => load.id === loadId) ?? null;
+}
+
+const WAITING_STATUSES = [
+  ApplicationStatus.SENT,
+  ApplicationStatus.DISPATCHER_REVIEW,
+  ApplicationStatus.CUSTOMER_REVIEW,
+];
+
+/**
+ * Deadline reconciliation, called on every feed read. An application cannot stay
+ * "awaiting" after both approvals are impossible. The deadline is snapshotted on
+ * the application at apply time; legacy applications fall back to the load.
+ */
+export function expireApplications(now = Date.now()): number {
+  const current = store.get();
+  let changed = 0;
+  let changedActive = false;
+  const applications: Record<string, LoadApplication> = {};
+  for (const application of Object.values(current.applications)) {
+    if (!WAITING_STATUSES.includes(application.status)) continue;
+    const deadline = application.approvalsDeadline ?? getLoad(application.loadId)?.approvalsAt;
+    if (!deadline || Date.parse(deadline) > now) continue;
+    applications[application.loadId] = {
+      ...application,
+      status: ApplicationStatus.EXPIRED,
+      expiredAt: new Date(now).toISOString(),
+    };
+    changed += 1;
+    if (current.loadId === application.loadId) changedActive = true;
+  }
+  if (changed > 0) {
+    store.set({
+      applications,
+      ...(changedActive ? { status: ApplicationStatus.EXPIRED } : {}),
+    });
+  }
+  return changed;
 }
 
 export async function submitApplication(loadId: string) {
@@ -511,10 +603,36 @@ export async function submitApplication(loadId: string) {
   if (existing && !existing.dismissed && [ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REVIEW, ApplicationStatus.CUSTOMER_REVIEW, ApplicationStatus.CONFIRMED].includes(existing.status) && !existing.cancelledAfterConfirm) {
     throw new AlreadyAppliedError();
   }
+  const load = getLoad(loadId);
+  if (!load) throw new ApplicationError('PICKUP_CLOSED', 'This load is no longer available.');
+  if (Date.parse(load.approvalsAt) <= Date.now()) {
+    throw new ApplicationError('APPROVALS_CLOSED', 'The application window has closed.');
+  }
+  if (isPickupClosed(load)) {
+    throw new ApplicationError('PICKUP_CLOSED', 'The pickup window has closed.');
+  }
+  if (isPickupUnreachable(load)) {
+    throw new ApplicationError('PICKUP_UNREACHABLE', 'You cannot reach this pickup before the window closes.');
+  }
+  // Money rule: no verified destination, no application. Confirming a trip we
+  // cannot pay creates a support case, not a booking.
+  if (!store.get().payoutMethods.some((method) => method.verified)) {
+    throw new ApplicationError('NO_PAYOUT_METHOD', 'Add a verified payout method before applying.');
+  }
   const submittedAt = new Date().toISOString();
-  store.set({ loadId, status: ApplicationStatus.SENT, submittedAt, applications: {
-    [loadId]: { loadId, status: ApplicationStatus.SENT, submittedAt },
-  } });
+  store.set({
+    loadId,
+    status: ApplicationStatus.SENT,
+    submittedAt,
+    applications: {
+      [loadId]: {
+        loadId,
+        status: ApplicationStatus.SENT,
+        submittedAt,
+        approvalsDeadline: load.approvalsAt,
+      },
+    },
+  });
   return { loadId, status: ApplicationStatus.SENT };
 }
 
@@ -573,7 +691,8 @@ export async function getTripDetails(loadId: string) {
   const load = getLoad(loadId);
   if (!load) return null;
   const application = store.getApplicationForLoad(loadId);
-  if (!application || application.status !== ApplicationStatus.CONFIRMED) return null;
+  const isCancelledTrip = application?.status === ApplicationStatus.CANCELLED && application.cancelledAfterConfirm;
+  if (!application || (application.status !== ApplicationStatus.CONFIRMED && !isCancelledTrip)) return null;
   return {
     load,
     application,
@@ -598,7 +717,10 @@ export async function setEnRoute(loadId: string, destination: 'pickup' | 'delive
 
 /** Preview-only cancellation consequence calculation, shared by confirmation UI and action. */
 export function cancellationPenalty(application: LoadApplication, pickupTime?: string, now = Date.now()): CancelTripPenalty {
-  const confirmedAt = application.submittedAt ? Date.parse(application.submittedAt) : NaN;
+  // Grace is measured from confirmation, not from applying. Those can be hours apart.
+  const confirmedAt = application.confirmedAt
+    ? Date.parse(application.confirmedAt)
+    : application.submittedAt ? Date.parse(application.submittedAt) : NaN;
   const pickupAt = pickupTime ? Date.parse(pickupTime) : NaN;
   const minsSinceConfirm = Number.isFinite(confirmedAt) ? (now - confirmedAt) / 60_000 : Infinity;
   const hoursToPickup = Number.isFinite(pickupAt) ? (pickupAt - now) / 3_600_000 : NaN;
@@ -642,8 +764,10 @@ export async function advanceTripStage(loadId: string, expected: TripStage, next
     // The demo invoice is created alongside so trip, ledger and invoice always agree.
     const load = getLoad(loadId);
     if (load && !current.ledger.some((entry) => entry.kind === 'trip' && entry.loadId === loadId)) {
+      const tripId = application.tripId ?? `TR-${loadId}`;
+      const dueAt = new Date(Date.parse(deliveredAt) + load.paymentTermDays * DAY_MS).toISOString();
       ledger = [
-        ...current.ledger,
+        ...ledger,
         {
           kind: 'trip' as const,
           id: `trip-${loadId}-${Date.parse(deliveredAt)}`,
@@ -655,11 +779,18 @@ export async function advanceTripStage(loadId: string, expected: TripStage, next
           status: 'pending' as const,
           paidAt: null,
           day: new Date(deliveredAt).toLocaleDateString('en-GB', { weekday: 'short' }),
+          paymentTermDays: load.paymentTermDays,
+          dueAt,
         },
       ];
       await createDemoInvoice({
-        loadId, company: load.company, from: load.from, to: load.to,
-        amount: load.rate, buyerVat: 'BE 0987.654.321',
+        loadId,
+        tripId,
+        company: load.company,
+        from: load.from,
+        to: load.to,
+        amount: load.rate,
+        paymentTermDays: load.paymentTermDays,
       });
     }
   }
@@ -841,9 +972,18 @@ export async function cancelTrip(loadId: string, reason: NonNullable<LoadApplica
   if (!application || application.status !== ApplicationStatus.CONFIRMED) {
     throw new Error('No confirmed trip to cancel');
   }
+  if (application.tripStage === 'delivered') {
+    throw new Error('A delivered trip cannot be cancelled');
+  }
   const load = getLoad(loadId);
   const penalty = cancellationPenalty(application, load?.pickupTime);
+  // A cancelled trip never pays. Remove its pending line instead of leaving
+  // phantom money in Balance, and void any invoice already generated.
+  const ledger = current.ledger.filter((entry) => !(entry.kind === 'trip' && entry.loadId === loadId && entry.status === 'pending'));
+  const { voidInvoiceForLoad } = await import('./invoices');
+  await voidInvoiceForLoad(loadId);
   store.set({
+    ledger,
     // Keep the most recently active application untouched when cancelling a different trip.
     ...(current.loadId === loadId ? { status: ApplicationStatus.CANCELLED } : {}),
     applications: {
@@ -855,18 +995,43 @@ export async function cancelTrip(loadId: string, reason: NonNullable<LoadApplica
       },
     },
   });
-  return { loadId, status: ApplicationStatus.CANCELLED, penalty };
+  return { loadId, status: ApplicationStatus.CANCELLED, penalty, payout: 0 };
 }
 
 export async function cancelApplication(loadId: string) {
   await wait(300);
   const current = store.get();
-  if (current.loadId !== loadId || !current.status) throw new Error('Application not found');
-  if (![ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REVIEW, ApplicationStatus.CUSTOMER_REVIEW].includes(current.status)) {
+  const application = current.applications[loadId];
+  if (!application) throw new Error('Application not found');
+  if (!WAITING_STATUSES.includes(application.status)) {
     throw new Error('This application can no longer be cancelled');
   }
-  store.set({ status: ApplicationStatus.CANCELLED });
+  store.set({
+    ...(current.loadId === loadId ? { status: ApplicationStatus.CANCELLED } : {}),
+    applications: {
+      [loadId]: { ...application, status: ApplicationStatus.CANCELLED },
+    },
+  });
   return { loadId, status: ApplicationStatus.CANCELLED };
+}
+
+/**
+ * Driver asks a human to review a declined or expired decision. Prototype: the
+ * request is stored on the application and a system line is kept with the trip
+ * conversation when one exists. Nothing is transmitted anywhere.
+ */
+export async function disputeApplication(loadId: string, message: string) {
+  await wait(300);
+  const current = store.get();
+  const application = current.applications[loadId];
+  if (!application) throw new Error('Application not found');
+  if (![ApplicationStatus.REJECTED, ApplicationStatus.EXPIRED].includes(application.status)) {
+    throw new Error('Only a declined or expired application can be disputed');
+  }
+  if (!message.trim()) throw new Error('Tell the dispatcher what to review.');
+  const dispute = { message: message.trim(), at: new Date().toISOString(), status: 'sent' as const };
+  store.set({ applications: { [loadId]: { ...application, dispute } } });
+  return { loadId, dispute };
 }
 
 export async function getApplication() {
@@ -877,11 +1042,28 @@ export async function getApplication() {
 export async function advanceStatus(status: Status, loadId?: string, expectedStatus?: Status) {
   await wait(300);
   const current = store.get();
-  if (!current.loadId || (loadId && current.loadId !== loadId)) throw new Error('No active application');
-  if (expectedStatus && current.status !== expectedStatus) {
-    return { status: current.status, updated: false };
+  const id = loadId ?? current.loadId;
+  if (!id) throw new Error('No active application');
+  const application = current.applications[id];
+  if (!application) throw new Error('No active application');
+  if (expectedStatus && application.status !== expectedStatus) {
+    return { status: application.status, updated: false };
   }
-  store.set({ status });
+  // The presenter can click after the deadline; the deadline still wins.
+  const deadline = application.approvalsDeadline ?? getLoad(id)?.approvalsAt;
+  if (WAITING_STATUSES.includes(application.status) && deadline && Date.parse(deadline) <= Date.now()) {
+    store.set({
+      ...(current.loadId === id ? { status: ApplicationStatus.EXPIRED } : {}),
+      applications: {
+        [id]: { ...application, status: ApplicationStatus.EXPIRED, expiredAt: new Date().toISOString() },
+      },
+    });
+    return { status: ApplicationStatus.EXPIRED, updated: false };
+  }
+  store.set({
+    ...(current.loadId === id ? { status } : {}),
+    applications: { [id]: { ...application, status } },
+  });
   return { status, updated: true };
 }
 

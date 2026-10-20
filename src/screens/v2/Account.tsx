@@ -111,7 +111,7 @@ export function Account({ detail = false }: { detail?: boolean }) {
   }
   return <AccountFrame title="Account">
     {profile ? <>
-      <Link to="/v2/account/profile" aria-label="Open profile" className="mt-[var(--spacing-8)] block rounded-[var(--radius-md)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] focus-visible:outline-offset-4"><DriverProfile {...profile} verified verifiedStyle="inline" /></Link>
+      <Link to="/v2/account/profile" aria-label="Open profile" className="mt-[var(--spacing-8)] block rounded-[var(--radius-md)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] focus-visible:outline-offset-4"><DriverProfile {...profile} verified={false} verifiedStyle="inline" /></Link>
       <AccountSection label="Loads">
         <MenuRow to="/v2/account/dismissed" icon="eye" title="Dismissed loads" detail={dismissedCount > 0 ? `${dismissedCount} hidden from your feed` : 'Loads you hid from your feed'} badge={dismissedCount} />
         <MenuRow to="/v2" icon="search" title="Find loads" detail="Back to the loads feed" last />
@@ -122,10 +122,6 @@ export function Account({ detail = false }: { detail?: boolean }) {
       <AccountSection label="Profile">
         <MenuRow to="/v2/account/profile" icon="user-round" title="Profile" detail={`${profile.phone || 'No phone'} · ${profile.email || 'No email'}`} />
         <MenuRow to="/v2/account/profile/edit" icon="settings" title="Contact details" detail="Phone and email on this device" last />
-      </AccountSection>
-      <AccountSection label="Preferences">
-        <MenuRow to="/v2/account" icon="bell" title="Notifications" detail="Push and email updates" />
-        <MenuRow to="/v2/account" icon="languages" title="Language" detail="English" last />
       </AccountSection>
       <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Contact details stay on this device.</p>
     </> : <ProfileStatus error={error} retry={retry} />}

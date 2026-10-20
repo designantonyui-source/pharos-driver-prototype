@@ -30,6 +30,7 @@ import { Icon } from '../Icon';
 import { Sheet } from './Sheet';
 import { timeAgo } from '../../lib/v2/loads';
 import { KNOWN_CITIES } from '../../lib/v2/cities';
+import { directionLabel } from '../../lib/v2/feed';
 
 function CityField({
   id,
@@ -284,11 +285,17 @@ export function RouteSheet({
   const toLabel = toDraft.trim() || value.to;
   const withoutOrigin = countFor({ from: '', to: toDraft });
   const defaultRoute = countFor({ from: '', to: value.to });
+  // When the active filters make even the destination empty, dropping both
+  // fields is the only honest way back to inventory — and the button has to say
+  // so, not promise loads toward a town with none.
+  const anywhere = countFor({ from: '', to: '' });
   const recovery = withoutOrigin > 0
     ? { label: `Show ${withoutOrigin} ${withoutOrigin === 1 ? 'load' : 'loads'} toward ${toLabel}`, route: { from: '', to: toDraft.trim() || value.to } }
-    : defaultRoute > 0
+    : value.to.trim() && defaultRoute > 0
       ? { label: `Show ${defaultRoute} ${defaultRoute === 1 ? 'load' : 'loads'} toward ${value.to}`, route: { from: '', to: value.to } }
-      : null;
+      : anywhere > 0
+        ? { label: `Show ${anywhere} ${anywhere === 1 ? 'load' : 'loads'} anywhere`, route: { from: '', to: '' } }
+        : null;
 
   return (
     <Sheet open={open} onClose={onClose} label="Change direction">
@@ -337,14 +344,14 @@ export function RouteSheet({
           <ul className="mt-[8px] flex flex-col gap-[4px]">
             {recents.map(({ route, matches }) => {
               const dead = matches === 0;
-              const fromLabel = route.from.trim() || 'Anywhere';
+              const label = directionLabel(route.from, route.to);
               return (
                 <li key={`${route.from}→${route.to}`}>
                   <button
                     type="button"
                     disabled={dead}
                     onClick={() => { setFromDraft(route.from); setToDraft(route.to); closeSuggestions(); }}
-                    aria-label={`${fromLabel} to ${route.to}, ${dead ? 'no loads' : `${matches} ${matches === 1 ? 'load' : 'loads'}`}${route.at ? `, ${timeAgo(route.at)}` : ''}`}
+                    aria-label={`${label}, ${dead ? 'no loads' : `${matches} ${matches === 1 ? 'load' : 'loads'}`}${route.at ? `, ${timeAgo(route.at)}` : ''}`}
                     className={`flex min-h-[44px] w-full items-center gap-[8px] rounded-[var(--radius-md)] px-[12px] text-left text-body-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${
                       dead
                         ? 'cursor-not-allowed text-[var(--color-text-disabled)]'
@@ -353,7 +360,7 @@ export function RouteSheet({
                   >
                     <Icon name="clock" size="sm" className="shrink-0 text-[var(--color-text-secondary)]" />
                     <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate">{fromLabel} → {route.to}</span>
+                      <span className="truncate">{label}</span>
                       {route.at && <span className="text-caption-12 text-[var(--color-text-secondary)]">{timeAgo(route.at)}</span>}
                     </span>
                     <span className="shrink-0 text-caption-12 text-[var(--color-text-secondary)]">

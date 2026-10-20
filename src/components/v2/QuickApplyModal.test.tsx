@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { submitApplication } from '../../lib/api';
@@ -25,16 +26,18 @@ describe('QuickApplyModal', () => {
     });
 
     render(
-      <QuickApplyModal
-        loadId={load.id}
-        load={load}
-        onCancel={vi.fn()}
-        onSubmitted={onSubmitted}
-      />,
+      <MemoryRouter>
+        <QuickApplyModal
+          loadId={load.id}
+          load={load}
+          onCancel={vi.fn()}
+          onSubmitted={onSubmitted}
+        />
+      </MemoryRouter>,
     );
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText(`${load.from} → ${load.to}`)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${load.from} → ${load.to}`))).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send application' })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: 'Send application' }));
@@ -45,12 +48,14 @@ describe('QuickApplyModal', () => {
 
   it('disables submission until load data is available', async () => {
     render(
-      <QuickApplyModal
-        loadId="nordcargo"
-        load={null}
-        onCancel={vi.fn()}
-        onSubmitted={vi.fn()}
-      />,
+      <MemoryRouter>
+        <QuickApplyModal
+          loadId="nordcargo"
+          load={null}
+          onCancel={vi.fn()}
+          onSubmitted={vi.fn()}
+        />
+      </MemoryRouter>,
     );
 
     const submitButton = screen.getByRole('button', { name: 'Send application' });
@@ -66,12 +71,14 @@ describe('QuickApplyModal', () => {
     const onCancel = vi.fn();
 
     render(
-      <QuickApplyModal
-        loadId={V2_LOADS[0].id}
-        load={V2_LOADS[0]}
-        onCancel={onCancel}
-        onSubmitted={vi.fn()}
-      />,
+      <MemoryRouter>
+        <QuickApplyModal
+          loadId={V2_LOADS[0].id}
+          load={V2_LOADS[0]}
+          onCancel={onCancel}
+          onSubmitted={vi.fn()}
+        />
+      </MemoryRouter>,
     );
 
     await user.click(screen.getByRole('button', { name: 'Cancel' }));

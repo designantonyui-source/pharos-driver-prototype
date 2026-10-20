@@ -74,10 +74,27 @@ describe('ApplicationTrackerView notices', () => {
     expect(screen.getByText(/Application closes unless both approve by/)).toHaveTextContent(load.approvalsBy);
   });
 
-  it('shows dispute as a toast, not an alert', () => {
-    renderView(ApplicationStatus.REJECTED);
+  it('sends a dispute through the sheet', async () => {
+    const onDispute = vi.fn().mockResolvedValue(undefined);
+    render(
+      <MemoryRouter>
+        <ApplicationTrackerView
+          status={ApplicationStatus.REJECTED}
+          load={load}
+          onCancel={noop}
+          onViewTrip={noop}
+          onSimilarLoads={noop}
+          onContactDispatcher={noop}
+          onDispute={onDispute}
+        />
+      </MemoryRouter>,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Dispute decision' }));
-    expect(screen.getByRole('status')).toHaveTextContent('Disputing a decision is not connected yet.');
+    expect(screen.getByRole('dialog', { name: 'Dispute decision' })).toBeVisible();
+    fireEvent.change(screen.getByLabelText('What should the dispatcher review?'), { target: { value: 'The customer approved late.' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send dispute' }));
+    await screen.findByText('Dispute sent');
+    expect(onDispute).toHaveBeenCalledWith('The customer approved late.');
   });
 
   it('shows the expired outcome with a recovery path', () => {
@@ -97,7 +114,7 @@ describe('ApplicationTrackerView notices', () => {
     expect(screen.getByRole('heading', { name: 'Application expired' })).toBeVisible();
     expect(screen.getByText(/Needed both approvals by/)).toHaveTextContent(load.approvalsBy);
     expect(screen.queryByRole('button', { name: 'Cancel application' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Back to loads' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Find similar loads' }));
     expect(onSimilar).toHaveBeenCalledTimes(1);
   });
 });

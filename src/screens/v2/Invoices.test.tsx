@@ -27,23 +27,22 @@ afterEach(() => { cleanup(); router?.dispose(); vi.restoreAllMocks(); localStora
 it('lists invoices newest-first with paid history', async () => {
   setup('/v2/account/balance/invoices');
   await screen.findByText('INV-2026-0038 - BelRoute');
-  expect(screen.getAllByText('paid').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Paid').length).toBeGreaterThan(0);
   expect(screen.queryByText('pending')).toBeNull();
   fireEvent.click(screen.getByRole('link', { name: /INV-2026-0038/ }));
-  await screen.findByText('Reverse charge');
+  await screen.findByText(/TVA 21%/);
 });
 
 it('shows invoice details with parties, VAT math and actions', async () => {
   setup('/v2/account/balance/invoices/inv-2026-0038');
   await screen.findByText('INV-2026-0038', { selector: 'p.sr-only' });
-  expect(screen.getByText(/Northway Freight SPRL/)).toBeTruthy();
+  expect(screen.getByText(/Northway Freight SAS/)).toBeTruthy();
   expect(screen.getByText(/BelRoute BV/)).toBeTruthy();
-  expect(screen.getAllByText(/reverse charge/i).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/TVA 21%/).length).toBeGreaterThan(0);
   const open = vi.spyOn(window, 'open').mockReturnValue(null);
   fireEvent.click(screen.getByRole('button', { name: 'Download PDF' }));
   expect(open).toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Open trip' }));
-  await screen.findByText('Trip page');
+  expect(screen.queryByRole('button', { name: 'Open trip' })).toBeNull();
 });
 
 it('links a history trip row to its invoice', async () => {
@@ -64,6 +63,6 @@ it('exposes invoice lookup by load and accountant CSV', async () => {
   expect(csv).toContain('INV-2026-0038');
   const html = invoiceHtml(invoices[0]);
   expect(html).toContain('INV-2026-0038');
-  expect(html).toContain('reverse charge');
-  expect(html).toContain('EUR 210.00');
+  expect(html).toContain('TVA 21%');
+  expect(html).toContain('EUR 350.90');
 });

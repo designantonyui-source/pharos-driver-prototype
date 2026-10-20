@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as api from '../../lib/api';
 import { store } from '../../lib/store';
 import { ApplicationStatus } from '../../lib/models';
-import { V2_LOADS } from '../../lib/v2/loads';
+import { V2_LOADS, dayLabel } from '../../lib/v2/loads';
 import { DismissedLoads } from './DismissedLoads';
 
 const load = V2_LOADS[0];
@@ -29,7 +29,7 @@ describe('DismissedLoads', () => {
     expect(screen.getByText('No dismissed loads')).toBeTruthy();
     act(dismiss);
     expect(screen.getByText('Lille → Brussels')).toBeTruthy();
-    expect(screen.getByText('NordCargo · €360 · Today 14:00–15:00')).toBeTruthy();
+    expect(screen.getByText(`NordCargo · €${load.rate} · ${dayLabel(load.date)} ${load.window}`)).toBeTruthy();
     act(() => store.reset());
     expect(screen.getByText('No dismissed loads')).toBeTruthy();
   });

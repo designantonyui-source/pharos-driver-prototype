@@ -22,6 +22,7 @@ describe('Trips hub', () => {
   });
 
   it('shows the empty state with a CTA when there are no applications', async () => {
+    store.set({ ledger: [{ kind: 'adjustment', id: 'adj-empty', amount: 0, reason: 'correction', note: 'No trips yet', relatedLoadId: null, status: 'applied', createdAt: new Date().toISOString() }] });
     setup();
     expect(await screen.findByText('No trips yet')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Find loads' })).toBeTruthy();
@@ -36,7 +37,7 @@ describe('Trips hub', () => {
     setup();
     expect(await screen.findByText('Active trip')).toBeTruthy();
     expect(screen.getAllByText('In review').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('Past')).toBeTruthy();
+    expect(screen.getByText('Past applications')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Open trip' })).toBeTruthy();
     expect(screen.getByText('Declined')).toBeTruthy();
   });
@@ -55,7 +56,8 @@ describe('Trips hub', () => {
       nordcargo: { loadId: 'nordcargo', status: ApplicationStatus.CANCELLED, submittedAt: null, dismissed: true },
     } });
     setup();
-    expect(await screen.findByText('No trips yet')).toBeTruthy();
+    expect(await screen.findByText('Completed')).toBeTruthy();
+    expect(screen.queryByText('Cancelled')).toBeNull();
   });
 
   it('shows expired applications in Past with an Expired chip', async () => {
@@ -63,7 +65,7 @@ describe('Trips hub', () => {
       nordcargo: { loadId: 'nordcargo', status: ApplicationStatus.EXPIRED, submittedAt: null },
     } });
     setup();
-    expect(await screen.findByText('Past')).toBeTruthy();
+    expect(await screen.findByText('Past applications')).toBeTruthy();
     expect(screen.getByText('Expired')).toBeTruthy();
   });
 });

@@ -240,7 +240,7 @@ export function SmartLoadList({
           </>
         ) : (
           <div className="relative -mx-[16px] -mt-[8px] h-full min-h-[300px]">
-            <div className="absolute inset-0 overflow-hidden bg-[var(--color-map-land)]" role="group" aria-label={`Route map towards ${currentRoute.to}: ${sortedLoads.length} loads pinned`}>
+            <div className="absolute inset-0 overflow-hidden bg-[var(--color-map-land)]" role="group" aria-label={`Route map towards ${currentRoute.to || 'Anywhere'}: ${sortedLoads.length} loads pinned`}>
               <img src={mapArt} alt="" className="absolute inset-0 h-full w-full object-cover" />
               {sortedLoads.map((load) => (
                 <MapPin
@@ -255,7 +255,7 @@ export function SmartLoadList({
               ))}
             </div>
             <span className="absolute left-[28px] top-[12px] rounded-[var(--radius-pill)] bg-[var(--color-bg-surface)] px-[10px] py-[6px] text-label-12 text-[var(--color-text-primary)] shadow-card">
-              {sortedLoads.length} {sortedLoads.length === 1 ? 'load' : 'loads'} towards {currentRoute.to}
+              {sortedLoads.length} {sortedLoads.length === 1 ? 'load' : 'loads'} towards {currentRoute.to || 'Anywhere'}
             </span>
             <div className="absolute inset-x-0 bottom-0 flex snap-x snap-mandatory gap-[8px] overflow-x-auto px-[16px] pb-[12px] pt-[24px]" aria-label="Loads on map">
               {sortedLoads.map((load) => <div key={load.id} id={`map-card-${load.id}`} className="w-[280px] shrink-0 snap-center"><MapCard load={load} /></div>)}

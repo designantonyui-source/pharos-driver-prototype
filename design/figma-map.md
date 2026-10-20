@@ -105,16 +105,33 @@ No Figma node yet: these screens lead and go back to Figma afterwards. Source of
 
 | Route | Screen | Components (new, `src/components/v2/`) | Status |
 |---|---|---|---|
-| `/v2` | Loads — unified List/Map home: filters, route-match markers, quick apply, live banner; direction header states the feed (`Direction: {from → to}, {visible} of {total} loads`; empty origin reads "Anywhere"; subline names active filters or "No filters"), empty state recovers via Clear filters + Change direction | V2Frame, SmartLoadList, QuickApplyModal, LoadSheet, ApplicationBanner, Sheet, DemoToggle, RouteSheet | prototype |
-| `/application/:id` | Unified application tracker (replaces Pending screens); `?scenario=approve` (default) / `?scenario=reject`; rejection reason, similar loads and appeal mock; cancel via `CancelApplicationSheet` + info `Toast` for demo stubs | ApplicationTracker, CancelApplicationSheet, Toast | prototype |
+| `/v2` | Loads — unified List/Map home: default `Anywhere → Anywhere`, direction/filter counts from one `feed.ts`, route-match markers, quick apply, live banner; empty state recovers via Clear filters + Change direction. Filter is `€2.50+/km net`; paid trips are history, not inventory. | V2Frame, SmartLoadList, QuickApplyModal, LoadSheet, ApplicationBanner, Sheet, DemoToggle, RouteSheet | prototype |
+| `/application/:id` | Unified application tracker: live states only; `EXPIRED` is terminal, rejected/cancelled can reapply; no auto-advance (status moves through DemoPanel); cancel via `CancelApplicationSheet`, dispute via `Sheet`; ended states stay on card + Trips Past | ApplicationTracker, CancelApplicationSheet, Toast | prototype |
 | `/trip/:id` | Confirmed trip — одна скролл-поверхность: TRIP_ID + payout в summary, Trip progress stepper, Cargo, Route с адресами/контактами/гейтами + Call на стоп, En-route leg с действием прибытия, Customer + `Contact dispatcher`, Report a delay → `Sheet`, Documents через `TripDocumentsSheet`, handover + POD, Earnings после доставки, cancel через `CancelTripSheet` | TripDetails, TripDocumentsSheet, CancelTripSheet, Sheet, Toast | prototype |
 | `/trip/:id/chat` | Тред диспетчера на один рейс — полоса контекста груза, сообщения, системные строки (репорт задержки, хендофф на человека), композер; автоответы помечены «AI dispatcher» | TripChat, ChatCargoContext, MessageBubble, ChatComposer, V2BackBar | prototype |
-| `/v2/trips` | Trips (Applications + My day merged) | `screens/v2/Trips.tsx` — active hero + in-review + past, StatusBlock/empty states | prototype |
-| `/v2/account` | Account | placeholder `screens/v2/Soon.tsx` | todo |
+| `/v2/trips` | Trips hub: active hero, in-review applications, completed ledger rows (paid/pending) and past applications (rejected/expired/cancelled) | `screens/v2/Trips.tsx` — active hero + sections + StatusBlock/empty states | prototype |
+| `/v2/account` | Account hub: contact/profile, payout methods entry, dismissed loads, sign-out surface | Account, V2Frame, RowLink | prototype |
+| `/v2/account/profile` / `/edit` | Profile detail + contact edit with unsaved-changes guard | Account detail, EditContact, Input | prototype |
+| `/v2/account/dismissed` | Dismissed loads with restore | DismissedLoads | prototype |
+| `/v2/account/balance` | Balance: available/pending, verified payout method, cash-out CTA, recent activity, documents | Balance, StatusBlock, Toast | prototype |
+| `/v2/account/balance/method` | Payout methods: verified IBAN/card, default/remove, add method behind operation-scoped SCA | PayoutMethodScreen, ScaSheet | prototype |
+| `/v2/account/balance/cashout` | Manual cash out: destination rail, fee quote, confirm sheet, SCA challenge | CashOut, ScaSheet, Sheet | prototype |
+| `/v2/account/balance/withdrawals/:id` | Permanent withdrawal receipt after cash out | WithdrawalDetails | prototype |
+| `/v2/account/balance/history` | Ledger history: trips + withdrawals, invoice links | BalanceHistory, LedgerLine | prototype |
+| `/v2/account/balance/invoices` / `/:id` | Invoice list + legal invoice detail: seller/buyer registry, route VAT, PDF/CSV export, void state | InvoiceList, InvoiceDetails | prototype |
+| `/v2/account/balance/schedules` | Auto-withdraw rule, scheduled runs, accountant CSV | Schedules | prototype |
 
 ### Shared load application action
 
-`src/components/v2/LoadCta.tsx` is the sole entry CTA in SmartLoadList (list and map cards) and LoadSheet. It reads per-load applications from `store.getApplicationForLoad(loadId)`, opens QuickApplyModal, and routes to the matching tracker/trip. Pending states cannot resubmit; rejection opens the reason; cancellation permits reapplying. The API rejects duplicate pending/confirmed applications with `ALREADY_APPLIED`, including concurrent requests. Legacy single-application storage is migrated to the per-load map. No timeout/similar-load block exists in the current source tree; any future such surface should compose LoadCta.
+`src/components/v2/LoadCta.tsx` is the sole entry CTA in SmartLoadList (list and map cards) and LoadSheet. It reads per-load applications from `store.getApplicationForLoad(loadId)`, opens QuickApplyModal, and routes to the matching tracker/trip. Applying requires a verified payout method; closed or unreachable pickup blocks the CTA. Pending states cannot resubmit; rejection and cancellation can reapply; `EXPIRED` is terminal and never offers “Apply again”. The API rejects duplicate pending/confirmed applications with `ALREADY_APPLIED`, including concurrent requests. Legacy single-application storage is migrated to the per-load map. No timeout/similar-load block exists in the current source tree; any future such surface should compose LoadCta.
+
+### Feed, time and money contracts (2026-10-20)
+
+- `src/lib/v2/feed.ts` is the only source of direction, filters, counters and eligibility. The header denominator is direction-eligible loads before filters; the numerator is after filters. Empty direction reads `Anywhere → Anywhere`, never a hidden city. Completed paid/pending trips and dismissed loads are excluded from the feed.
+- `RouteSheet` opens the towns that carry loads for that half of the route, each with its live count; typing narrows the same list and dead towns appear only when asked for by name. An empty `To` draft keeps the committed destination on apply, and `countForRoute` resolves it the same way. If a dead end is caused by filters, the recovery says `Show N loads anywhere` rather than promising loads toward an empty town.
+- Live offers use relative ISO dates/windows (`V2Load.date`, `window`, `approvalsAt`); `EXPIRED` is the seventh status and terminal. No timer advances an application: the DemoPanel presenter drives dispatcher review, confirmation and expiry.
+- `ApplicationBanner` renders live states only. Ended states (rejected / expired / cancelled / cancelled-after-confirm) live on the load card and in Trips Past, never as a page banner.
+- Money: the demo starts with a verified French IBAN because its ledger already contains paid trips; a missing method blocks apply. Adding a payout method and manual cash out each require a fresh `authorizeSca(purpose)` token (`ScaSheet`); auto-withdraw uses a standing mandate. Cancelled trips pay €0, drop the pending ledger line and void the invoice. Invoice VAT is route-based (FR 20%, BE 21%, cross-border 0% reverse charge), seller is the French SAS `Northway Freight SAS`, and `overdue` is computed at read time.
 
 ### Loads feed polish (2026-10-11, measured in Chrome on the preview build)
 

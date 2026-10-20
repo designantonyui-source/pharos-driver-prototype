@@ -27,19 +27,22 @@ export const STATUS_COPY: Record<ApplicationStatus, { title: string; step: numbe
  * Ended states (rejected / expired / cancelled) render NOTHING here — the state
  * already lives on the card pill and in Trips → Past. A banner for a dead
  * application duplicates the card and its "Step 4 of 4" means nothing.
- * props: load, status, application, onOpen
+ * props: load, status, application, more, onOpen
  * tokens: color-nav-bg/text, color-status-info/warning-bg/text, radius-lg, shadow-card
  */
 export function ApplicationBanner({
   load,
   status,
   application,
+  more = 0,
   onOpen,
 }: {
   load: V2Load;
   status: ApplicationStatus;
   /** Per-load application: drives the confirmed-trip copy (stage + en-route). */
   application?: LoadApplication | null;
+  /** Other live applications. The banner shows the newest; the rest stay in Trips. */
+  more?: number;
   onOpen: () => void;
 }) {
   const { step } = STATUS_COPY[status];
@@ -59,9 +62,10 @@ export function ApplicationBanner({
     // 5 trip stages double as the floater's ступеньки: filled = passed, rest dim.
     const stepIndex = Math.max(0, TRIP_STAGE_STEPS.findIndex((s) => s.id === stage));
     const stepLabel = TRIP_STAGE_STEPS[stepIndex]?.label ?? 'Confirmed';
-    const sub = enRoute
+    const baseSub = enRoute
       ? `En route to ${enRoute} · Step ${stepIndex + 1} of ${TRIP_STAGE_STEPS.length}`
       : `${stepLabel} · Step ${stepIndex + 1} of ${TRIP_STAGE_STEPS.length}`;
+    const sub = more > 0 ? `${baseSub} · +${more} more in Trips` : baseSub;
     return (
       <button
         type="button"
@@ -107,7 +111,7 @@ export function ApplicationBanner({
   }
 
   const { title } = STATUS_COPY[status];
-  const detail = `${load.from} → ${load.to} · €${load.rate} · by ${load.approvalsBy}`;
+  const detail = `${load.from} → ${load.to} · €${load.rate} · by ${load.approvalsBy}${more > 0 ? ` · +${more} more in Trips` : ''}`;
 
   return (
     <button

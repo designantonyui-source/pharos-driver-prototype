@@ -27,6 +27,7 @@ import { Toast, useToast } from '../../components/v2/Toast';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { Sheet } from '../../components/v2/Sheet';
 import { RemoveMethodSheet } from '../../components/v2/RemoveMethodSheet';
+import { ScaSheet } from '../../components/v2/ScaSheet';
 import {
   PAYOUT_POLICY, addCardMethod, addIbanMethod, adjustmentLabel, detectCardBrand, evaluateSchedule, formatCardExpiry,
   formatCardNumber, getBalance, getLedger, getPayoutMethods, getWithdrawal, maskCard,
@@ -37,6 +38,7 @@ import {
 } from '../../lib/api';
 import { getInvoices } from '../../lib/invoices';
 import { useLedger } from '../../lib/store';
+import { shortDate } from '../../lib/v2/loads';
 
 export function formatEuro(amount: number): string {
   return `EUR ${amount.toLocaleString('en-IE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -191,7 +193,7 @@ export function Balance() {
   if (error || !summary || !methods || !recent) {
     return <BalanceFrame title="Balance"><StatusBlock error={error} retry={() => setAttempt(v => v + 1)} label="balance" /></BalanceFrame>;
   }
-  const def = methods.find(m => m.isDefault) ?? methods[0];
+  const def = methods.find(m => m.verified && m.isDefault) ?? methods.find(m => m.verified);
   const hasMethod = !!def;
   return <BalanceFrame title="Balance" toast={<Toast toast={toast} onClose={dismiss} />}>
     <div className="mt-[var(--spacing-8)] rounded-[var(--radius-md)] bg-[var(--color-nav-bg)] p-[var(--spacing-16)] text-[var(--color-nav-text)]">
@@ -200,12 +202,14 @@ export function Balance() {
         <span>Available balance</span>
       </div>
       <p className="mt-[var(--spacing-8)] text-metric-28 text-[var(--color-text-inverse)]">{formatEuro(summary.available)}</p>
-      {summary.pending > 0 && <p className="mt-[var(--spacing-8)] text-body-14 opacity-90">{formatEuro(summary.pending)} pending - released when the customer pays</p>}
+      {summary.pending > 0 && <p className="mt-[var(--spacing-8)] text-body-14 opacity-90">
+        {formatEuro(summary.pending)} pending{summary.pendingDueAt ? ` · customer payment due ${shortDate(summary.pendingDueAt)}` : ''}
+      </p>}
       <div className="mt-[var(--spacing-16)]">
         <Button label={hasMethod ? `Cash out - ${def.kind === 'card' ? PAYOUT_POLICY.cardEta : PAYOUT_POLICY.eta}` : 'Add payout method to cash out'} onClick={() => navigate(hasMethod ? '/v2/account/balance/cashout' : '/v2/account/balance/method')} />
       </div>
       {(!hasMethod || summary.available < PAYOUT_POLICY.minWithdrawal) && <p className="mt-[var(--spacing-8)] text-caption-12 opacity-80">
-        {!hasMethod ? 'SEPA to your bank or instant to your card - add a method first.' : `Minimum withdrawal is ${formatEuro(PAYOUT_POLICY.minWithdrawal)}.`}
+        {!hasMethod ? 'SEPA to your bank or instant to your card - add and verify a method first.' : `Minimum withdrawal is ${formatEuro(PAYOUT_POLICY.minWithdrawal)}.`}
       </p>}
     </div>
     <Section label="Payout methods">
@@ -248,6 +252,7 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [scaIntent, setScaIntent] = useState<'iban' | 'card' | null>(null);
   const { toast, show, dismiss } = useToast();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -266,19 +271,21 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
   const ibanCompact = iban.replace(/[\s-]/g, '');
   const ibanValid = validateIban(iban);
   const ibanShowError = ibanTouched && ibanCompact !== '' && !ibanValid;
-  async function saveIban() {
+  async function saveIban(scaToken: string) {
     if (saving || !ibanValid || !ibanCompact) return;
     setSaving(true);
     setSaveError(false);
     try {
-      await addIbanMethod({ iban: ibanCompact, label: ibanLabel });
+      await addIbanMethod({ iban: ibanCompact, label: ibanLabel, scaToken });
       await reload();
       setIban('');
       setIbanLabel('');
       setIbanTouched(false);
+      setScaIntent(null);
       show({ tone: 'success', title: 'Bank account saved', detail: 'Cash out will offer it right away.' });
     } catch {
       setSaveError(true);
+      setScaIntent(null);
     } finally {
       setSaving(false);
     }
@@ -289,14 +296,14 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
   const cardValidCvc = validateCardCvc(cardCvc, brand);
   const cardShowNumberError = cardTouched && cardNumber.replace(/\D/g, '') !== '' && !cardValidNumber;
   const cardReady = cardValidNumber && cardValidExpiry && cardValidCvc && cardHolder.trim() !== '';
-  async function saveCard() {
+  async function saveCard(scaToken: string) {
     if (saving || !cardReady) return;
     setSaving(true);
     setSaveError(false);
     try {
       // PAN is tokenised and dropped here — only the token result (last4/brand) leaves this handler.
       const { token, last4, brand: tokBrand } = tokeniseCard(cardNumber);
-      await addCardMethod({ token, last4, brand: tokBrand, label: cardLabel || cardHolder.trim() });
+      await addCardMethod({ token, last4, brand: tokBrand, label: cardLabel || cardHolder.trim(), scaToken });
       await reload();
       setCardNumber('');
       setCardExpiry('');
@@ -304,9 +311,11 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
       setCardHolder('');
       setCardLabel('');
       setCardTouched(false);
+      setScaIntent(null);
       show({ tone: 'success', title: 'Card saved', detail: 'Instant cash out is now available.' });
     } catch {
       setSaveError(true);
+      setScaIntent(null);
     } finally {
       setSaving(false);
     }
@@ -357,11 +366,11 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
       <div className="flex gap-[var(--spacing-8)] p-[var(--spacing-12)]" role="group" aria-label="Method type">
         {(['iban', 'card'] as const).map(t => <button key={t} type="button" aria-pressed={tab === t} onClick={() => setTab(t)} className={`h-[var(--size-control-mobile)] flex-1 rounded-[var(--radius-sm)] border text-label-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${tab === t ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]' : 'border-[var(--color-action-border)] text-[var(--color-action-text)]'}`}>{t === 'iban' ? `Bank (SEPA, free)` : `Card (instant, ${formatEuro(PAYOUT_POLICY.cardFee)})`}</button>)}
       </div>
-      {tab === 'iban' ? <form onSubmit={e => { e.preventDefault(); void saveIban(); }} noValidate className="flex flex-col gap-[var(--spacing-16)] p-[var(--spacing-12)]">
+      {tab === 'iban' ? <form onSubmit={e => { e.preventDefault(); if (ibanValid && ibanCompact && !saving) setScaIntent('iban'); }} noValidate className="flex flex-col gap-[var(--spacing-16)] p-[var(--spacing-12)]">
         <Input label="IBAN" value={iban} placeholder="DE89 3704 0044 0532 0130 00" state={ibanShowError ? 'error' : iban ? 'filled' : 'empty'} icon={false} hint={ibanShowError ? 'Check the IBAN - wrong check digits.' : 'We validate the check digits before saving.'} onChange={v => { setIban(v.toUpperCase()); setIbanTouched(true); setSaveError(false); }} />
         <Input label="Account nickname (optional)" value={ibanLabel} placeholder="My business account" state="empty" icon={false} hint={null} onChange={v => { setIbanLabel(v); setSaveError(false); }} />
-        <Button label={saving ? 'Saving...' : 'Add bank account'} disabled={!ibanValid || !ibanCompact || saving} loading={saving} onClick={() => void saveIban()} />
-      </form> : <form onSubmit={e => { e.preventDefault(); void saveCard(); }} noValidate className="flex flex-col gap-[var(--spacing-16)] p-[var(--spacing-12)]">
+        <Button label={saving ? 'Saving...' : 'Add bank account'} disabled={!ibanValid || !ibanCompact || saving} loading={saving} onClick={() => { if (ibanValid && ibanCompact && !saving) setScaIntent('iban'); }} />
+      </form> : <form onSubmit={e => { e.preventDefault(); if (cardReady && !saving) setScaIntent('card'); }} noValidate className="flex flex-col gap-[var(--spacing-16)] p-[var(--spacing-12)]">
         <div className="rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] p-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Card is tokenised in the form — the number never leaves this screen. Instant payout, {formatEuro(PAYOUT_POLICY.cardFee)} fee, {PAYOUT_POLICY.cardEta}.</div>
         <Input label="Card number" value={cardNumber} placeholder="4242 4242 4242 4242" state={cardShowNumberError ? 'error' : cardNumber ? 'filled' : 'empty'} icon={false} hint={cardShowNumberError ? 'Check the card number.' : brand ? `${brand} - detected automatically.` : 'Visa, Mastercard, Amex.'} onChange={v => { setCardNumber(formatCardNumber(v)); setCardTouched(true); setSaveError(false); }} />
         <div className="flex gap-[var(--spacing-8)]">
@@ -370,7 +379,7 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
         </div>
         <Input label="Cardholder name" value={cardHolder} placeholder="Alexey K." state={cardHolder ? 'filled' : 'empty'} icon={false} hint={null} onChange={v => { setCardHolder(v); setSaveError(false); }} />
         <Input label="Card nickname (optional)" value={cardLabel} placeholder="Fuel card" state="empty" icon={false} hint={null} onChange={v => { setCardLabel(v); setSaveError(false); }} />
-        <Button label={saving ? 'Saving...' : 'Add card'} disabled={!cardReady || saving} loading={saving} onClick={() => void saveCard()} />
+        <Button label={saving ? 'Saving...' : 'Add card'} disabled={!cardReady || saving} loading={saving} onClick={() => { if (cardReady && !saving) setScaIntent('card'); }} />
       </form>}
     </Section>
     {saveError && <div className="mt-[var(--spacing-16)]" role="alert"><Alert type="error" title="Could not save the method">Check your connection and try again.</Alert></div>}
@@ -383,6 +392,16 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
       onConfirm={() => void confirmRemove()}
       onClose={closeRemove}
     />
+    <ScaSheet
+      open={scaIntent !== null}
+      purpose="payout-method"
+      title={scaIntent === 'card' ? 'Confirm the new card' : 'Confirm the new bank account'}
+      summary={scaIntent === 'card'
+        ? `Add ${cardLabel || cardHolder.trim() || 'card'} ${cardNumber.replace(/\D/g, '').slice(-4) ? `••${cardNumber.replace(/\D/g, '').slice(-4)}` : ''} as a payout method.`
+        : `Add ${maskIban(ibanCompact)} as a payout method.`}
+      onAuthorized={(token) => (scaIntent === 'card' ? saveCard(token) : saveIban(token))}
+      onClose={() => { if (!saving) setScaIntent(null); }}
+    />
   </BalanceFrame>;
 }
 
@@ -394,6 +413,7 @@ export function CashOut() {
   const [touched, setTouched] = useState(false);
   const [sending, setSending] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [scaOpen, setScaOpen] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const { toast, show, dismiss } = useToast();
   const [error, setError] = useState(false);
@@ -423,7 +443,13 @@ export function CashOut() {
       <div className="mt-[var(--spacing-16)]"><Alert type="warning" title="Add a payout method first">Cash out needs a bank account or a card.<span className="mt-[var(--spacing-8)] block"><Button label="Add payout method" onClick={() => navigate('/v2/account/balance/method')} /></span></Alert></div>
     </BalanceFrame>;
   }
-  const method = methods.find(m => m.id === methodId) ?? methods.find(m => m.isDefault) ?? methods[0];
+  const usableMethods = methods.filter(m => m.verified);
+  if (usableMethods.length === 0) {
+    return <BalanceFrame title="Cash out" backTo="/v2/account/balance">
+      <div className="mt-[var(--spacing-16)]"><Alert type="warning" title="No verified payout method">Cash out opens once your bank account or card is verified.<span className="mt-[var(--spacing-8)] block"><Button label="Manage payout methods" onClick={() => navigate('/v2/account/balance/method')} /></span></Alert></div>
+    </BalanceFrame>;
+  }
+  const method = usableMethods.find(m => m.id === methodId) ?? usableMethods.find(m => m.isDefault) ?? usableMethods[0];
   const quote = quoteFor(method, Number(amount.replace(',', '.')) || 0);
   const parsed = Number(amount.replace(',', '.'));
   const validNumber = Number.isFinite(parsed) && parsed > 0;
@@ -444,11 +470,12 @@ export function CashOut() {
     if (!validNumber || belowMin || overBalance || sending) return;
     setConfirmOpen(true);
   }
-  async function confirm() {
+  async function authorize(scaToken: string) {
     setSending(true);
     setFailure(null);
     try {
-      const result = await requestWithdrawal(parsed, method.id);
+      const result = await requestWithdrawal(parsed, method.id, scaToken);
+      setScaOpen(false);
       setConfirmOpen(false);
       setSummary(await getBalance());
       setAmount('');
@@ -460,6 +487,7 @@ export function CashOut() {
         // Unit tests render CashOut without the withdrawals route — the toast confirms it.
       }
     } catch (e) {
+      setScaOpen(false);
       setConfirmOpen(false);
       setFailure(e instanceof Error ? e.message : 'Could not request the withdrawal.');
     } finally {
@@ -469,7 +497,7 @@ export function CashOut() {
   function quick(v: number) { setAmount(String(v)); setTouched(true); setFailure(null); }
   return <BalanceFrame title="Cash out" backTo="/v2/account/balance" toast={<Toast toast={toast} onClose={dismiss} />}>
     <Section label="Destination">
-      {methods.map((m, i) => <label key={m.id} className={`flex min-h-[var(--size-control-mobile)] cursor-pointer items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${i === methods.length - 1 ? '' : 'border-b border-[var(--color-border-default)]'}`}>
+      {usableMethods.map((m, i) => <label key={m.id} className={`flex min-h-[var(--size-control-mobile)] cursor-pointer items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${i === usableMethods.length - 1 ? '' : 'border-b border-[var(--color-border-default)]'}`}>
         <input type="radio" name="payout-method" checked={m.id === method.id} onChange={() => setMethodId(m.id)} className="h-[20px] w-[20px] accent-[var(--color-action-primary)]" aria-label={m.label || methodLabel(m)} />
         <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name={m.kind === 'card' ? 'wallet' : 'landmark'} size="md" /></span>
         <span className="flex min-w-0 flex-1 flex-col">
@@ -522,10 +550,18 @@ export function CashOut() {
       </dl>
       <p className="mt-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">No real money moves.</p>
       <div className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-8)]">
-        <Button label={sending ? 'Sending...' : `Confirm - ${validNumber ? formatEuro(parsed) : ''}`.trim()} loading={sending} onClick={() => void confirm()} />
+        <Button label={sending ? 'Sending...' : `Confirm - ${validNumber ? formatEuro(parsed) : ''}`.trim()} loading={sending} onClick={() => setScaOpen(true)} />
         <Button label="Keep editing" appearance="secondary" disabled={sending} onClick={() => setConfirmOpen(false)} />
       </div>
     </Sheet>
+    <ScaSheet
+      open={scaOpen}
+      purpose="withdrawal"
+      title="Confirm the cash out"
+      summary={`Cash out ${validNumber ? formatEuro(parsed) : ''} to ${method.label || methodLabel(method)}. Total debit ${validNumber ? formatEuro(Math.round((parsed + quote.fee) * 100) / 100) : '—'}.`}
+      onAuthorized={authorize}
+      onClose={() => { if (!sending) setScaOpen(false); }}
+    />
   </BalanceFrame>;
 }
 

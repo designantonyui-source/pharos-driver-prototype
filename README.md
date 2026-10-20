@@ -11,7 +11,7 @@ React 19 · TypeScript · Vite · Tailwind v4 · Storybook 10 · Playwright · V
 [![CI](https://github.com/designantonyui-source/pharos-driver-prototype/actions/workflows/pharos-validation.yml/badge.svg)](https://github.com/designantonyui-source/pharos-driver-prototype/actions/workflows/pharos-validation.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-087ea4?style=flat-square&logo=react&logoColor=white)](https://react.dev/)
-[![Tests](https://img.shields.io/badge/tests-206%20unit%20%2B%2016%20e2e-4c1?style=flat-square)](https://github.com/designantonyui-source/pharos-driver-prototype)
+[![Tests](https://img.shields.io/badge/tests-208%20unit%20%2B%2016%20e2e-4c1?style=flat-square)](https://github.com/designantonyui-source/pharos-driver-prototype)
 
 [Live prototype](https://pharos-driver-prototype.vercel.app) · [Case study](docs/CASE-STUDY.md) · [Demo script](docs/DEMO-SCRIPT.md) · [Payments vision](design/PAYMENTS-VISION.md)
 
@@ -186,7 +186,7 @@ So the card ships as the **paid speed lane** on top of a free SEPA base. The ful
 | **76 components** | each one Storybook-first, with a contract header naming its Figma node |
 | **25 screens** | every screen is a route, and every route appears in the screen index |
 | **184 design tokens** | exported from Figma → CSS, with a **token guard** that fails the build |
-| **206 unit tests** | Vitest + Testing Library, covering the money rules |
+| **208 unit tests** | Vitest + Testing Library, covering the money rules |
 | **16 E2E tests** | Playwright at 402×874 — the money loop as a user would walk it |
 | **~20k lines** | TypeScript, strict, no `any` in the payments layer |
 
@@ -239,7 +239,7 @@ POD review, payout outcome) so the whole money loop can be shown on demand.
 
 ```bash
 pnpm check         # token audit + tsc --noEmit + production build
-pnpm test          # 206 unit tests
+pnpm test          # 208 unit tests
 pnpm test:e2e      # 16 Playwright tests (needs Chrome)
 pnpm capture:case-study   # regenerate docs/screens/ from the running app
 ```

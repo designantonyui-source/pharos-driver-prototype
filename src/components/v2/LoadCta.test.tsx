@@ -17,7 +17,7 @@ function renderCta() {
 describe('LoadCta', () => {
   it('without an application shows the price and opens confirmation', () => {
     renderCta();
-    fireEvent.click(screen.getByRole('button', { name: 'Apply for €360' }));
+    fireEvent.click(screen.getByRole('button', { name: `Apply for €${V2_LOADS[0].rate}` }));
     expect(screen.getByRole('heading', { name: 'Apply for Lille → Brussels' })).toBeVisible();
   });
 
@@ -26,7 +26,7 @@ describe('LoadCta', () => {
     renderCta();
     expect(screen.getByRole('button', { name: 'Application sent' })).toBeDisabled();
     expect(screen.getByRole('link', { name: 'View status' })).toHaveAttribute('href', '/application/nordcargo');
-    expect(screen.queryByRole('button', { name: 'Apply for €360' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: `Apply for €${V2_LOADS[0].rate}` })).not.toBeInTheDocument();
   });
 
   it('CONFIRMED opens the trip', () => {
@@ -50,13 +50,12 @@ describe('LoadCta', () => {
     expect(screen.getByRole('heading', { name: 'Apply for Lille → Brussels' })).toBeVisible();
   });
 
-  it('EXPIRED disables applying, links to status and allows applying again', () => {
+  it('EXPIRED is terminal: no applying again', () => {
     store.set({ loadId: 'nordcargo', status: ApplicationStatus.EXPIRED });
     renderCta();
     expect(screen.getByRole('button', { name: 'Application expired' })).toBeDisabled();
     expect(screen.getByRole('link', { name: 'View status' })).toHaveAttribute('href', '/application/nordcargo');
-    fireEvent.click(screen.getByRole('button', { name: 'Apply again' }));
-    expect(screen.getByRole('heading', { name: 'Apply for Lille → Brussels' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Apply again' })).not.toBeInTheDocument();
   });
 
   it('updates when global application state changes', () => {
@@ -68,7 +67,7 @@ describe('LoadCta', () => {
   it('another load’s application does not disable this load', () => {
     store.set({ loadId: 'belroute', status: ApplicationStatus.SENT });
     renderCta();
-    expect(screen.getByRole('button', { name: 'Apply for €360' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: `Apply for €${V2_LOADS[0].rate}` })).toBeEnabled();
   });
 
   it('details View status opens the matching tracker and preserves the scenario', () => {
@@ -94,7 +93,7 @@ describe('LoadCta', () => {
   });
   it('portals the confirmation inside the phone frame, not document.body', () => {
     render(<MemoryRouter><div data-load-overlay-root><LoadCta loadId="nordcargo" /></div></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: 'Apply for €360' }));
+    fireEvent.click(screen.getByRole('button', { name: `Apply for €${V2_LOADS[0].rate}` }));
     const dialog = screen.getByRole('dialog');
     expect(dialog.closest('[data-load-overlay-root]')).not.toBeNull();
   });
@@ -104,7 +103,7 @@ describe('LoadCta', () => {
     try {
       const onNotice = vi.fn();
       render(<MemoryRouter><LoadCta loadId="nordcargo" onNotice={onNotice} /></MemoryRouter>);
-      fireEvent.click(screen.getByRole('button', { name: 'Apply for €360' }));
+      fireEvent.click(screen.getByRole('button', { name: `Apply for €${V2_LOADS[0].rate}` }));
       act(() => store.set({ loadId: 'nordcargo', status: ApplicationStatus.SENT }));
       fireEvent.click(screen.getByRole('button', { name: 'Send application' }));
       await act(async () => { await vi.advanceTimersByTimeAsync(600); });

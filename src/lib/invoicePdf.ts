@@ -44,16 +44,19 @@ export function invoiceHtml(invoice: Invoice): string {
   .note { margin-top: 24px; font-size: 12px; color: #586d79; border: 1px solid #d7e0e6; border-radius: 8px; padding: 12px; }
   .status { display: inline-block; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 999px; background: #e8f6ef; color: #216547; text-transform: uppercase; letter-spacing: .05em; }
   .status.pending { background: #fff4df; color: #855300; }
+  .status.overdue { background: #fdecea; color: #8a1f17; }
+  .status.void { background: #eef1f3; color: #52646f; text-decoration: line-through; }
   .foot { margin-top: 32px; font-size: 11px; color: #80929e; }
   @media print { body { padding: 0; } }
 </style></head>
 <body>
   <h1>Invoice ${invoice.number}</h1>
-  <div class="sub">Issued ${d(invoice.issuedAt)} · Due ${d(invoice.dueAt)} · <span class="status${invoice.status === 'pending' ? ' pending' : ''}">${invoice.status}</span></div>
+  <div class="sub">Issued ${d(invoice.issuedAt)} · ${invoice.status === 'void' ? 'Voided' : `Due ${d(invoice.dueAt)} (${invoice.paymentTermDays}-day terms)`} · Trip ${invoice.tripId} · <span class="status ${invoice.status}">${invoice.status}</span></div>
   <div class="grid">
     <div class="party"><h2>From</h2><strong>${invoice.seller.name}</strong><br>${invoice.seller.address}<br>VAT ${invoice.seller.vatId}</div>
     <div class="party"><h2>Bill to</h2><strong>${invoice.buyer.name}</strong><br>${invoice.buyer.address}<br>VAT ${invoice.buyer.vatId}</div>
   </div>
+  ${invoice.status === 'void' ? '<div class="note"><strong>Voided.</strong> This invoice must not be paid or sent to the customer.</div>' : ''}
   <table>
     <thead><tr><th>Description</th><th class="num">Amount</th></tr></thead>
     <tbody>${lines}</tbody>

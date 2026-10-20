@@ -28,15 +28,17 @@ beforeEach(() => { store.reset(); });
 afterEach(() => { cleanup(); router?.dispose(); vi.restoreAllMocks(); store.reset(); });
 
 it('shows available vs pending with cash out CTA and empty method state', async () => {
+  store.set({ payoutMethods: [] });
   setup('/v2/account/balance');
   await screen.findByText('Available balance');
-  expect(screen.getByText(/EUR 500\.00/)).toBeTruthy();
+  expect(screen.getByText(/EUR 720\.00/)).toBeTruthy();
   expect(screen.queryByText(/pending/)).toBeNull();
   expect(screen.getByRole('button', { name: /Add payout method to cash out/ })).toBeTruthy();
   expect(screen.getByText('Add payout method')).toBeTruthy();
 });
 
 it('adds an IBAN method with check-digit validation', async () => {
+  store.set({ payoutMethods: [] });
   setup('/v2/account/balance/method');
   await screen.findByText('Add method');
   const iban = screen.getByLabelText(/IBAN/, { exact: false });
@@ -45,7 +47,8 @@ it('adds an IBAN method with check-digit validation', async () => {
   fireEvent.change(iban, { target: { value: 'de89 3704 0044 0532 0130 00' } });
   fireEvent.change(screen.getByLabelText(/nickname/, { exact: false }), { target: { value: 'Business' } });
   fireEvent.click(screen.getByRole('button', { name: 'Add bank account' }));
-  await screen.findByText(/1 saved/);
+  fireEvent.click(await screen.findByRole('button', { name: 'Confirm with bank app' }));
+  await screen.findByText(/1 saved/, undefined, { timeout: 3000 });
   const methods = await api.getPayoutMethods();
   expect(methods.length).toBe(1);
   expect(methods[0].kind).toBe('iban');
@@ -53,6 +56,7 @@ it('adds an IBAN method with check-digit validation', async () => {
 });
 
 it('adds a card without persisting the PAN', async () => {
+  store.set({ payoutMethods: [] });
   setup('/v2/account/balance/method');
   await screen.findByText('Add method');
   fireEvent.click(screen.getByRole('button', { name: /Card \(instant/ }));
@@ -64,7 +68,8 @@ it('adds a card without persisting the PAN', async () => {
   fireEvent.change(screen.getByLabelText(/CVC/, { exact: false }), { target: { value: '123' } });
   fireEvent.change(screen.getByLabelText(/Cardholder name/, { exact: false }), { target: { value: 'Alexey K.' } });
   fireEvent.click(screen.getByRole('button', { name: 'Add card' }));
-  await screen.findByText(/1 saved/);
+  fireEvent.click(await screen.findByRole('button', { name: 'Confirm with bank app' }));
+  await screen.findByText(/1 saved/, undefined, { timeout: 3000 });
   const methods = await api.getPayoutMethods();
   expect(methods.length).toBe(1);
   expect(methods[0].kind).toBe('card');
@@ -78,9 +83,10 @@ it('adds a card without persisting the PAN', async () => {
 });
 
 it('sets default and removes methods, keeping one default', async () => {
-  await api.addIbanMethod({ iban: VALID_IBAN, label: 'First' });
+  store.set({ payoutMethods: [] });
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'First', scaToken: await api.authorizeSca('payout-method') });
   const tok = (await import('../../lib/profile')).tokeniseCard(VALID_CARD);
-  await api.addCardMethod({ ...tok, label: 'Second' });
+  await api.addCardMethod({ ...tok, label: 'Second', scaToken: await api.authorizeSca('payout-method') });
   setup('/v2/account/balance/method');
   await screen.findByText(/2 saved/);
   const defaults = screen.getAllByRole('button', { name: 'Default' });
@@ -99,7 +105,8 @@ it('sets default and removes methods, keeping one default', async () => {
  * to cash out with no explanation.
  */
 it('asks for confirmation before removing a payout method', async () => {
-  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business account' });
+  store.set({ payoutMethods: [] });
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business account', scaToken: await api.authorizeSca('payout-method') });
   setup('/v2/account/balance/method');
   await screen.findByText(/1 saved/);
 
@@ -118,7 +125,8 @@ it('asks for confirmation before removing a payout method', async () => {
 });
 
 it('removes the payout method once the confirmation is accepted', async () => {
-  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business account' });
+  store.set({ payoutMethods: [] });
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business account', scaToken: await api.authorizeSca('payout-method') });
   setup('/v2/account/balance/method');
   await screen.findByText(/1 saved/);
 
@@ -131,9 +139,10 @@ it('removes the payout method once the confirmation is accepted', async () => {
 });
 
 it('warns that another method becomes the default when the default is removed', async () => {
-  await api.addIbanMethod({ iban: VALID_IBAN, label: 'First' });
+  store.set({ payoutMethods: [] });
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'First', scaToken: await api.authorizeSca('payout-method') });
   const tok = (await import('../../lib/profile')).tokeniseCard(VALID_CARD);
-  await api.addCardMethod({ ...tok, label: 'Second' });
+  await api.addCardMethod({ ...tok, label: 'Second', scaToken: await api.authorizeSca('payout-method') });
   setup('/v2/account/balance/method');
   await screen.findByText(/2 saved/);
 
@@ -146,13 +155,15 @@ it('warns that another method becomes the default when the default is removed', 
 });
 
 it('blocks cash out without method and completes SEPA withdrawal', async () => {
+  store.set({ payoutMethods: [] });
   setup('/v2/account/balance/cashout');
   await screen.findByText('Add a payout method first');
   fireEvent.click(screen.getByRole('button', { name: 'Add payout method' }));
   await screen.findByLabelText(/IBAN/, { exact: false });
   fireEvent.change(screen.getByLabelText(/IBAN/, { exact: false }), { target: { value: VALID_IBAN } });
   fireEvent.click(screen.getByRole('button', { name: 'Add bank account' }));
-  await screen.findByText(/1 saved/);
+  fireEvent.click(await screen.findByRole('button', { name: 'Confirm with bank app' }));
+  await screen.findByText(/1 saved/, undefined, { timeout: 3000 });
   await waitFor(async () => {
     expect((await api.getPayoutMethods())[0]?.verified).toBe(true);
   });
@@ -169,11 +180,12 @@ it('blocks cash out without method and completes SEPA withdrawal', async () => {
   expect(screen.getByText('Total debit')).toBeTruthy();
   expect(screen.getByText('Remaining')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: /Confirm/ }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Confirm with bank app' }));
   await waitFor(async () => {
     const ledger = await api.getLedger();
     expect(ledger.filter((e) => e.kind === 'withdrawal')).toHaveLength(1);
   }, { timeout: 8000 });
-  expect((await api.getBalance()).available).toBeCloseTo(400, 2);
+  expect((await api.getBalance()).available).toBeCloseTo(620, 2);
   const withdrawals = (await api.getLedger()).filter((e) => e.kind === 'withdrawal');
   expect(withdrawals).toHaveLength(1);
   expect(withdrawals[0]).toMatchObject({ amount: 100, status: 'processing' });
@@ -182,28 +194,28 @@ it('blocks cash out without method and completes SEPA withdrawal', async () => {
 });
 
 it('quotes the card fee and executes via the mock provider ref', async () => {
-  store.reset();
-  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank' });
+  store.set({ payoutMethods: [] });
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank', scaToken: await api.authorizeSca('payout-method') });
   const tok = (await import('../../lib/profile')).tokeniseCard(VALID_CARD);
-  const card = await api.addCardMethod({ ...tok, label: 'Fuel' });
+  const card = await api.addCardMethod({ ...tok, label: 'Fuel', scaToken: await api.authorizeSca('payout-method') });
   const quote = api.quoteFor(card, 100);
   expect(quote.rail).toBe('instant-card');
   expect(quote.fee).toBe(1.5);
-  expect(api.maxWithdrawalFor(500, 1.5)).toBeCloseTo(498.5, 2);
-  const { entry } = await api.requestWithdrawal(100, card.id);
+  expect(api.maxWithdrawalFor(720, 1.5)).toBeCloseTo(718.5, 2);
+  // Amount + fee must fit: 719 + 1.50 over a 720 balance is rejected.
+  await expect(api.requestWithdrawal(719, card.id, await api.authorizeSca('withdrawal'))).rejects.toThrow('plus fee');
+  const { entry } = await api.requestWithdrawal(100, card.id, await api.authorizeSca('withdrawal'));
   expect(entry.id).toMatch(/^mock_card_/);
   expect(entry.fee).toBe(1.5);
   expect(entry.methodLabel).toBe('Fuel');
   // Card rail deducts amount + EUR 1.50 prototype fee from available.
-  expect((await api.getBalance()).available).toBeCloseTo(398.5, 2);
-  // Amount + fee must fit: 499 + 1.50 over a 500 balance is rejected.
-  await expect(api.requestWithdrawal(499, card.id)).rejects.toThrow('plus fee');
-});
+  expect((await api.getBalance()).available).toBeCloseTo(618.5, 2);
+}, 15_000);
 
 it('opens a permanent withdrawal screen after confirm', async () => {
-  store.reset();
-  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business' });
-  const { entry } = await api.requestWithdrawal(80);
+  store.set({ payoutMethods: [] });
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business', scaToken: await api.authorizeSca('payout-method') });
+  const { entry } = await api.requestWithdrawal(80, undefined, await api.authorizeSca('withdrawal'));
   setup(`/v2/account/balance/withdrawals/${encodeURIComponent(entry.id)}`);
   await screen.findByText(/Request accepted/);
   expect(screen.getByText('Total debit')).toBeTruthy();
@@ -212,11 +224,12 @@ it('opens a permanent withdrawal screen after confirm', async () => {
 });
 
 it('lists trips and withdrawals in history with rail notes', async () => {
-  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business' });
+  store.set({ payoutMethods: [] });
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business', scaToken: await api.authorizeSca('payout-method') });
   setup('/v2/account/balance/history');
   await screen.findByText('Ghent - Antwerp');
   expect(screen.getByText(/C.te Fret/)).toBeTruthy();
-  const { entry } = await api.requestWithdrawal(100);
+  const { entry } = await api.requestWithdrawal(100, undefined, await api.authorizeSca('withdrawal'));
   expect(entry.methodLabel).toBe('Business');
   const ledger = await api.getLedger();
   expect(ledger.some(e => e.kind === 'withdrawal' && e.amount === 100)).toBe(true);
@@ -237,7 +250,7 @@ it('dismisses only dismissed feed entries and never touches the ledger', async (
   store.set({ applications: { nordcargo: { loadId: 'nordcargo', status: ApplicationStatus.CANCELLED, submittedAt: null, dismissed: true } } });
   setup('/v2/account/balance');
   await screen.findByText('Available balance');
-  expect((await api.getBalance()).available).toBeCloseTo(500, 2);
+  expect((await api.getBalance()).available).toBeCloseTo(720, 2);
 });
 
 /**
@@ -276,12 +289,12 @@ it('refreshes the balance when the customer pays while the screen is open', asyn
 });
 
 it('refreshes the history list when a payout outcome lands', async () => {
-  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business account' });
+  await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business account', scaToken: await api.authorizeSca('payout-method') });
   setup('/v2/account/balance/history');
   await screen.findAllByText('Activity');
   expect(screen.queryByText(/Cash out to/)).toBeNull();
 
-  await api.requestWithdrawal(100);
+  await api.requestWithdrawal(100, undefined, await api.authorizeSca('withdrawal'));
   await waitFor(() => expect(screen.getByText(/Cash out to/)).toBeTruthy());
 });
 
@@ -290,6 +303,7 @@ it('shows a row-shaped loading skeleton and an empty method illustration', async
   setup('/v2/account/balance/method');
   expect(await screen.findByLabelText('Loading payout methods')).toBeTruthy();
   cleanup(); router?.dispose(); vi.restoreAllMocks(); store.reset();
+  store.set({ payoutMethods: [] });
   setup('/v2/account/balance/method');
   await screen.findByText('Add method');
   expect(screen.getByText('No payout methods yet')).toBeTruthy();

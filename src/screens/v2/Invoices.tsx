@@ -20,7 +20,8 @@ import { V2BackBar } from '../../components/layout/NavigationBar';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { getInvoice, getInvoices, invoicesToCsv, type Invoice, type InvoiceStatus } from '../../lib/invoices';
 import { downloadInvoicePdf, formatEuro } from '../../lib/invoicePdf';
-import { useLedger } from '../../lib/store';
+import { ApplicationStatus } from '../../lib/models';
+import { useLedger, useStore } from '../../lib/store';
 
 function InvoiceFrame({ title, backTo, children }: { title: string; backTo?: string; children: ReactNode }) {
   return <V2Frame active="Account">
@@ -47,10 +48,18 @@ const STATUS_TONE: Record<InvoiceStatus, string> = {
   paid: 'bg-[var(--color-status-success-bg)] text-[var(--color-status-success-text)]',
   pending: 'bg-[var(--color-status-warning-bg)] text-[var(--color-status-warning-text)]',
   overdue: 'bg-[var(--color-status-danger-bg)] text-[var(--color-status-danger-text)]',
+  void: 'bg-[var(--color-status-neutral-bg)] text-[var(--color-status-neutral-text)]',
+};
+
+const STATUS_LABEL: Record<InvoiceStatus, string> = {
+  paid: 'Paid',
+  pending: 'Pending',
+  overdue: 'Overdue',
+  void: 'Void',
 };
 
 function StatusChip({ status }: { status: InvoiceStatus }) {
-  return <span className={`inline-flex shrink-0 items-center rounded-[var(--radius-pill)] px-[var(--spacing-8)] py-[var(--spacing-4)] text-caption-10 uppercase tracking-wide ${STATUS_TONE[status]}`}>{status}</span>;
+  return <span className={`inline-flex shrink-0 items-center rounded-[var(--radius-pill)] px-[var(--spacing-8)] py-[var(--spacing-4)] text-caption-10 uppercase tracking-wide ${STATUS_TONE[status]}`}>{STATUS_LABEL[status]}</span>;
 }
 
 function StatusBlock({ error, retry, label, rows = 3 }: { error: boolean; retry: () => void; label: string; rows?: number }) {
@@ -86,7 +95,7 @@ export function InvoiceList() {
   if (error || !invoices) {
     return <InvoiceFrame title="Invoices" backTo="/v2/account/balance"><StatusBlock error={error} retry={() => setAttempt(v => v + 1)} label="invoices" /></InvoiceFrame>;
   }
-  const pending = invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + i.total, 0);
+  const pending = invoices.filter(i => i.status === 'pending' || i.status === 'overdue').reduce((s, i) => s + i.total, 0);
   function exportCsv() {
     const blob = new Blob([invoicesToCsv(invoices!)], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -126,6 +135,7 @@ export function InvoiceList() {
 export function InvoiceDetails() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const { state } = useStore();
   const [invoice, setInvoice] = useState<Invoice | null | undefined>(undefined);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -143,6 +153,9 @@ export function InvoiceDetails() {
       <div className="mt-[var(--spacing-16)]"><Alert type="warning" title="Invoice not found">It may have been removed.<span className="mt-[var(--spacing-8)] block"><Button label="Back to invoices" appearance="secondary" onClick={() => navigate('/v2/account/balance/invoices')} /></span></Alert></div>
     </InvoiceFrame>;
   }
+  const application = state.applications[invoice.loadId];
+  const canOpenTrip = application?.status === ApplicationStatus.CONFIRMED
+    || (application?.status === ApplicationStatus.CANCELLED && application.cancelledAfterConfirm === true);
   return <InvoiceFrame title={invoice.number} backTo="/v2/account/balance/invoices">
     <div className="mt-[var(--spacing-8)] rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] p-[var(--spacing-16)]">
       <div className="flex items-center justify-between gap-[var(--spacing-8)]">
@@ -150,9 +163,11 @@ export function InvoiceDetails() {
       <p className="text-heading-20 text-[var(--color-text-primary)]" aria-hidden="true">{invoice.number}</p>
         <StatusChip status={invoice.status} />
       </div>
-      <p className="mt-[var(--spacing-8)] text-body-14 text-[var(--color-text-secondary)]">Issued {new Date(invoice.issuedAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })} - due {new Date(invoice.dueAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+      <p className="mt-[var(--spacing-8)] text-body-14 text-[var(--color-text-secondary)]">Issued {new Date(invoice.issuedAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })} - {invoice.status === 'void' ? 'voided' : `due ${new Date(invoice.dueAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })}`}</p>
       <p className="mt-[var(--spacing-8)] text-metric-28">{formatEuro(invoice.total)}</p>
+      <p className="mt-[var(--spacing-4)] text-caption-12 text-[var(--color-text-secondary)]">{invoice.tripId} · {invoice.paymentTermDays}-day terms · {invoice.buyer.country === 'FR' ? 'French' : invoice.buyer.country === 'BE' ? 'Belgian' : 'Dutch'} customer</p>
     </div>
+    {invoice.status === 'void' && <div className="mt-[var(--spacing-16)]"><Alert type="warning" title="Invoice voided">The trip was cancelled. This invoice is not payable and must not be sent to the customer.</Alert></div>}
     <Section label="Parties">
       <div className="px-[var(--spacing-12)] py-[var(--spacing-8)]">
         <p className="text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">From</p>
@@ -177,10 +192,10 @@ export function InvoiceDetails() {
         <div className="flex justify-between py-[var(--spacing-8)] text-heading-20"><span>Total</span><span>{formatEuro(invoice.total)}</span></div>
       </div>
     </Section>
-    <div className="mt-[var(--spacing-16)]"><Alert type="info" title="Reverse charge">{invoice.note}</Alert></div>
+    <div className="mt-[var(--spacing-16)]"><Alert type="info" title={invoice.vatRate === 0 ? 'Reverse charge' : 'VAT'}>{invoice.note}</Alert></div>
     <div className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-8)]">
       <Button label="Download PDF" onClick={() => downloadInvoicePdf(invoice)} />
-      <Button label="Open trip" appearance="secondary" onClick={() => navigate(`/trip/${invoice.loadId}`)} />
+      {canOpenTrip && <Button label="Open trip" appearance="secondary" onClick={() => navigate(`/trip/${invoice.loadId}`)} />}
     </div>
   </InvoiceFrame>;
 }
