@@ -67,9 +67,9 @@ const CANCELLABLE = new Set<ApplicationStatus>([
   ApplicationStatus.CUSTOMER_REVIEW,
 ]);
 
-/** Demo timing: each driver-facing review step gets two seconds, then the trip opens. */
-export const AUTO_REVIEW_STEP_MS = 2_000;
-export const AUTO_OPEN_TRIP_MS = 1_200;
+/** Demo timing: each driver-facing review step gets 1.5s, then the trip opens. */
+export const AUTO_REVIEW_STEP_MS = 1_500;
+export const AUTO_OPEN_TRIP_MS = 900;
 const AUTO_NEXT: Partial<Record<ApplicationStatus, ApplicationStatus>> = {
   [ApplicationStatus.SENT]: ApplicationStatus.DISPATCHER_REVIEW,
   [ApplicationStatus.DISPATCHER_REVIEW]: ApplicationStatus.CUSTOMER_REVIEW,
