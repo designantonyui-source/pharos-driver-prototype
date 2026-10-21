@@ -89,8 +89,7 @@ export function LoadSheet({
       <div className="mt-[16px] rounded-[var(--radius-md)] bg-[var(--color-bg-subtle)] p-[12px]">
         <p className="text-label-14 text-[var(--color-text-primary)]">What happens next</p>
         <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
-          Your dispatcher checks the schedule, then the customer confirms — both by {load.approvalsBy}. Applying doesn’t
-          reserve the load.
+          Most dispatchers reply within 15 minutes. Applying doesn’t reserve the load.
         </p>
       </div>
 

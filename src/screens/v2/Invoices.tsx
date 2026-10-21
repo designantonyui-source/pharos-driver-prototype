@@ -118,8 +118,8 @@ export function InvoiceList() {
       {invoices.map((inv, i) => <Link key={inv.id} to={`/v2/account/balance/invoices/${inv.id}`} className={`flex min-h-[var(--size-control-mobile)] items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] focus-visible:-outline-offset-2 ${i === invoices.length - 1 ? '' : 'border-b border-[var(--color-border-default)]'}`}>
         <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="history" size="md" /></span>
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-body-14 text-[var(--color-text-primary)]">{inv.number} - {inv.company}</span>
-          <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{inv.from} - {inv.to} - {new Date(inv.issuedAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })}</span>
+          <span className="truncate text-body-14 text-[var(--color-text-primary)]">{inv.number} · {inv.company}</span>
+          <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{inv.from} → {inv.to} · {new Date(inv.issuedAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })}</span>
         </span>
         <span className="flex shrink-0 flex-col items-end gap-[var(--spacing-4)]">
           <span className="text-body-14 text-[var(--color-text-primary)]">{formatEuro(inv.total)}</span>
@@ -128,7 +128,7 @@ export function InvoiceList() {
       </Link>)}
     </Section>}
     {invoices.length > 0 && <div className="mt-[var(--spacing-16)]"><Button label="Export CSV for accountant" appearance="secondary" onClick={exportCsv} /></div>}
-    <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Documents - confirm with accounting before use.</p>
+    <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Draft documents · confirm with accounting before use.</p>
   </InvoiceFrame>;
 }
 
@@ -163,7 +163,7 @@ export function InvoiceDetails() {
       <p className="text-heading-20 text-[var(--color-text-primary)]" aria-hidden="true">{invoice.number}</p>
         <StatusChip status={invoice.status} />
       </div>
-      <p className="mt-[var(--spacing-8)] text-body-14 text-[var(--color-text-secondary)]">Issued {new Date(invoice.issuedAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })} - {invoice.status === 'void' ? 'voided' : `due ${new Date(invoice.dueAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })}`}</p>
+      <p className="mt-[var(--spacing-8)] text-body-14 text-[var(--color-text-secondary)]">Issued {new Date(invoice.issuedAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })} · {invoice.status === 'void' ? 'Voided' : `Due ${new Date(invoice.dueAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })}`}</p>
       <p className="mt-[var(--spacing-8)] text-metric-28">{formatEuro(invoice.total)}</p>
       <p className="mt-[var(--spacing-4)] text-caption-12 text-[var(--color-text-secondary)]">{invoice.tripId} · {invoice.paymentTermDays}-day terms · {invoice.buyer.country === 'FR' ? 'French' : invoice.buyer.country === 'BE' ? 'Belgian' : 'Dutch'} customer</p>
     </div>
@@ -171,11 +171,11 @@ export function InvoiceDetails() {
     <Section label="Parties">
       <div className="px-[var(--spacing-12)] py-[var(--spacing-8)]">
         <p className="text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">From</p>
-        <p className="mt-[var(--spacing-4)] text-body-14 text-[var(--color-text-primary)]">{invoice.seller.name} - {invoice.seller.address} - VAT {invoice.seller.vatId}</p>
+        <p className="mt-[var(--spacing-4)] text-body-14 text-[var(--color-text-primary)]">{invoice.seller.name} · {invoice.seller.address} · VAT {invoice.seller.vatId}</p>
       </div>
       <div className="border-t border-[var(--color-border-default)] px-[var(--spacing-12)] py-[var(--spacing-8)]">
         <p className="text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">Bill to</p>
-        <p className="mt-[var(--spacing-4)] text-body-14 text-[var(--color-text-primary)]">{invoice.buyer.name} - {invoice.buyer.address} - VAT {invoice.buyer.vatId}</p>
+        <p className="mt-[var(--spacing-4)] text-body-14 text-[var(--color-text-primary)]">{invoice.buyer.name} · {invoice.buyer.address} · VAT {invoice.buyer.vatId}</p>
       </div>
     </Section>
     <Section label="Lines">

@@ -1,18 +1,18 @@
 import { ApplicationStatus } from '../../lib/models';
 import { TRIP_STAGE_STEPS } from '../../lib/api';
 import type { LoadApplication } from '../../lib/store';
-import type { V2Load } from '../../lib/v2/loads';
+import { deadlineLabel, type V2Load } from '../../lib/v2/loads';
 import { Icon } from '../Icon';
 
 /** Banner copy per status (flow stories S6: one status, two waiting states). */
 export const STATUS_COPY: Record<ApplicationStatus, { title: string; step: number }> = {
-  [ApplicationStatus.SENT]: { title: 'Application sent', step: 1 },
-  [ApplicationStatus.DISPATCHER_REVIEW]: { title: 'Awaiting dispatcher', step: 2 },
-  [ApplicationStatus.CUSTOMER_REVIEW]: { title: 'Dispatcher approved · awaiting customer', step: 3 },
-  [ApplicationStatus.CONFIRMED]: { title: 'Confirmed · Trip TR-4821', step: 4 },
-  [ApplicationStatus.REJECTED]: { title: 'Application declined', step: 4 },
-  [ApplicationStatus.EXPIRED]: { title: 'Application expired', step: 4 },
-  [ApplicationStatus.CANCELLED]: { title: 'Cancelled by you', step: 4 },
+  [ApplicationStatus.SENT]: { title: 'Under review', step: 2 },
+  [ApplicationStatus.DISPATCHER_REVIEW]: { title: 'Under review', step: 2 },
+  [ApplicationStatus.CUSTOMER_REVIEW]: { title: 'Under review · awaiting customer', step: 2 },
+  [ApplicationStatus.CONFIRMED]: { title: 'Confirmed', step: 3 },
+  [ApplicationStatus.REJECTED]: { title: 'Application declined', step: 3 },
+  [ApplicationStatus.EXPIRED]: { title: 'Application expired', step: 3 },
+  [ApplicationStatus.CANCELLED]: { title: 'Cancelled by you', step: 3 },
 };
 
 /**
@@ -26,7 +26,7 @@ export const STATUS_COPY: Record<ApplicationStatus, { title: string; step: numbe
  * Rule: live states ONLY (sent / dispatcher-review / customer-review / confirmed).
  * Ended states (rejected / expired / cancelled) render NOTHING here — the state
  * already lives on the card pill and in Trips → Past. A banner for a dead
- * application duplicates the card and its "Step 4 of 4" means nothing.
+ * application duplicates the card and its "Step 3 of 3" means nothing.
  * props: load, status, application, more, onOpen
  * tokens: color-nav-bg/text, color-status-info/warning-bg/text, radius-lg, shadow-card
  */
@@ -111,7 +111,8 @@ export function ApplicationBanner({
   }
 
   const { title } = STATUS_COPY[status];
-  const detail = `${load.from} → ${load.to} · €${load.rate} · by ${load.approvalsBy}${more > 0 ? ` · +${more} more in Trips` : ''}`;
+  const deadline = application?.approvalsDeadline ? deadlineLabel(application.approvalsDeadline) : load.approvalsBy;
+  const detail = `${load.from} → ${load.to} · €${load.rate} · by ${deadline}${more > 0 ? ` · +${more} more in Trips` : ''}`;
 
   return (
     <button
@@ -124,13 +125,13 @@ export function ApplicationBanner({
           <Icon name="clock" size="sm" />
           {title}
         </span>
-        <span className="text-label-12">{`Step ${step} of 4`}</span>
+        <span className="text-label-12">{`Step ${step} of 3`}</span>
       </span>
       <span className="text-body-14">
         {detail}
       </span>
       <span className="flex gap-[4px]" aria-hidden>
-        {[1, 2, 3, 4].map((i) => (
+        {[1, 2, 3].map((i) => (
           // Passed solid, current dimmed, upcoming faint — the same three
           // states as the trip page list.
           <span

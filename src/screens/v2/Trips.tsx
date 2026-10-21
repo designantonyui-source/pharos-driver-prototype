@@ -182,7 +182,7 @@ export function Trips() {
     </div>}
     {review.length > 0 && <Section label={review.length === 1 ? 'In review' : `${review.length} in review`}>
       {review.map(({ load, application }, i) => <TripRow key={load.id} to={`/application/${load.id}`} icon="clock" tone="pending" chip="In review"
-        title={`${load.from} to ${load.to}`} detail={`${application.status === ApplicationStatus.CUSTOMER_REVIEW ? 'Waiting for customer' : 'With the dispatcher'} · decided by ${deadlineLabel(application.approvalsDeadline ?? load.approvalsAt)}`}
+        title={`${load.from} to ${load.to}`} detail={`${application.status === ApplicationStatus.CUSTOMER_REVIEW ? 'With customer' : 'With dispatcher'} · decision by ${deadlineLabel(application.approvalsDeadline ?? load.approvalsAt)}`}
         amount={money(load.rate)} last={i === review.length - 1} />)}
     </Section>}
     {completed.length > 0 && <Section label="Completed">

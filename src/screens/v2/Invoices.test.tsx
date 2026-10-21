@@ -26,7 +26,7 @@ afterEach(() => { cleanup(); router?.dispose(); vi.restoreAllMocks(); localStora
 
 it('lists invoices newest-first with paid history', async () => {
   setup('/v2/account/balance/invoices');
-  await screen.findByText('INV-2026-0038 - BelRoute');
+  await screen.findByText('INV-2026-0038 · BelRoute');
   expect(screen.getAllByText('Paid').length).toBeGreaterThan(0);
   expect(screen.queryByText('pending')).toBeNull();
   fireEvent.click(screen.getByRole('link', { name: /INV-2026-0038/ }));
@@ -47,7 +47,7 @@ it('shows invoice details with parties, VAT math and actions', async () => {
 
 it('links a history trip row to its invoice', async () => {
   setup('/v2/account/balance/history');
-  const link = await screen.findByRole('link', { name: /Ghent - Antwerp.*invoice/ });
+  const link = await screen.findByRole('link', { name: /Ghent → Antwerp.*invoice/ });
   fireEvent.click(link);
   await screen.findByText('INV-2026-0038', { selector: 'p.sr-only' });
 });

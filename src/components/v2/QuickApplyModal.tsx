@@ -97,8 +97,7 @@ export function QuickApplyModal({ loadId, load, onCancel, onSubmitted, onAlready
 
         {load && (
           <p className="mt-[12px] text-body-14 text-[var(--color-text-secondary)]">
-            Your dispatcher checks the schedule, then the customer confirms — both by {load.approvalsBy}.
-            Applying does not reserve the load.
+            Most dispatchers reply within 15 minutes. Applying doesn’t reserve the load.
           </p>
         )}
 

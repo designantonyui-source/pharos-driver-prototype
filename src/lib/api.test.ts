@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { acceptDemoPod, advanceStatus, advanceTripStage, cancelApplication, cancelTrip, cancellationPenalty, commitRoute, customerPaysDemoTrip, dismissLoad, earningsStateFor, getTripDetails, markWithdrawalDelayed, markWithdrawalFailed, markWithdrawalPaid, rejectDemoPod, requestWithdrawal, restoreLoad, returnWithdrawalFunds, setEnRoute, submitApplication, submitProofOfDelivery } from './api';
+import { APPROVAL_WINDOW_MIN } from './approval';
 import { ApplicationStatus } from './models';
 import { store } from './store';
 
@@ -394,6 +395,8 @@ describe('application lifecycle', () => {
     await expect(result).resolves.toEqual({ loadId: 'nordcargo', status: ApplicationStatus.SENT });
     expect(store.get()).toMatchObject({ loadId: 'nordcargo', status: ApplicationStatus.SENT });
     expect(store.get().submittedAt).toBe(new Date().toISOString());
+    const application = store.get().applications.nordcargo;
+    expect(Date.parse(application.approvalsDeadline!) - Date.parse(application.submittedAt!)).toBe(APPROVAL_WINDOW_MIN * 60_000);
   });
 
   it.each([

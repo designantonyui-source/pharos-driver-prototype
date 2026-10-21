@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApplicationStatus } from './models';
 import { migrateLegacyMethod, normalizeContactProfile, normalizePayoutMethod, normalizeSchedule, type ContactProfile, type LedgerEntry, type PayoutMethod, type PayoutSchedule, type ScheduledRun } from './profile';
+import { withApprovalWindow } from './approval';
 import type { ChatMessage } from './chat';
 
 export type Status = ApplicationStatus;
@@ -146,6 +147,9 @@ function read(): AppState {
       : LEGACY_STATUS[saved.status ?? 'none'] ?? null;
     const applications = { ...saved.applications };
     if (saved.loadId && status) applications[saved.loadId] = { ...applications[saved.loadId], loadId: saved.loadId, status, submittedAt: saved.submittedAt ?? null };
+    for (const [id, application] of Object.entries(applications)) {
+      applications[id] = withApprovalWindow(application);
+    }
     let contactProfile = initial.contactProfile;
     try {
       if (saved.contactProfile) contactProfile = normalizeContactProfile(saved.contactProfile);

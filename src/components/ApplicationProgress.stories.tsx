@@ -2,8 +2,12 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { ApplicationProgress, type ApplicationStage } from './ApplicationProgress';
 
 /**
- * `Pharos/App/Application progress` `734:426` — five variants, one per stage of the application.
- * Dispatcher / Customer / Assigned are 370x180 (4 rows); Direct / DirectAssigned are 370x148 (3 rows).
+ * `Pharos/App/Application progress` `734:426` — the Figma master has five 4-row variants.
+ *
+ * Product deviation (2026-10-21): the driver-facing tracker renders three rows for every stage —
+ * Application sent / Under review / Confirmed — because dispatcher approval and customer
+ * confirmation are one waiting period for the driver. The substatus carries the internal state.
+ * Figma still needs this 3-row variant.
  */
 const meta = { title: 'Components/ApplicationProgress', parameters: { layout: 'centered' } } satisfies Meta;
 export default meta;
@@ -11,17 +15,17 @@ type Story = StoryObj;
 
 const render = (stage: ApplicationStage) => () => <ApplicationProgress stage={stage} />;
 
-/** 734:357 · 370x180 · Current on "Dispatcher approval" — the only stage instanced on a screen (735:1115) */
+/** Current on "Under review" — "With dispatcher" */
 export const Dispatcher: Story = { render: render('dispatcher') };
 
-/** 734:380 · 370x180 · Current on "Customer confirmation" (instance 735:1158) */
+/** Current on "Under review" — "Dispatcher approved · waiting for customer" */
 export const Customer: Story = { render: render('customer') };
 
-/** 734:403 · 370x180 · all four rows Done (instance 735:1489) */
+/** All three driver-facing rows Done */
 export const Assigned: Story = { render: render('assigned') };
 
-/** 2020:373 · 370x148 · three rows — no instance in the file, ported from the set */
+/** Direct path — Current on "Under review" with "With customer" */
 export const Direct: Story = { render: render('direct') };
 
-/** 2020:396 · 370x148 · three rows, all Done — no instance in the file, ported from the set */
+/** Direct path, all three rows Done */
 export const DirectAssigned: Story = { render: render('direct-assigned') };

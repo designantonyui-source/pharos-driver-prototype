@@ -27,7 +27,7 @@ function PayoutRow({ load, compact = false }: { load: V2Load; compact?: boolean 
     return () => { live = false; };
   }, []);
   const body = method === undefined ? 'Checking payout method…'
-    : method ? `${load.payoutDate} → ${methodLabel(method)}`
+    : method ? `${load.payoutDate} · ${methodLabel(method)}`
     : 'No payout method yet — add one to receive earnings';
   return (
     <Link
@@ -656,7 +656,7 @@ export function TripDetails() {
         {!loadError && details === null && <div className="mt-[var(--spacing-16)] flex flex-col items-center gap-[var(--spacing-8)] rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] px-[var(--spacing-16)] py-[var(--spacing-24)] text-center">
           <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="truck" size="md" /></span>
           <p className="text-heading-14 text-[var(--color-text-primary)]">No confirmed trip for this load</p>
-          <p className="text-body-14 text-[var(--color-text-secondary)]">Book a load first — the itinerary appears here once the customer confirms.</p>
+          <p className="text-body-14 text-[var(--color-text-secondary)]">Book a load first — the itinerary appears here once the load is confirmed.</p>
         </div>}
         {loadError && <div className="mt-[16px]"><Button label="Retry" onClick={() => setLoadAttempt((n) => n + 1)} /></div>}
         <div className="mt-[16px]"><Button label="Back to loads" appearance="secondary" onClick={emptyBack} /></div>

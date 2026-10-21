@@ -11,6 +11,7 @@
  *             336 inside Trip steps, 338 inside Application progress, so `w-full` here)
  *   Frame     24x24, radius 999, HORIZONTAL centred; holds the step number 12/16 DM Sans Medium
  *   Title     14/20, FILL -> taken out of the 24 + 12 + 12 + status budget, exactly like Figma
+ *   Detail    optional 12/16 line under the title (product extension; not in the Figma row)
  *   Status    12/16 DM Sans Medium, hug; the Figma master text is "Done"/"Current"/"Next"
  *
  *   state     Frame fill                    number                Title                       Status
@@ -56,6 +57,7 @@ export function ProgressStep({
   state,
   number,
   label,
+  detail,
   status,
   showConnector = false,
   lineTone = 'bg-[var(--color-border-default)]',
@@ -66,6 +68,8 @@ export function ProgressStep({
   number: ReactNode;
   /** Figma text property `Title` — what the step is called. */
   label: string;
+  /** Optional second line under the title (application review substatus). */
+  detail?: string;
   /** Figma text property `Status`. Defaults to the master text of the variant ("Done"/"Current"/"Next"). */
   status?: string;
   /** Vertical connector to the next row (stepper lists only). */
@@ -98,6 +102,7 @@ export function ProgressStep({
       </span>
       <span className="flex min-h-[var(--spacing-24)] min-w-0 flex-1 flex-col justify-center">
         <span className={`${TITLE[state]}`}>{label}</span>
+        {detail ? <span className="text-caption-12 text-[var(--color-text-secondary)]">{detail}</span> : null}
       </span>
       <span className={`flex min-h-[var(--spacing-24)] shrink-0 items-center whitespace-nowrap text-label-12 ${STATUS[state]}`}>
         {status ?? MASTER_STATUS[state]}

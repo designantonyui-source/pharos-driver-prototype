@@ -8,12 +8,13 @@ import { ApplicationTrackerView } from './ApplicationTracker';
 const load = V2_LOADS[0];
 const noop = () => undefined;
 
-function renderView(status: ApplicationStatus, onCancel: () => void = noop) {
+function renderView(status: ApplicationStatus, onCancel: () => void = noop, approvalsBy?: string) {
   return render(
     <MemoryRouter>
       <ApplicationTrackerView
         status={status}
         load={load}
+        approvalsBy={approvalsBy}
         onCancel={onCancel}
         onViewTrip={noop}
         onSimilarLoads={noop}
@@ -36,7 +37,7 @@ describe('ApplicationTrackerView cancel confirmation', () => {
     const onCancel = vi.fn();
     renderView(ApplicationStatus.SENT, onCancel);
     fireEvent.click(screen.getByRole('button', { name: 'Cancel application' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Withdraw application' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, cancel application' }));
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
@@ -69,9 +70,24 @@ describe('ApplicationTrackerView notices', () => {
     expect(onContact).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the approvals deadline while waiting', () => {
+  it('shows the one decision deadline while waiting', () => {
+    renderView(ApplicationStatus.SENT, noop, '10:29');
+    expect(screen.getByText(/Decision by/)).toHaveTextContent('10:29');
+  });
+
+  it('shows three driver-facing steps and the dispatcher substatus', () => {
     renderView(ApplicationStatus.SENT);
-    expect(screen.getByText(/Application closes unless both approve by/)).toHaveTextContent(load.approvalsBy);
+    expect(screen.getByText('Application progress · Step 2 of 3')).toBeVisible();
+    expect(screen.getByText('Under review')).toBeVisible();
+    expect(screen.getByText('With dispatcher')).toBeVisible();
+    expect(screen.queryByText('Customer confirmation')).toBeNull();
+    expect(screen.queryByText('Trip assigned')).toBeNull();
+  });
+
+  it('shows the customer substatus inside the review step', () => {
+    renderView(ApplicationStatus.CUSTOMER_REVIEW);
+    expect(screen.getByText('Application progress · Step 2 of 3')).toBeVisible();
+    expect(screen.getByText('Dispatcher approved · waiting for customer')).toBeVisible();
   });
 
   it('sends a dispute through the sheet', async () => {
@@ -112,7 +128,7 @@ describe('ApplicationTrackerView notices', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('heading', { name: 'Application expired' })).toBeVisible();
-    expect(screen.getByText(/Needed both approvals by/)).toHaveTextContent(load.approvalsBy);
+    expect(screen.getByText(/No decision by/)).toHaveTextContent(load.approvalsBy);
     expect(screen.queryByRole('button', { name: 'Cancel application' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Find similar loads' }));
     expect(onSimilar).toHaveBeenCalledTimes(1);

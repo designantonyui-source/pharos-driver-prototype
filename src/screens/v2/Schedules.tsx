@@ -106,7 +106,7 @@ export function Schedules() {
           ? { mode: 'threshold', threshold: Math.max(Number(threshold) || 500, PAYOUT_POLICY.minWithdrawal), methodId: current?.id ?? null }
           : { mode: 'weekly', weekday: 'friday', methodId: current?.id ?? null };
       setSchedule(await updateSchedule(next));
-      show({ tone: 'success', title: 'Rule saved', detail: 'It applies from the next Balance open.' });
+      show({ tone: 'success', title: 'Rule saved', detail: 'It applies the next time you open Balance.' });
     } catch {
       setSaveError(true);
     } finally {
@@ -119,7 +119,7 @@ export function Schedules() {
     try {
       const current = methodFor(scheduleMethodId());
       setSchedule(await updateSchedule({ mode: 'threshold', threshold: Math.max(Number(threshold) || 500, PAYOUT_POLICY.minWithdrawal), methodId: current?.id ?? null }));
-      show({ tone: 'success', title: 'Rule saved', detail: 'It applies from the next Balance open.' });
+      show({ tone: 'success', title: 'Rule saved', detail: 'It applies the next time you open Balance.' });
     } catch {
       setSaveError(true);
     } finally {
@@ -148,11 +148,11 @@ export function Schedules() {
   }
   const modes: Array<{ mode: PayoutSchedule['mode']; title: string; detail: string }> = [
     { mode: 'off', title: 'Manual only', detail: 'You cash out by hand' },
-    { mode: 'threshold', title: `Auto at ${formatEuro(Number(threshold) || 500)}`, detail: 'Withdraw everything when balance reaches it' },
+    { mode: 'threshold', title: `Auto at ${formatEuro(Number(threshold) || 500)}`, detail: 'Send all available funds at this balance' },
     { mode: 'weekly', title: 'Every Friday', detail: 'Withdraw everything available' },
   ];
   return <SchedulesFrame title="Auto-withdraw" toast={<Toast toast={toast} onClose={dismiss} />}>
-    <div className="mt-[var(--spacing-16)]"><Alert type="info" title="Scheduler">Evaluated when you open Balance. Production runs on a server cron — the rule shape is identical.</Alert></div>
+    <div className="mt-[var(--spacing-16)]"><Alert type="info" title="How it runs">Auto-withdraw runs when you open Balance. In production, it runs on a schedule.</Alert></div>
     <Section label="Rule">
       {modes.map((m, i) => <label key={m.mode} className={`flex min-h-[var(--size-control-mobile)] cursor-pointer items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${i === modes.length - 1 ? '' : 'border-b border-[var(--color-border-default)]'}`}>
         <input type="radio" name="schedule-mode" checked={schedule.mode === m.mode} onChange={() => void pick(m.mode)} disabled={saving} className="h-[20px] w-[20px] accent-[var(--color-action-primary)]" aria-label={m.title} />
@@ -177,20 +177,20 @@ export function Schedules() {
       </label>)}
     </Section>}
     {runs.length === 0
-      ? <Section label="Auto runs"><p className="px-[var(--spacing-12)] py-[var(--spacing-16)] text-body-14 text-[var(--color-text-secondary)]">No auto runs yet — turn on a rule above and it will fire from the next Balance open.</p></Section>
+      ? <Section label="Auto runs"><p className="px-[var(--spacing-12)] py-[var(--spacing-16)] text-body-14 text-[var(--color-text-secondary)]">No auto-withdraws yet. Turn on a rule to start.</p></Section>
       : <Section label={`${runs.length} auto runs`}>
       {runs.slice(0, 5).map((r, i) => <div key={r.id} className={`flex min-h-[var(--size-control-mobile)] items-center gap-[var(--spacing-12)] px-[var(--spacing-12)] py-[var(--spacing-8)] ${i === Math.min(runs.length, 5) - 1 ? '' : 'border-b border-[var(--color-border-default)]'}`}>
         <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="clock" size="md" /></span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-body-14 text-[var(--color-text-primary)]">{formatEuro(r.amount)} to {r.methodLabel}</span>
-          <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{r.trigger === 'weekly' ? 'Friday schedule' : 'Threshold reached'} - {new Date(r.at).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })}</span>
+          <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{r.trigger === 'weekly' ? 'Friday schedule' : 'Threshold reached'} · {new Date(r.at).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })}</span>
         </span>
       </div>)}
       </Section>}
     <Section label="Accountant">
       <div className="p-[var(--spacing-12)] flex flex-col gap-[var(--spacing-8)]">
         <Button label="Export monthly statement (CSV)" appearance="secondary" onClick={exportStatement} />
-        <p className="text-caption-12 text-[var(--color-text-secondary)]">Every ledger line with running detail — trips, withdrawals, adjustments.</p>
+        <p className="text-caption-12 text-[var(--color-text-secondary)]">Every trip and withdrawal, with a running balance.</p>
       </div>
     </Section>
     {saveError && <div className="mt-[var(--spacing-16)]" role="alert"><Alert type="error" title="Could not save the rule">Check your connection and try again.</Alert></div>}

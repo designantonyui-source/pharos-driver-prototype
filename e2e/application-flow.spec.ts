@@ -210,7 +210,7 @@ test('driver submits and cancels without an automatic status change', async ({ p
     await page.getByRole('button', { name: /Lille → Brussels · €435 · by/ }).click();
     await page.getByRole('button', { name: 'Cancel application', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Cancel application Lille to Brussels' })).toBeVisible();
-    await page.getByRole('button', { name: 'Withdraw application', exact: true }).click();
+    await page.getByRole('button', { name: 'Yes, cancel application', exact: true }).click();
   });
 
   await test.step('6. Return to the list with the cancellation saved', async () => {
@@ -327,7 +327,7 @@ test('portfolio happy path: confirmed trip to delivered earnings', async ({ page
   const earnings = page.getByRole('region', { name: 'Earnings' });
   await expect(earnings).toContainText('Upload POD to unlock earnings');
   await expect(earnings).toContainText('€435 · Expected payout');
-  await expect(page.getByText('28 Oct → FR76 •••• 0189')).toBeVisible();
+  await expect(page.getByText('28 Oct · FR76 •••• 0189')).toBeVisible();
   await expect(page.getByRole('link', { name: /No payout method yet/ })).toHaveCount(0);
 });
 
@@ -351,7 +351,7 @@ test('rejected application shows the reason, dispute sheet and reapply', async (
   await page.goto('/#/application/nordcargo?scenario=reject');
   await expect(page.getByText('Application declined', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('The customer chose another carrier.', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Cancel application', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Yes, cancel application', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'View trip', exact: true })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Dispute decision', exact: true }).click();

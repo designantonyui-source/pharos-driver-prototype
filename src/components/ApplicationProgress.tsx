@@ -20,6 +20,13 @@ import { ProgressStep, type ProgressState } from './ProgressStep';
  *     Direct       Done "Application sent" · Current "Customer confirmation" · Next "Trip assigned"  (3 rows)
  *     DirectAssigned Done "Application sent" · Done "Customer confirmation" · Done "Trip assigned"   (3 rows)
  *
+ *   PRODUCT DEVIATION (2026-10-21): the Figma master is the 4-row list above. The driver-facing
+ *   tracker collapses dispatcher approval and customer confirmation into one "Under review" step
+ *   with a substatus and one deadline. The stage prop still maps the underlying application status,
+ *   but every variant now renders the same three driver-facing rows:
+ *     Application sent -> Under review -> Confirmed
+ *   Figma still needs this 3-row variant; do not treat the port as 1:1 until it is updated.
+ *
  *   Only three of the five variants are placed on a screen — Dispatcher `735:1115`,
  *   Customer `735:1158`, Assigned `735:1489` (all on `01 · Driver journey`, "pending"/"confirmed").
  *   Direct and DirectAssigned have no instance anywhere in the file; they are ported because the
@@ -31,36 +38,33 @@ import { ProgressStep, type ProgressState } from './ProgressStep';
  */
 export type ApplicationStage = 'dispatcher' | 'customer' | 'assigned' | 'direct' | 'direct-assigned';
 
-type Row = [ProgressState, string];
+type Row = { state: ProgressState; label: string; detail?: string };
 
 const STAGES: Record<ApplicationStage, Row[]> = {
   dispatcher: [
-    ['done', 'Application sent'],
-    ['current', 'Dispatcher approval'],
-    ['next', 'Customer confirmation'],
-    ['next', 'Trip assigned'],
+    { state: 'done', label: 'Application sent' },
+    { state: 'current', label: 'Under review', detail: 'With dispatcher' },
+    { state: 'next', label: 'Confirmed' },
   ],
   customer: [
-    ['done', 'Application sent'],
-    ['done', 'Dispatcher approval'],
-    ['current', 'Customer confirmation'],
-    ['next', 'Trip assigned'],
+    { state: 'done', label: 'Application sent' },
+    { state: 'current', label: 'Under review', detail: 'Dispatcher approved · waiting for customer' },
+    { state: 'next', label: 'Confirmed' },
   ],
   assigned: [
-    ['done', 'Application sent'],
-    ['done', 'Dispatcher approval'],
-    ['done', 'Customer confirmation'],
-    ['done', 'Trip assigned'],
+    { state: 'done', label: 'Application sent' },
+    { state: 'done', label: 'Under review' },
+    { state: 'done', label: 'Confirmed' },
   ],
   direct: [
-    ['done', 'Application sent'],
-    ['current', 'Customer confirmation'],
-    ['next', 'Trip assigned'],
+    { state: 'done', label: 'Application sent' },
+    { state: 'current', label: 'Under review', detail: 'With customer' },
+    { state: 'next', label: 'Confirmed' },
   ],
   'direct-assigned': [
-    ['done', 'Application sent'],
-    ['done', 'Customer confirmation'],
-    ['done', 'Trip assigned'],
+    { state: 'done', label: 'Application sent' },
+    { state: 'done', label: 'Under review' },
+    { state: 'done', label: 'Confirmed' },
   ],
 };
 
@@ -74,9 +78,9 @@ export function ApplicationProgress({
   label?: string;
 }) {
   const rows = STAGES[stage];
-  const currentIndex = rows.findIndex(([state]) => state === 'current');
-  const doneCount = rows.filter(([state]) => state === 'done').length;
-  // Screen readers get "Step 2 of 4" — the visual rows already carry Done/Current/Next.
+  const currentIndex = rows.findIndex((row) => row.state === 'current');
+  const doneCount = rows.filter((row) => row.state === 'done').length;
+  // Screen readers get "Step 2 of 3" — the visual rows already carry Done/Current/Next.
   const position = currentIndex >= 0 ? currentIndex + 1 : doneCount;
   return (
     <div className="flex w-[var(--card-w)] flex-col gap-[var(--spacing-12)] rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[var(--spacing-16)]">
@@ -87,13 +91,14 @@ export function ApplicationProgress({
       >
         {/* ProgressStep already renders the <li>; wrapping it produced a nested list
             item (React DOM warning) and doubled the step semantics for screen readers. */}
-        {rows.map(([state, title], i) => (
+        {rows.map((row, i) => (
           <ProgressStep
-            key={title}
-            state={state}
+            key={row.label}
+            state={row.state}
             number={i + 1}
-            label={title}
-            aria-current={state === 'current' ? 'step' : undefined}
+            label={row.label}
+            detail={row.detail}
+            aria-current={row.state === 'current' ? 'step' : undefined}
           />
         ))}
       </ol>

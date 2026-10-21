@@ -27,14 +27,14 @@ const STATUS_VIEW: Record<ApplicationStatus, { title: string; message: string; i
     stage: 'dispatcher',
   },
   [ApplicationStatus.DISPATCHER_REVIEW]: {
-    title: 'Under dispatcher review',
+    title: 'Under review',
     message: 'The dispatcher is reviewing your application.',
     icon: 'clock',
     stage: 'dispatcher',
   },
   [ApplicationStatus.CUSTOMER_REVIEW]: {
-    title: 'Waiting for customer',
-    message: 'The dispatcher approved your application. The customer is reviewing it.',
+    title: 'Under review',
+    message: 'The dispatcher approved your application. Waiting for the customer.',
     icon: 'clock',
     stage: 'customer',
   },
@@ -51,7 +51,7 @@ const STATUS_VIEW: Record<ApplicationStatus, { title: string; message: string; i
   },
   [ApplicationStatus.EXPIRED]: {
     title: 'Application expired',
-    message: 'Both approvals didn’t arrive in time.',
+    message: 'No decision arrived in time.',
     icon: 'circle-x',
   },
   [ApplicationStatus.CANCELLED]: {
@@ -159,12 +159,12 @@ export function ApplicationTrackerView({
 
           {waiting ? (
             <p className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-subtle)] p-[12px] text-body-14 text-[var(--color-text-secondary)]">
-              Average response time: ~15 min · Application closes unless both approve by {deadline}.
+              Typical reply: ~15 min · Decision by {deadline}.
             </p>
           ) : null}
           {expired ? (
             <p className="mt-[12px] rounded-[var(--radius-lg)] bg-[var(--color-bg-subtle)] p-[12px] text-body-14 text-[var(--color-text-secondary)]">
-              Needed both approvals by {deadline}. This application is closed; the load itself is no longer available.
+              No decision by {deadline}. This application is closed; the load itself is no longer available.
               You can find a similar load.
             </p>
           ) : null}

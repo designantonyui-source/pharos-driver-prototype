@@ -13,17 +13,24 @@ function renderBanner(status: ApplicationStatus) {
 }
 
 describe('ApplicationBanner — live states only', () => {
-  it.each([ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REVIEW, ApplicationStatus.CUSTOMER_REVIEW])('shows a status banner while %s', (status) => {
+  it.each([ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REVIEW, ApplicationStatus.CUSTOMER_REVIEW])('shows a three-step status banner while %s', (status) => {
     const { onOpen } = renderBanner(status);
     expect(screen.getByText(new RegExp(`Lille → Brussels · €${load.rate} · by`))).toBeVisible();
+    expect(screen.getByText(/Step 2 of 3/)).toBeVisible();
     fireEvent.click(screen.getByRole('button'));
     expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses the decision deadline snapshotted on the application', () => {
+    const application = { loadId: load.id, status: ApplicationStatus.SENT, submittedAt: new Date().toISOString(), approvalsDeadline: new Date(Date.now() + 20 * 60_000).toISOString() };
+    render(<ApplicationBanner load={load} status={ApplicationStatus.SENT} application={application} onOpen={vi.fn()} />);
+    expect(screen.getByText(/· by \d{2}:\d{2}/)).toBeVisible();
   });
 
   it('shows the confirmed mini-player, not a status banner', () => {
     renderBanner(ApplicationStatus.CONFIRMED);
     expect(screen.getByText(/km to go/)).toBeVisible();
-    expect(screen.queryByText(/Step .* of 4/)).toBeNull();
+    expect(screen.queryByText(/Step .* of 3/)).toBeNull();
   });
 
   it.each([ApplicationStatus.REJECTED, ApplicationStatus.EXPIRED, ApplicationStatus.CANCELLED])('renders nothing for ended state %s — card pill owns it', (status) => {

@@ -7,6 +7,7 @@
  *  2. later: real backend — replace these functions, nothing else changes
  */
 import { ApplicationStatus } from './models';
+import { APPROVAL_WINDOW_MIN } from './approval';
 import { store, type LoadApplication, type Status } from './store';
 import { V2_LOADS, isPickupClosed, isPickupUnreachable, type V2Load } from './v2/loads';
 import { BL_ORDERS, type BlOrder } from './bl/logic';
@@ -44,6 +45,7 @@ export const OWNER_DRIVER_ASSUMPTION = Object.freeze({
  * id, route, rate and documents must match everywhere (loads feed, trip, invoice, ledger).
  */
 export const DEMO_LOAD_ID = 'nordcargo';
+
 export function getDemoLoad(): V2Load {
   const load = V2_LOADS.find((l) => l.id === DEMO_LOAD_ID);
   if (!load) throw new Error('Seed load is missing from the feed');
@@ -619,7 +621,9 @@ export async function submitApplication(loadId: string) {
   if (!store.get().payoutMethods.some((method) => method.verified)) {
     throw new ApplicationError('NO_PAYOUT_METHOD', 'Add a verified payout method before applying.');
   }
-  const submittedAt = new Date().toISOString();
+  const submittedAtDate = new Date();
+  const submittedAt = submittedAtDate.toISOString();
+  const approvalsDeadline = new Date(submittedAtDate.getTime() + APPROVAL_WINDOW_MIN * 60_000).toISOString();
   store.set({
     loadId,
     status: ApplicationStatus.SENT,
@@ -629,7 +633,7 @@ export async function submitApplication(loadId: string) {
         loadId,
         status: ApplicationStatus.SENT,
         submittedAt,
-        approvalsDeadline: load.approvalsAt,
+        approvalsDeadline,
       },
     },
   });

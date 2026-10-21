@@ -32,7 +32,7 @@ test('balance: add SCA-approved IBAN then SEPA cash out to history', async ({ pa
   await expect(page).toHaveURL(/#\/v2\/account\/balance\/withdrawals\//, { timeout: 15000 });
 
   await page.goto('/#/v2/account/balance/history');
-  await expect(page.getByText(/Ghent - Antwerp/)).toBeVisible();
+  await expect(page.getByText(/Ghent → Antwerp/)).toBeVisible();
 });
 
 test('balance: card method with instant fee quote', async ({ page }) => {
@@ -51,7 +51,7 @@ test('balance: card method with instant fee quote', async ({ page }) => {
   await expect(sca).toContainText('Confirm the new card');
   await sca.getByRole('button', { name: 'Confirm with bank app' }).click();
   await expect(page.getByText(/2 saved/)).toBeVisible({ timeout: 10000 });
-  await expect(page.getByText(/instant, within 30 minutes/).first()).toBeVisible();
+  await expect(page.getByText(/Visa •••• 4242 · Instant/).first()).toBeVisible();
 
   // Card is a distinct rail with a visible fee, not hidden inside the amount.
   await page.goto('/#/v2/account/balance/cashout');
@@ -64,13 +64,13 @@ test('balance: invoices list, details, route VAT and history link', async ({ pag
   await page.goto('/#/v2/account/balance/invoices');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await expect(page.getByText('INV-2026-0038 - BelRoute')).toBeVisible();
+  await expect(page.getByText('INV-2026-0038 · BelRoute')).toBeVisible();
   await page.getByRole('link', { name: /INV-2026-0038/ }).click();
   // Ghent → Antwerp is a Belgian domestic route: 21% VAT, not reverse charge.
   await expect(page.getByText(/TVA 21%/).first()).toBeVisible();
   await expect(page.getByText(/Northway Freight SAS/)).toBeVisible();
   await page.goto('/#/v2/account/balance/history');
-  await page.getByRole('link', { name: /Ghent - Antwerp.*invoice/ }).click();
+  await page.getByRole('link', { name: /Ghent → Antwerp.*invoice/ }).click();
   await expect(page.getByText('INV-2026-0038', { exact: false }).first()).toBeVisible();
 });
 

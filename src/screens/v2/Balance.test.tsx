@@ -43,7 +43,7 @@ it('adds an IBAN method with check-digit validation', async () => {
   await screen.findByText('Add method');
   const iban = screen.getByLabelText(/IBAN/, { exact: false });
   fireEvent.change(iban, { target: { value: 'FR00 0000' } });
-  await screen.findByText('Check the IBAN - wrong check digits.');
+  await screen.findByText('Check the IBAN. The check digits don’t match.');
   fireEvent.change(iban, { target: { value: 'de89 3704 0044 0532 0130 00' } });
   fireEvent.change(screen.getByLabelText(/nickname/, { exact: false }), { target: { value: 'Business' } });
   fireEvent.click(screen.getByRole('button', { name: 'Add bank account' }));
@@ -63,7 +63,7 @@ it('adds a card without persisting the PAN', async () => {
   fireEvent.change(screen.getByLabelText(/Card number/, { exact: false }), { target: { value: '4242424242424241' } });
   await screen.findByText('Check the card number.');
   fireEvent.change(screen.getByLabelText(/Card number/, { exact: false }), { target: { value: VALID_CARD } });
-  await screen.findByText(/Visa - detected automatically/);
+  await screen.findByText(/Visa · detected automatically/);
   fireEvent.change(screen.getByLabelText(/Expiry/, { exact: false }), { target: { value: '12/30' } });
   fireEvent.change(screen.getByLabelText(/CVC/, { exact: false }), { target: { value: '123' } });
   fireEvent.change(screen.getByLabelText(/Cardholder name/, { exact: false }), { target: { value: 'Alexey K.' } });
@@ -227,7 +227,7 @@ it('lists trips and withdrawals in history with rail notes', async () => {
   store.set({ payoutMethods: [] });
   await api.addIbanMethod({ iban: VALID_IBAN, label: 'Business', scaToken: await api.authorizeSca('payout-method') });
   setup('/v2/account/balance/history');
-  await screen.findByText('Ghent - Antwerp');
+  await screen.findByText('Ghent → Antwerp');
   expect(screen.getByText(/C.te Fret/)).toBeTruthy();
   const { entry } = await api.requestWithdrawal(100, undefined, await api.authorizeSca('withdrawal'));
   expect(entry.methodLabel).toBe('Business');

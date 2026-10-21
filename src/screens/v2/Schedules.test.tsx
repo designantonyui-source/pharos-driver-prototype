@@ -77,5 +77,5 @@ it('explains the empty auto-runs state before the first run', async () => {
   await api.addIbanMethod({ iban: VALID_IBAN, label: 'Bank', scaToken: await api.authorizeSca('payout-method') });
   setup();
   await screen.findByText('Export monthly statement (CSV)');
-  expect(screen.getByText(/No auto runs yet/)).toBeTruthy();
+  expect(screen.getByText(/No auto-withdraws yet/)).toBeTruthy();
 });

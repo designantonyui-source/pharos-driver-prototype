@@ -25,7 +25,7 @@ export function CancelApplicationSheet({
 }) {
   return (
     <Sheet open={open} onClose={onClose} label={`Cancel application ${load.from} to ${load.to}`}>
-      <h2 className="text-heading-20 text-[var(--color-text-primary)]">Withdraw this application?</h2>
+      <h2 className="text-heading-20 text-[var(--color-text-primary)]">Cancel this application?</h2>
       <p className="mt-[var(--spacing-8)] text-body-14 text-[var(--color-text-secondary)]">
         {load.from} → {load.to} · €{load.rate}
       </p>
@@ -34,7 +34,7 @@ export function CancelApplicationSheet({
       </p>
       {error && <p role="alert" className="mt-[var(--spacing-8)] text-body-14 text-[var(--color-text-danger)]">{error}</p>}
       <div className="mt-[var(--spacing-20)] flex flex-col gap-[var(--spacing-8)]">
-        <Button label="Withdraw application" appearance="danger" loading={cancelling} disabled={cancelling} onClick={onConfirm} />
+        <Button label="Yes, cancel application" appearance="danger" loading={cancelling} disabled={cancelling} onClick={onConfirm} />
         <Button label="Keep application" appearance="secondary" disabled={cancelling} onClick={onClose} />
       </div>
     </Sheet>

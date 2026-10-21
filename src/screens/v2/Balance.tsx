@@ -31,7 +31,7 @@ import { ScaSheet } from '../../components/v2/ScaSheet';
 import {
   PAYOUT_POLICY, addCardMethod, addIbanMethod, adjustmentLabel, detectCardBrand, evaluateSchedule, formatCardExpiry,
   formatCardNumber, getBalance, getLedger, getPayoutMethods, getWithdrawal, maskCard,
-  maskIban, maxWithdrawalFor, methodLabel, payoutProvider, quoteFor, removeMethod, requestWithdrawal,
+  maskIban, maxWithdrawalFor, methodLabel, quoteFor, removeMethod, requestWithdrawal,
   setDefaultMethod, tokeniseCard, validateCardCvc, validateCardExpiry,
   validateCardNumber, validateIban,
   type BalanceSummary, type LedgerEntry, type PayoutMethod,
@@ -104,10 +104,10 @@ function EmptyState({ icon, title, body }: { icon: IconName; title: string; body
 
 function methodDetail(method: PayoutMethod): string {
   const base = method.kind === 'iban'
-    ? `${maskIban(method.iban)} - SEPA, ${PAYOUT_POLICY.eta}`
-    : `${maskCard(method.last4, method.brand)} - instant, ${PAYOUT_POLICY.cardEta}`;
-  const verifying = method.verified ? '' : ' - verifying...';
-  const def = method.isDefault ? ' - default' : '';
+    ? `${maskIban(method.iban)} · SEPA`
+    : `${maskCard(method.last4, method.brand)} · Instant`;
+  const verifying = method.verified ? '' : ' · verifying…';
+  const def = method.isDefault ? ' · default' : '';
   return `${base}${verifying}${def}`;
 }
 
@@ -117,8 +117,8 @@ export function LedgerLine({ entry, last = false, invoiceId }: { entry: LedgerEn
     const inner = <>
       <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="truck" size="md" /></span>
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-body-14 text-[var(--color-text-primary)]">{entry.from} - {entry.to}</span>
-        <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{entry.company} - {entry.day}{entry.status === 'pending' ? ' - pending payout' : ''}{invoiceId ? ' - invoice' : ''}</span>
+        <span className="truncate text-body-14 text-[var(--color-text-primary)]">{entry.from} → {entry.to}</span>
+        <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{entry.company} · {entry.day}{entry.status === 'pending' ? ' · pending payout' : ''}{invoiceId ? ' · invoice' : ''}</span>
       </span>
       <span className="flex shrink-0 flex-col items-end">
         <span className="text-body-14 text-[var(--color-text-primary)]">+{formatEuro(entry.amount)}</span>
@@ -136,7 +136,7 @@ export function LedgerLine({ entry, last = false, invoiceId }: { entry: LedgerEn
       <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="landmark" size="md" /></span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-body-14 text-[var(--color-text-primary)]">Cash out to {entry.methodLabel}</span>
-        <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{new Date(entry.createdAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })} - {railNote}{entry.fee > 0 ? ` - fee ${formatEuro(entry.fee)}` : ''}</span>
+        <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{new Date(entry.createdAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })} · {railNote}{entry.fee > 0 ? ` · fee ${formatEuro(entry.fee)}` : ''}</span>
       </span>
       <span className="flex shrink-0 flex-col items-end">
         <span className="text-body-14 text-[var(--color-text-primary)]">-{formatEuro(entry.amount)}</span>
@@ -149,7 +149,7 @@ export function LedgerLine({ entry, last = false, invoiceId }: { entry: LedgerEn
     <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name="triangle-alert" size="md" /></span>
     <span className="flex min-w-0 flex-1 flex-col">
       <span className="truncate text-body-14 text-[var(--color-text-primary)]">{adjustmentLabel(entry.reason)}</span>
-      <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{entry.note} - {new Date(entry.createdAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })}</span>
+      <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{entry.note} · {new Date(entry.createdAt).toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })}</span>
     </span>
     <span className="flex shrink-0 flex-col items-end">
       <span className={`text-body-14 ${negative ? 'text-[var(--color-text-danger)]' : 'text-[var(--color-status-success-text)]'}`}>{negative ? '-' : '+'}{formatEuro(Math.abs(entry.amount))}</span>
@@ -206,10 +206,10 @@ export function Balance() {
         {formatEuro(summary.pending)} pending{summary.pendingDueAt ? ` · customer payment due ${shortDate(summary.pendingDueAt)}` : ''}
       </p>}
       <div className="mt-[var(--spacing-16)]">
-        <Button label={hasMethod ? `Cash out - ${def.kind === 'card' ? PAYOUT_POLICY.cardEta : PAYOUT_POLICY.eta}` : 'Add payout method to cash out'} onClick={() => navigate(hasMethod ? '/v2/account/balance/cashout' : '/v2/account/balance/method')} />
+        <Button label={hasMethod ? `Cash out · ${def.kind === 'card' ? PAYOUT_POLICY.cardEta : PAYOUT_POLICY.eta}` : 'Add payout method to cash out'} onClick={() => navigate(hasMethod ? '/v2/account/balance/cashout' : '/v2/account/balance/method')} />
       </div>
       {(!hasMethod || summary.available < PAYOUT_POLICY.minWithdrawal) && <p className="mt-[var(--spacing-8)] text-caption-12 opacity-80">
-        {!hasMethod ? 'SEPA to your bank or instant to your card - add and verify a method first.' : `Minimum withdrawal is ${formatEuro(PAYOUT_POLICY.minWithdrawal)}.`}
+        {!hasMethod ? 'Add a bank account or card before cashing out.' : `Minimum withdrawal is ${formatEuro(PAYOUT_POLICY.minWithdrawal)}.`}
       </p>}
     </div>
     <Section label="Payout methods">
@@ -230,7 +230,7 @@ export function Balance() {
       <RowLink to="/v2/account/balance/invoices" icon="history" title="Invoices" detail="Per-trip paperwork with VAT, PDF export" />
       <RowLink to="/v2/account/balance/schedules" icon="clock" title="Auto-withdraw" detail="Schedules, runs, accountant export" last />
     </Section>
-    <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">No real money moves. Provider: {payoutProvider.name}.</p>
+    <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Prototype only · no real money moves.</p>
   </BalanceFrame>;
 }
 
@@ -367,12 +367,12 @@ export function PayoutMethodScreen({ initialTab = 'iban' }: { initialTab?: 'iban
         {(['iban', 'card'] as const).map(t => <button key={t} type="button" aria-pressed={tab === t} onClick={() => setTab(t)} className={`h-[var(--size-control-mobile)] flex-1 rounded-[var(--radius-sm)] border text-label-14 focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] ${tab === t ? 'border-[var(--color-action-primary)] bg-[var(--color-action-primary)] text-[var(--color-action-text-inverse)]' : 'border-[var(--color-action-border)] text-[var(--color-action-text)]'}`}>{t === 'iban' ? `Bank (SEPA, free)` : `Card (instant, ${formatEuro(PAYOUT_POLICY.cardFee)})`}</button>)}
       </div>
       {tab === 'iban' ? <form onSubmit={e => { e.preventDefault(); if (ibanValid && ibanCompact && !saving) setScaIntent('iban'); }} noValidate className="flex flex-col gap-[var(--spacing-16)] p-[var(--spacing-12)]">
-        <Input label="IBAN" value={iban} placeholder="DE89 3704 0044 0532 0130 00" state={ibanShowError ? 'error' : iban ? 'filled' : 'empty'} icon={false} hint={ibanShowError ? 'Check the IBAN - wrong check digits.' : 'We validate the check digits before saving.'} onChange={v => { setIban(v.toUpperCase()); setIbanTouched(true); setSaveError(false); }} />
+        <Input label="IBAN" value={iban} placeholder="DE89 3704 0044 0532 0130 00" state={ibanShowError ? 'error' : iban ? 'filled' : 'empty'} icon={false} hint={ibanShowError ? 'Check the IBAN. The check digits don’t match.' : 'We validate the check digits before saving.'} onChange={v => { setIban(v.toUpperCase()); setIbanTouched(true); setSaveError(false); }} />
         <Input label="Account nickname (optional)" value={ibanLabel} placeholder="My business account" state="empty" icon={false} hint={null} onChange={v => { setIbanLabel(v); setSaveError(false); }} />
         <Button label={saving ? 'Saving...' : 'Add bank account'} disabled={!ibanValid || !ibanCompact || saving} loading={saving} onClick={() => { if (ibanValid && ibanCompact && !saving) setScaIntent('iban'); }} />
       </form> : <form onSubmit={e => { e.preventDefault(); if (cardReady && !saving) setScaIntent('card'); }} noValidate className="flex flex-col gap-[var(--spacing-16)] p-[var(--spacing-12)]">
         <div className="rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] p-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Card is tokenised in the form — the number never leaves this screen. Instant payout, {formatEuro(PAYOUT_POLICY.cardFee)} fee, {PAYOUT_POLICY.cardEta}.</div>
-        <Input label="Card number" value={cardNumber} placeholder="4242 4242 4242 4242" state={cardShowNumberError ? 'error' : cardNumber ? 'filled' : 'empty'} icon={false} hint={cardShowNumberError ? 'Check the card number.' : brand ? `${brand} - detected automatically.` : 'Visa, Mastercard, Amex.'} onChange={v => { setCardNumber(formatCardNumber(v)); setCardTouched(true); setSaveError(false); }} />
+        <Input label="Card number" value={cardNumber} placeholder="4242 4242 4242 4242" state={cardShowNumberError ? 'error' : cardNumber ? 'filled' : 'empty'} icon={false} hint={cardShowNumberError ? 'Check the card number.' : brand ? `${brand} · detected automatically.` : 'Visa, Mastercard, Amex.'} onChange={v => { setCardNumber(formatCardNumber(v)); setCardTouched(true); setSaveError(false); }} />
         <div className="flex gap-[var(--spacing-8)]">
           <div className="flex-1"><Input label="Expiry" value={cardExpiry} placeholder="MM/YY" state={cardTouched && cardExpiry && !cardValidExpiry ? 'error' : cardExpiry ? 'filled' : 'empty'} icon={false} hint={cardTouched && cardExpiry && !cardValidExpiry ? 'Use a future date.' : null} onChange={v => { setCardExpiry(formatCardExpiry(v)); setCardTouched(true); setSaveError(false); }} /></div>
           <div className="flex-1"><Input label={brand === 'Amex' ? 'CID (4 digits)' : 'CVC'} value={cardCvc} placeholder={brand === 'Amex' ? '1234' : '123'} state={cardTouched && cardCvc && !cardValidCvc ? 'error' : cardCvc ? 'filled' : 'empty'} icon={false} hint={null} onChange={v => { setCardCvc(v.replace(/\D/g, '').slice(0, 4)); setCardTouched(true); setSaveError(false); }} /></div>
@@ -459,11 +459,11 @@ export function CashOut() {
   const showError = touched && (!validNumber || belowMin || overBalance);
   const net = validNumber && !belowMin && !overBalance ? parsed : 0;
   const maxForMethod = maxWithdrawalFor(summary.available, quote.fee);
-  const hint = !touched ? `Available ${formatEuro(summary.available)} - minimum ${formatEuro(PAYOUT_POLICY.minWithdrawal)}.`
+  const hint = !touched ? `Available ${formatEuro(summary.available)} · Minimum ${formatEuro(PAYOUT_POLICY.minWithdrawal)}.`
     : !validNumber ? 'Enter an amount greater than 0.'
     : belowMin ? `Minimum withdrawal is ${formatEuro(PAYOUT_POLICY.minWithdrawal)}.`
     : overBalance ? 'Amount plus fee exceeds your available balance.'
-    : quote.fee > 0 ? `Fee ${formatEuro(quote.fee)} - arrives ${quote.eta}.` : `${formatEuro(summary.available - parsed)} will remain available.`;
+    : quote.fee > 0 ? `Fee ${formatEuro(quote.fee)} · arrives ${quote.eta}.` : `${formatEuro(summary.available - parsed)} will remain available.`;
   function openConfirm() {
     setTouched(true);
     setFailure(null);
@@ -502,14 +502,14 @@ export function CashOut() {
         <span className="flex h-[var(--size-icon-xl)] w-[var(--size-icon-xl)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-bg-subtle)] text-[var(--color-action-primary)]" aria-hidden><Icon name={m.kind === 'card' ? 'wallet' : 'landmark'} size="md" /></span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-body-14 text-[var(--color-text-primary)]">{m.label || methodLabel(m)}</span>
-          <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{m.kind === 'card' ? `Instant - ${PAYOUT_POLICY.cardEta} - fee ${formatEuro(PAYOUT_POLICY.cardFee)}` : `SEPA - ${PAYOUT_POLICY.eta} - no fee`}{m.verified ? '' : ' - verifying...'}</span>
+          <span className="truncate text-caption-12 text-[var(--color-text-secondary)]">{m.kind === 'card' ? `Instant · ${PAYOUT_POLICY.cardEta} · fee ${formatEuro(PAYOUT_POLICY.cardFee)}` : `SEPA · ${PAYOUT_POLICY.eta} · no fee`}{m.verified ? '' : ' · verifying…'}</span>
         </span>
       </label>)}
     </Section>
     <div className="mt-[var(--spacing-16)] rounded-[var(--radius-md)] bg-[var(--color-bg-surface)] p-[var(--spacing-16)]">
       <p className="text-caption-12 uppercase tracking-wide text-[var(--color-text-secondary)]">Available</p>
       <p className="mt-[var(--spacing-8)] text-metric-28">{formatEuro(summary.available)}</p>
-      <p className="mt-[var(--spacing-8)] text-body-14 text-[var(--color-text-secondary)]">Via {method.label || methodLabel(method)} - {quote.fee > 0 ? `fee ${formatEuro(quote.fee)}, ` : ''}arrives {quote.eta}.</p>
+      <p className="mt-[var(--spacing-8)] text-body-14 text-[var(--color-text-secondary)]">To {method.label || methodLabel(method)} · {quote.fee > 0 ? `fee ${formatEuro(quote.fee)}, ` : ''}arrives {quote.eta}.</p>
     </div>
     <form onSubmit={e => { e.preventDefault(); openConfirm(); }} noValidate className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-12)]">
       <Input label="Amount (EUR)" value={amount} placeholder="100.00" state={showError ? 'error' : amount ? 'filled' : 'empty'} icon={false} hint={hint} onChange={v => { setAmount(v.replace(/[^\d.,]/g, '')); setTouched(true); setFailure(null); }} />
@@ -550,7 +550,7 @@ export function CashOut() {
       </dl>
       <p className="mt-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">No real money moves.</p>
       <div className="mt-[var(--spacing-16)] flex flex-col gap-[var(--spacing-8)]">
-        <Button label={sending ? 'Sending...' : `Confirm - ${validNumber ? formatEuro(parsed) : ''}`.trim()} loading={sending} onClick={() => setScaOpen(true)} />
+        <Button label={sending ? 'Sending…' : `Confirm ${validNumber ? formatEuro(parsed) : ''}`.trim()} loading={sending} onClick={() => setScaOpen(true)} />
         <Button label="Keep editing" appearance="secondary" disabled={sending} onClick={() => setConfirmOpen(false)} />
       </div>
     </Sheet>
@@ -596,7 +596,7 @@ export function BalanceHistory() {
     </div> : <Section label={`${ledger.length} entries`}>
       {ledger.map((entry, i) => <LedgerLine key={entry.id} entry={entry} last={i === ledger.length - 1} invoiceId={entry.kind === 'trip' ? invoiceByLoad[entry.loadId] ?? null : null} />)}
     </Section>}
-    <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Ledger - stored on this device only.</p>
+    <p className="mt-[var(--spacing-16)] px-[var(--spacing-12)] text-caption-12 text-[var(--color-text-secondary)]">Activity is stored on this device only.</p>
   </BalanceFrame>;
 }
 
