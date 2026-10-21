@@ -11,7 +11,7 @@ React 19 · TypeScript · Vite · Tailwind v4 · Storybook 10 · Playwright · V
 [![CI](https://github.com/designantonyui-source/pharos-driver-prototype/actions/workflows/pharos-validation.yml/badge.svg)](https://github.com/designantonyui-source/pharos-driver-prototype/actions/workflows/pharos-validation.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-087ea4?style=flat-square&logo=react&logoColor=white)](https://react.dev/)
-[![Tests](https://img.shields.io/badge/tests-208%20unit%20%2B%2016%20e2e-4c1?style=flat-square)](https://github.com/designantonyui-source/pharos-driver-prototype)
+[![Tests](https://img.shields.io/badge/tests-210%20unit%20%2B%2016%20e2e-4c1?style=flat-square)](https://github.com/designantonyui-source/pharos-driver-prototype)
 
 [Live prototype](https://pharos-driver-prototype.vercel.app) · [Case study](docs/CASE-STUDY.md) · [Demo script](docs/DEMO-SCRIPT.md) · [Payments vision](design/PAYMENTS-VISION.md)
 
@@ -29,7 +29,7 @@ So I built this prototype **backwards from the money**. The loads feed, the appl
 trip screens exist to feed the ledger; the ledger is the product. Every screen in the payments area
 is built around one question a real driver asks out loud:
 
-> *"I earned €360 on Monday. Where is it, and when can I have it?"*
+> *"I earned €435 on Monday. Where is it, and when can I have it?"*
 
 ---
 
@@ -40,7 +40,7 @@ This is the flow to show. It runs end to end in the prototype, and every beat is
 ```
  ┌──────────────┐   ┌───────────┐   ┌──────────────┐   ┌───────────────┐
  │  Book a load │──▶│  Deliver  │──▶│  Pending     │──▶│ Customer pays │
- │  apply → send│   │  POD ok   │   │ EUR 360 held │   │  → Available  │
+ │  apply → send│   │  POD ok   │   │ EUR 435 held │   │  → Available  │
  └──────────────┘   └───────────┘   └──────────────┘   └───────┬───────┘
         │                                                        │
         │                                                        ▼
@@ -70,7 +70,7 @@ This is the flow to show. It runs end to end in the prototype, and every beat is
 | | | |
 |---|---|---|
 | ![Trip — earnings pending the customer](docs/screens/06-trip-earnings-awaiting-payment.png) | ![Balance — earnings land as pending](docs/screens/07-balance-pending.png) | ![Balance — customer pays, funds release](docs/screens/08-balance-available.png) |
-| **Trip** — "€360, awaiting customer payment" | **Balance · pending** — earned ≠ available | **Balance · available** — released on payment |
+| **Trip** — "€435, awaiting customer payment" | **Balance · pending** — earned ≠ available | **Balance · available** — released on payment |
 | ![Payout method — IBAN with mod-97 validation](docs/screens/09-payout-method-iban.png) | ![Cash out — quote before execute](docs/screens/16-cashout-confirm-sheet.png) | ![Ledger — trips, withdrawals, adjustments](docs/screens/18-balance-history.png) |
 | **Payout method** — SEPA IBAN, mod-97 validated | **Cash out** — fee, total debit, ETA, before the call | **Ledger** — one list for every money movement |
 | ![Invoice — EU B2B with reverse charge](docs/screens/22-invoice-details.png) | ![Payout failed — funds returned](docs/screens/20-payout-failed-returned.png) | ![Auto-withdraw — schedules and runs](docs/screens/23-auto-withdraw-schedules.png) |
@@ -144,7 +144,7 @@ determines whether a driver trusts the product.
 
 ### 5. EU B2B invoicing, not a receipt
 
-The driver is a **carrier company** (`Northway Freight SPRL`), not a gig worker, so every completed
+The driver is a **carrier company** (`Northway Freight SAS`), not a gig worker, so every completed
 trip produces a real invoice with:
 
 - seller and buyer blocks, both with **VAT IDs**
@@ -186,7 +186,7 @@ So the card ships as the **paid speed lane** on top of a free SEPA base. The ful
 | **76 components** | each one Storybook-first, with a contract header naming its Figma node |
 | **25 screens** | every screen is a route, and every route appears in the screen index |
 | **184 design tokens** | exported from Figma → CSS, with a **token guard** that fails the build |
-| **208 unit tests** | Vitest + Testing Library, covering the money rules |
+| **210 unit tests** | Vitest + Testing Library, covering the money rules |
 | **16 E2E tests** | Playwright at 402×874 — the money loop as a user would walk it |
 | **~20k lines** | TypeScript, strict, no `any` in the payments layer |
 
@@ -239,7 +239,7 @@ POD review, payout outcome) so the whole money loop can be shown on demand.
 
 ```bash
 pnpm check         # token audit + tsc --noEmit + production build
-pnpm test          # 208 unit tests
+pnpm test          # 210 unit tests
 pnpm test:e2e      # 16 Playwright tests (needs Chrome)
 pnpm capture:case-study   # regenerate docs/screens/ from the running app
 ```

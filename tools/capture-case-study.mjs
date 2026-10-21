@@ -79,6 +79,15 @@ async function drive(page, eventLabel, opts = {}) {
   await page.waitForTimeout(300);
 }
 
+async function latestWithdrawalId(page) {
+  return page.evaluate(() => {
+    const raw = localStorage.getItem('pharos-driver-prototype');
+    const state = raw ? JSON.parse(raw) : {};
+    const withdrawals = (state.ledger ?? []).filter((entry) => entry.kind === 'withdrawal');
+    return withdrawals[withdrawals.length - 1]?.id ?? null;
+  });
+}
+
 async function main() {
   await rm(OUT, { recursive: true, force: true });
   await mkdir(OUT, { recursive: true });
@@ -195,7 +204,9 @@ async function main() {
   await page.waitForTimeout(900);
   await shot(page, '16-cashout-confirm-sheet');
 
-  await tapButton(page, /Confirm/i);
+  await tapButton(page, /^Confirm EUR/);
+  await page.waitForTimeout(900);
+  await tapButton(page, /Confirm with bank app/);
   await page.waitForTimeout(2000);
   await shot(page, '17-cashout-done');
 
@@ -206,13 +217,15 @@ async function main() {
   await shot(page, '18-balance-history');
 
   await drive(page, '→ delayed', { route: '/v2/account/balance/history', settle: 1600 });
-  await page.goto(clean('/v2/account/balance/history'));
+  const delayedId = await latestWithdrawalId(page);
+  await page.goto(clean(`/v2/account/balance/withdrawals/${encodeURIComponent(delayedId)}`));
   await page.waitForTimeout(1200);
   await shot(page, '19-payout-delayed');
 
   await drive(page, '→ failed', { route: '/v2/account/balance/history', settle: 1600 });
   await drive(page, '→ funds returned', { route: '/v2/account/balance/history', settle: 1800 });
-  await page.goto(clean('/v2/account/balance/history'));
+  const returnedId = await latestWithdrawalId(page);
+  await page.goto(clean(`/v2/account/balance/withdrawals/${encodeURIComponent(returnedId)}`));
   await page.waitForTimeout(1200);
   await shot(page, '20-payout-failed-returned');
 

@@ -28,15 +28,15 @@ the transfer the money comes back.
 
 **Screen:** `/v2` → screenshot `01-loads-feed.png`
 
-The map-first feed. Two loads: **NordCargo, Lille → Brussels, €360, €3.24/km, 111 km, "Paid in 7
-days"**, and a second option.
+The map-first feed. Four loads; the first is **NordCargo, Lille → Brussels, €435, €3.54/km,
+111 km, "Paid in 7 days"**.
 
 **Say:**
 
 > "Freight apps all look like this. Map, cards, a rate. I'm not going to spend the demo here —
 > the loads feed exists in this prototype to feed the part that actually matters, which is money."
 
-**Tap:** **Apply for €360** → the load sheet opens (screenshot `02-load-details.png`).
+**Tap:** **Apply for €435** → the load sheet opens (screenshot `02-load-details.png`).
 
 > "One tap to apply, two taps to be in the running. The load says 'paid in 7 days' — hold on to
 > that, it's the reason the balance screen looks the way it does."
@@ -69,8 +69,8 @@ Open the pill → **→ delivered** → **→ POD submitted** → **→ POD acce
 **Screen:** scroll to the **Earnings** block on the trip (screenshot
 `06-trip-earnings-awaiting-payment.png`)
 
-> "This is the same state the balance screen will show, one screen earlier: €360, awaiting customer
-> payment, expected by the 22nd. *Money is not available yet — the customer has not paid the
+> "This is the same state the balance screen will show, one screen earlier: €435, awaiting customer
+> payment, expected by 28 Oct. *Money is not available yet — the customer has not paid the
 > invoice.* And notice the primary button up here no longer says 'Upload POD' — the deed is done,
 > so the button names the next thing, which is money."
 
@@ -89,10 +89,10 @@ Tap the **Account** tab → **Balance**. Or go directly to `/#/v2/account/balanc
 
 **Say:**
 
-> "Here's the screen I actually want to be judged on. Available is €500. Pending is €360 — the
+> "Here's the screen I actually want to be judged on. Available is €720. Pending is €435 — the
 > NordCargo trip I just delivered."
 
-> "The driver has *earned* €360. They cannot *withdraw* €360, because the load pays in 7 days.
+> "The driver has *earned* €435. They cannot *withdraw* €435, because the load pays in 7 days.
 > Most apps show one number, and the driver discovers the difference at the cash-out screen, which
 > is the worst possible moment."
 
@@ -113,7 +113,7 @@ Open the pill → **→ customer paid** → close the panel.
 
 **Screen:** Balance (screenshot `08-balance-available.png`)
 
-> "€360 moved from pending to available. Same trip, same €360, now withdrawable."
+> "€435 moved from pending to available. Same trip, same €435, now withdrawable."
 
 > "The invoice flipped to paid in the same operation — the paperwork and the money move together,
 > because for a carrier company the invoice is the thing the accountant files."
@@ -178,7 +178,7 @@ Type `120`, then tap **Cash out EUR 120.00**.
 > maximum: the €10 minimum can never overdraw on a €1.50 instant rail, because we check
 > *amount + fee* against the balance, not the amount alone."
 
-Tap **Confirm – EUR 120.00**.
+Tap **Confirm EUR 120.00** → **Confirm with bank app** (the SCA challenge).
 
 **Screen:** the operation (screenshot `17-cashout-done.png`)
 
@@ -196,11 +196,11 @@ Tap **Confirm – EUR 120.00**.
 > "This is the part most prototypes skip, and it's the part that decides whether a driver trusts
 > the product."
 
-Open the pill → **→ delayed** → close the panel. Show the history (screenshot `19-payout-delayed.png`).
+Open the pill → **→ delayed** → close the panel. Show the operation (screenshot `19-payout-delayed.png`).
 
 > "The provider needs more time. The withdrawal says so."
 
-Open the pill → **→ failed** → **→ funds returned** → close the panel (screenshot `20-payout-failed-returned.png`).
+Open the pill → **→ failed** → **→ funds returned** → close the panel. Show the returned operation (screenshot `20-payout-failed-returned.png`).
 
 > "The bank rejected the transfer. The money comes *back* — the amount is credited to the balance,
 > and the fee is debited unless policy refunds it, because a failed transfer shouldn't cost the

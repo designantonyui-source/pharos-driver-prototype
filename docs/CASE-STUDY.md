@@ -25,11 +25,11 @@ That decision shaped everything else. The map exists, but it is scaffolding for 
 
 ## 2. The problem, stated precisely
 
-A driver in this market is a **carrier company** (`Northway Freight SPRL`), not a gig worker. Three
+A driver in this market is a **carrier company** (`Northway Freight SAS`), not a gig worker. Three
 consequences follow, and each one became a design requirement:
 
 1. **Money is earned before it is payable.** Freight runs on net terms — the load says
-   *"Paid in 7 days"*. A driver who delivered on Monday owns €360, but cannot withdraw it on Monday.
+   *"Paid in 7 days"*. A driver who delivered on Monday owns €435, but cannot withdraw it on Monday.
    A single "balance" number is a lie. → **The balance splits into Available and Pending.**
 
 2. **The payout is to a company account, in EUR, inside the EU.** The rail is SEPA. → **IBAN is the
@@ -190,7 +190,7 @@ screens (25)  ──▶  lib/api.ts  ──▶  lib/store.ts  (localStorage)
 
 **One ledger, many readers.** The ledger is the single source of truth for balance, history,
 invoices and the withdrawal screen. Every writer goes through `ensureLedger()`, so a fresh store
-never loses the seeded history. (That was a real bug: delivery on a fresh store dropped the €500 of
+never loses the seeded history. (That was a real bug: delivery on a fresh store dropped the €720 of
 settled history, because the writers built the ledger from scratch. It was caught by a temporary
 screenshot spec, not by a unit test — which is why the capture script became permanent.)
 
@@ -225,10 +225,10 @@ set and **fails the build** on an undefined reference.
 | A filter or direction matches nothing | The sheet names what does not match and offers the tap that recovers — never a disabled button with no way out |
 | Any count shown on a button | Computed with the same rules the feed applies, so the number is the number you get |
 
-### 6.1 Eight real defects the case-study pass found
+### 6.1 Eleven real defects the case-study pass found
 
-Writing the case study forced me to walk the money loop screen by screen, and eight things turned
-out to be wrong. I fixed all eight and locked each one with a test — a case study is not worth
+Writing the case study forced me to walk the money loop screen by screen, and eleven things turned
+out to be wrong. I fixed all eleven and locked each one with a test — a case study is not worth
 much if the thing it describes is quietly broken.
 
 **A count on a button is a promise, and the feed did not keep it.**
@@ -281,15 +281,30 @@ cancelling an application already had sheets, and hiding a load is reversible wi
 
 **The balance did not follow the money.**
 The money screens fetched once on mount, so when the customer paid while the balance screen was
-already open, the card kept showing *"EUR 360.00 pending"* and EUR 500 available. The single most
+already open, the card kept showing *"EUR 435.00 pending"* and EUR 720 available. The single most
 important beat of the demo appeared to do nothing. The screens now refetch when the ledger
 changes — and only then, via a stable ledger reference, so unrelated store writes (chat, profile,
 dismissed loads) do not trigger a refetch.
 
+**The decision deadline belonged to the load, not the application.**
+The tracker reused the load's apply-by timestamp as the dispatcher decision deadline. On a load for
+tomorrow it rendered *"Decision by tomorrow 10:24"* — a 24-hour wait after the driver had already
+applied. The fix was product logic, not copy: the clock now starts at submit and is capped at
+**20 minutes** (`submittedAt + 20 min`), with legacy local state capped on read so an old deadline
+cannot resurrect the wait. The screen now reads *"Typical reply: ~15 min · Decision by 10:29."*
+
+**A second status banner duplicated the card.**
+The feed showed *"In review"* on the load card and repeated the same waiting state in a banner above
+List/Map, with its own three-step progress bar. Removed: the card owns waiting status and
+*"View status"*, and only a confirmed trip keeps the active-trip mini-player (km to go, stage,
+*"Open"*). A second progress bar did not help the driver choose a load.
+
 None of these were found by reading the code. The first three were found by *using* the app, the
 fourth and fifth by looking at a screenshot, the sixth and seventh by walking the money loop, and
-the last one because the presenter pressed "customer paid" while sitting on the balance screen. The
-eighth was visible only because the E2E run surfaced a console error that nobody was reading.
+the eighth by pressing the destructive method removal without a confirmation. The last three came
+from the presenter pressing "customer paid" while sitting on the balance screen, using a load
+scheduled for tomorrow, and looking at the feed after applying. The balance bug was visible only
+because the E2E run surfaced a console error that nobody was reading.
 
 ---
 
@@ -298,7 +313,7 @@ eighth was visible only because the E2E run surfaced a console error that nobody
 | Gate | What it covers | Result |
 |---|---|---|
 | `pnpm check` | token audit → `tsc --noEmit` → production build | clean |
-| `pnpm test` | Vitest + Testing Library | **206 passing** |
+| `pnpm test` | Vitest + Testing Library | **210 passing** |
 | `pnpm test:e2e` | Playwright at 402×874 — the money loop as a user walks it | **16 passing** |
 | `pnpm capture:case-study` | regenerates the screenshot set from the running app | 23 screens |
 
