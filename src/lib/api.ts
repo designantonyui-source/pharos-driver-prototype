@@ -634,6 +634,7 @@ export async function submitApplication(loadId: string) {
         status: ApplicationStatus.SENT,
         submittedAt,
         approvalsDeadline,
+        autoAdvance: true,
       },
     },
   });
@@ -1074,7 +1075,8 @@ export async function advanceStatus(status: Status, loadId?: string, expectedSta
 /**
  * Demo scenario controls (prototype only): managed external events + clean reset.
  * Every scenario replays from a clean state and persists through reloads (localStorage).
- * No automatic timers — the presenter drives each transition explicitly.
+ * New applications carry `autoAdvance` and run their own short review loop;
+ * the presenter can still drive any transition explicitly.
  */
 export type DemoScenarioId = 'book' | 'deliver' | 'cashout' | 'issue';
 

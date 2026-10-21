@@ -397,6 +397,7 @@ describe('application lifecycle', () => {
     expect(store.get().submittedAt).toBe(new Date().toISOString());
     const application = store.get().applications.nordcargo;
     expect(Date.parse(application.approvalsDeadline!) - Date.parse(application.submittedAt!)).toBe(APPROVAL_WINDOW_MIN * 60_000);
+    expect(application.autoAdvance).toBe(true);
   });
 
   it.each([

@@ -13,7 +13,8 @@ import {
  * Dev-only helper: portfolio demo scenarios for the payments case study.
  * Four entries (book → deliver → cash out → resolve an issue), managed external
  * events (dispatcher, customer, POD review, payout outcome), clean reset per
- * scenario. No automatic timers — the presenter drives every transition.
+ * scenario. A new application has its own short auto-review loop; the presenter
+ * can still drive any transition manually.
  */
 const SCENARIOS: Array<{ id: DemoScenarioId; label: string; to: string }> = [
   { id: 'book', label: '1 · Find and book a load', to: '/v2' },

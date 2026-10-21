@@ -175,7 +175,7 @@ test('recent routes recall the last direction in one tap', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Direction: Paris → Brussels, 1 of 1 loads. Activate to change.' })).toBeVisible();
 });
 
-test('driver submits and cancels without an automatic status change', async ({ page }) => {
+test('driver submits and the demo review advances to the trip', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
 
@@ -195,36 +195,17 @@ test('driver submits and cancels without an automatic status change', async ({ p
     await page.getByRole('button', { name: 'Send application', exact: true }).click();
   });
 
-  await test.step('4. See the SENT tracker and wait for no fake advance', async () => {
+  await test.step('4. Watch the three steps advance, then open the trip', async () => {
     await expect(page).toHaveURL(/#\/application\/nordcargo$/);
-    await expect(page.getByText('Application sent', { exact: true }).first()).toBeVisible();
-    await page.waitForTimeout(2500);
-    await expect(page.getByText('Application sent', { exact: true }).first()).toBeVisible();
-    await expect(page.getByText('Under dispatcher review', { exact: true })).toHaveCount(0);
-    await page.screenshot({ path: test.info().outputPath('tracker-sent.png') });
-  });
-
-  await test.step('5. Go back, reopen the application and cancel', async () => {
-    await page.getByRole('button', { name: 'Back', exact: true }).click();
-    await expect(page).toHaveURL(/#\/v2$/);
-    await page.getByRole('link', { name: 'View status', exact: true }).click();
-    await page.getByRole('button', { name: 'Cancel application', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: 'Cancel application Lille to Brussels' })).toBeVisible();
-    await page.getByRole('button', { name: 'Yes, cancel application', exact: true }).click();
-  });
-
-  await test.step('6. Return to the list with the cancellation saved', async () => {
-    await expect(page).toHaveURL(/#\/v2$/);
-    // Waiting status never becomes a page banner — the card pill owns it and
-    // Trips owns the history. Only a confirmed trip gets the active-trip floater.
-    await expect(page.getByRole('button', { name: /Lille → Brussels · €435 · by/ })).toHaveCount(0);
-    await expect(page.getByText('Cancelled by you', { exact: true }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Apply again', exact: true })).toBeEnabled();
-    const status = await page.evaluate(() => JSON.parse(localStorage.getItem('pharos-driver-prototype') ?? '{}').status);
-    expect(status).toBe('CANCELLED');
+    await expect(page.getByRole('heading', { name: 'Application sent' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Under review' })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText('Dispatcher approved · waiting for customer')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('heading', { name: 'Load confirmed' })).toBeVisible({ timeout: 5_000 });
+    await expect(page).toHaveURL(/#\/trip\/nordcargo$/, { timeout: 5_000 });
+    await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('Confirmed');
+    const application = await page.evaluate(() => JSON.parse(localStorage.getItem('pharos-driver-prototype') ?? '{}').applications?.nordcargo);
+    expect(application).toMatchObject({ status: 'CONFIRMED', autoAdvance: true });
     expect(errors).toEqual([]);
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.screenshot({ path: test.info().outputPath('loads-mobile-390.png') });
   });
 });
 
@@ -236,7 +217,7 @@ test('presenter confirmation opens trip details and active-trip banner', async (
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page).toHaveURL(/#\/v2/);
 
-  // Status is presenter-driven now, not a 5-second timer.
+  // The presenter can still drive an existing application manually.
   await page.getByRole('button', { name: 'Show walkthrough controls' }).click();
   await page.getByRole('button', { name: '→ confirmed', exact: true }).click();
   await expect(page).toHaveURL(/#\/trip\/nordcargo$/);

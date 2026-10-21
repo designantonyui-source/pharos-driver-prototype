@@ -8,7 +8,7 @@ import { CancelApplicationSheet } from '../../components/v2/CancelApplicationShe
 import { Sheet } from '../../components/v2/Sheet';
 import { Toast, useToast } from '../../components/v2/Toast';
 import { V2Frame } from '../../components/v2/V2Frame';
-import { cancelApplication, disputeApplication, getLoads } from '../../lib/api';
+import { advanceStatus, cancelApplication, disputeApplication, getLoads } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore } from '../../lib/store';
 import { dayLabel, deadlineLabel, type V2Load } from '../../lib/v2/loads';
@@ -66,6 +66,15 @@ const CANCELLABLE = new Set<ApplicationStatus>([
   ApplicationStatus.DISPATCHER_REVIEW,
   ApplicationStatus.CUSTOMER_REVIEW,
 ]);
+
+/** Demo timing: each driver-facing review step gets two seconds, then the trip opens. */
+export const AUTO_REVIEW_STEP_MS = 2_000;
+export const AUTO_OPEN_TRIP_MS = 1_200;
+const AUTO_NEXT: Partial<Record<ApplicationStatus, ApplicationStatus>> = {
+  [ApplicationStatus.SENT]: ApplicationStatus.DISPATCHER_REVIEW,
+  [ApplicationStatus.DISPATCHER_REVIEW]: ApplicationStatus.CUSTOMER_REVIEW,
+  [ApplicationStatus.CUSTOMER_REVIEW]: ApplicationStatus.CONFIRMED,
+};
 
 export function ApplicationTrackerView({
   status,
@@ -268,9 +277,25 @@ export function ApplicationTracker() {
   const application = state.applications[id] ?? null;
   const status = application?.status ?? (state.loadId === id ? state.status : null);
   const load = loads?.find((item) => item.id === id);
-  // Status moves only through the presenter controls (Demo panel) or a real
-  // dispatcher event. The old 5-second timer confirmed a load while the driver
-  // was still reading the screen — a prototype artifact, not a product behaviour.
+  // A newly submitted application is explicitly marked `autoAdvance`: the
+  // three driver-facing steps run on a short demo timer, then the confirmed
+  // trip opens. Legacy and presenter-driven applications stay manual, so an
+  // old waiting state cannot suddenly confirm itself.
+  const autoAdvance = application?.autoAdvance === true;
+  const nextAutoStatus = status ? AUTO_NEXT[status] : undefined;
+  useEffect(() => {
+    if (!autoAdvance || !status || !nextAutoStatus) return;
+    const timer = window.setTimeout(() => {
+      void advanceStatus(nextAutoStatus, id, status).catch(() => undefined);
+    }, AUTO_REVIEW_STEP_MS);
+    return () => window.clearTimeout(timer);
+  }, [autoAdvance, id, nextAutoStatus, status]);
+
+  useEffect(() => {
+    if (!autoAdvance || status !== ApplicationStatus.CONFIRMED) return;
+    const timer = window.setTimeout(() => navigate(`/trip/${id}`), AUTO_OPEN_TRIP_MS);
+    return () => window.clearTimeout(timer);
+  }, [autoAdvance, id, navigate, status]);
 
   async function handleCancel() {
     if (cancelling) return;
