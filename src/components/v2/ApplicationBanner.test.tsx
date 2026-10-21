@@ -6,35 +6,33 @@ import { ApplicationBanner } from './ApplicationBanner';
 
 const load = V2_LOADS[0];
 
-function renderBanner(status: ApplicationStatus) {
-  const onOpen = vi.fn();
-  const { container } = render(<ApplicationBanner load={load} status={status} onOpen={onOpen} />);
-  return { container, onOpen };
-}
+describe('ApplicationBanner — active-trip mini-player only', () => {
+  it('shows the confirmed trip with the stage and opens it', () => {
+    const onOpen = vi.fn();
+    render(
+      <ApplicationBanner
+        load={load}
+        application={{ loadId: load.id, status: ApplicationStatus.CONFIRMED, submittedAt: null, tripStage: 'at-pickup' }}
+        onOpen={onOpen}
+      />,
+    );
 
-describe('ApplicationBanner — live states only', () => {
-  it.each([ApplicationStatus.SENT, ApplicationStatus.DISPATCHER_REVIEW, ApplicationStatus.CUSTOMER_REVIEW])('shows a three-step status banner while %s', (status) => {
-    const { onOpen } = renderBanner(status);
-    expect(screen.getByText(new RegExp(`Lille → Brussels · €${load.rate} · by`))).toBeVisible();
-    expect(screen.getByText(/Step 2 of 3/)).toBeVisible();
+    expect(screen.getByText(/km to go/)).toBeVisible();
+    expect(screen.getByText('At pickup · Step 2 of 5')).toBeVisible();
+    expect(screen.getByText('Open')).toBeVisible();
     fireEvent.click(screen.getByRole('button'));
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
-  it('uses the decision deadline snapshotted on the application', () => {
-    const application = { loadId: load.id, status: ApplicationStatus.SENT, submittedAt: new Date().toISOString(), approvalsDeadline: new Date(Date.now() + 20 * 60_000).toISOString() };
-    render(<ApplicationBanner load={load} status={ApplicationStatus.SENT} application={application} onOpen={vi.fn()} />);
-    expect(screen.getByText(/· by \d{2}:\d{2}/)).toBeVisible();
-  });
+  it('mirrors the active leg while en route', () => {
+    render(
+      <ApplicationBanner
+        load={load}
+        application={{ loadId: load.id, status: ApplicationStatus.CONFIRMED, submittedAt: null, tripStage: 'at-pickup', enRouteTo: 'delivery' }}
+        onOpen={vi.fn()}
+      />,
+    );
 
-  it('shows the confirmed mini-player, not a status banner', () => {
-    renderBanner(ApplicationStatus.CONFIRMED);
-    expect(screen.getByText(/km to go/)).toBeVisible();
-    expect(screen.queryByText(/Step .* of 3/)).toBeNull();
-  });
-
-  it.each([ApplicationStatus.REJECTED, ApplicationStatus.EXPIRED, ApplicationStatus.CANCELLED])('renders nothing for ended state %s — card pill owns it', (status) => {
-    const { container } = renderBanner(status);
-    expect(container.firstChild).toBeNull();
+    expect(screen.getByText('En route to delivery · Step 2 of 5')).toBeVisible();
   });
 });

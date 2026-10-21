@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { dismissLoad, getLoads, restoreLoad, commitRoute } from '../../lib/api';
 import { ApplicationStatus } from '../../lib/models';
 import { useStore } from '../../lib/store';
@@ -21,10 +21,10 @@ import { SmartLoadList } from '../../components/v2/SmartLoadList';
  * props: none (state from `useStore`, data from `api.getLoads`)
  * tokens: color-bg-surface, color-text-primary, color-text-secondary, color-action-primary, color-action-text-inverse,
  *         color-border-default, radius-lg, radius-pill, shadow-card
- * epic: pharos-driver-flow-stories.md — S2 (tile → sheet), S4 (CTA), S6/S7 (banner + status), S8 (two deadlines)
+ * epic: pharos-driver-flow-stories.md — S2 (tile → sheet), S4 (CTA), S6/S7 (card status + active-trip mini-player), S8 (two deadlines)
  *
  * No form first: the feed is already there; direction + three quick filters narrow it. Applying is one tap and the
- * driver stays on the current view with a live banner. Status moves with the Demo panel (→ dispatcher approved, → confirmed).
+ * driver stays on the current view. Waiting status stays on the card; a confirmed trip adds one active-trip mini-player. Status moves with the Demo panel (→ dispatcher approved, → confirmed).
  *
  * The direction header states the feed (`Direction: {from → to}, {visible} of {towards} loads`);
  * both sides empty reads "Anywhere → Anywhere", never a hidden city; the subline
@@ -35,9 +35,6 @@ import { SmartLoadList } from '../../components/v2/SmartLoadList';
  */
 export function Home() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const scenario = searchParams.get('scenario');
-  const scenarioSearch = scenario === 'reject' || scenario === 'approve' ? `?scenario=${scenario}` : '';
   const { state } = useStore();
   const [loads, setLoads] = useState<V2Load[] | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -80,9 +77,8 @@ export function Home() {
   const routeLabel = directionLabel(state.route.from, state.route.to);
   const visible = feed.visible;
   const live = liveApplications(state);
-  const latestApplication = live[0] ?? null;
-  const applied = latestApplication ? loads?.find((l) => l.id === latestApplication.loadId) ?? null : null;
-  const status = latestApplication?.status ?? null;
+  const activeApplication = live.find((application) => application.status === ApplicationStatus.CONFIRMED) ?? null;
+  const activeLoad = activeApplication ? loads?.find((load) => load.id === activeApplication.loadId) ?? null : null;
   const open = loads?.find((l) => l.id === openId) ?? null;
   const activeLabels = FILTERS.filter((f) => on.includes(f.id)).map((f) => f.label);
 
@@ -114,12 +110,10 @@ export function Home() {
           </span>
         </button>
 
-        {applied && status && latestApplication && <ApplicationBanner
-          load={applied}
-          status={status}
-          application={latestApplication}
-          more={live.length - 1}
-          onOpen={() => navigate(status === ApplicationStatus.CONFIRMED ? `/trip/${applied.id}` : `/application/${applied.id}${scenarioSearch}`)}
+        {activeLoad && activeApplication && <ApplicationBanner
+          load={activeLoad}
+          application={activeApplication}
+          onOpen={() => navigate(`/trip/${activeLoad.id}`)}
         />}
 
         {loadError ? (

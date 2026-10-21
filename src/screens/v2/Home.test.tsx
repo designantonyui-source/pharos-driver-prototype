@@ -85,6 +85,23 @@ it('keeps the filters count equal to the loads the feed shows', async () => {
   });
 });
 
+it('keeps a waiting application on its card instead of a page banner', async () => {
+  setup();
+  await screen.findAllByRole('article');
+  act(() => store.set({
+    applications: {
+      'nordcargo': {
+        loadId: 'nordcargo',
+        status: ApplicationStatus.SENT,
+        submittedAt: new Date().toISOString(),
+      },
+    },
+  }));
+  expect(await screen.findByText('In review')).toBeVisible();
+  expect(screen.getByRole('link', { name: 'View status' })).toBeVisible();
+  expect(screen.queryByText(/Step 2 of 3/)).toBeNull();
+});
+
 it('keeps the badge denominator equal to the loads that still exist', async () => {
   setup();
   await screen.findAllByRole('article');

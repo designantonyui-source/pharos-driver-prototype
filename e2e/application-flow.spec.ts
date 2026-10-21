@@ -207,7 +207,7 @@ test('driver submits and cancels without an automatic status change', async ({ p
   await test.step('5. Go back, reopen the application and cancel', async () => {
     await page.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(page).toHaveURL(/#\/v2$/);
-    await page.getByRole('button', { name: /Lille → Brussels · €435 · by/ }).click();
+    await page.getByRole('link', { name: 'View status', exact: true }).click();
     await page.getByRole('button', { name: 'Cancel application', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'Cancel application Lille to Brussels' })).toBeVisible();
     await page.getByRole('button', { name: 'Yes, cancel application', exact: true }).click();
@@ -215,8 +215,8 @@ test('driver submits and cancels without an automatic status change', async ({ p
 
   await test.step('6. Return to the list with the cancellation saved', async () => {
     await expect(page).toHaveURL(/#\/v2$/);
-    // No banner for ended applications (rule: banner is live-only) — the card
-    // pill owns the state, Trips owns the history.
+    // Waiting status never becomes a page banner — the card pill owns it and
+    // Trips owns the history. Only a confirmed trip gets the active-trip floater.
     await expect(page.getByRole('button', { name: /Lille → Brussels · €435 · by/ })).toHaveCount(0);
     await expect(page.getByText('Cancelled by you', { exact: true }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Apply again', exact: true })).toBeEnabled();
