@@ -14,7 +14,7 @@ export type LoadApplication = {
   confirmedAt?: string;
   /** The deadline snapshot taken at apply time, so a reload cannot move it. */
   approvalsDeadline?: string;
-  /** Demo-only: a new application advances through the three steps and opens the trip. */
+  /** Demo-only: advances a waiting application; `false` keeps it manual. */
   autoAdvance?: boolean;
   /** Terminal expiry timestamp. */
   expiredAt?: string;

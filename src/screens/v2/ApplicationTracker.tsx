@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ApplicationProgress, type ApplicationStage } from '../../components/ApplicationProgress';
 import { Button } from '../../components/Button';
@@ -277,25 +277,29 @@ export function ApplicationTracker() {
   const application = state.applications[id] ?? null;
   const status = application?.status ?? (state.loadId === id ? state.status : null);
   const load = loads?.find((item) => item.id === id);
-  // A newly submitted application is explicitly marked `autoAdvance`: the
-  // three driver-facing steps run on a short demo timer, then the confirmed
-  // trip opens. Legacy and presenter-driven applications stay manual, so an
-  // old waiting state cannot suddenly confirm itself.
-  const autoAdvance = application?.autoAdvance === true;
+  // New applications carry the flag; an older waiting application without it
+  // still gets the demo loop, so a pre-existing SENT state cannot just hang.
+  // `autoAdvance: false` is the explicit manual escape hatch.
+  const autoWaiting = application?.autoAdvance !== false;
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (status && CANCELLABLE.has(status)) autoStarted.current = true;
+  }, [status]);
+  const autoOpenTrip = application?.autoAdvance === true || (autoStarted.current && status === ApplicationStatus.CONFIRMED);
   const nextAutoStatus = status ? AUTO_NEXT[status] : undefined;
   useEffect(() => {
-    if (!autoAdvance || !status || !nextAutoStatus) return;
+    if (!autoWaiting || !status || !nextAutoStatus) return;
     const timer = window.setTimeout(() => {
       void advanceStatus(nextAutoStatus, id, status).catch(() => undefined);
     }, AUTO_REVIEW_STEP_MS);
     return () => window.clearTimeout(timer);
-  }, [autoAdvance, id, nextAutoStatus, status]);
+  }, [autoWaiting, id, nextAutoStatus, status]);
 
   useEffect(() => {
-    if (!autoAdvance || status !== ApplicationStatus.CONFIRMED) return;
+    if (!autoOpenTrip || status !== ApplicationStatus.CONFIRMED) return;
     const timer = window.setTimeout(() => navigate(`/trip/${id}`), AUTO_OPEN_TRIP_MS);
     return () => window.clearTimeout(timer);
-  }, [autoAdvance, id, navigate, status]);
+  }, [autoOpenTrip, id, navigate, status]);
 
   async function handleCancel() {
     if (cancelling) return;
