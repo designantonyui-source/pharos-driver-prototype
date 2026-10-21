@@ -111,6 +111,14 @@ function methodDetail(method: PayoutMethod): string {
   return `${base}${verifying}${def}`;
 }
 
+function withdrawalStatusLabel(status: string): string {
+  if (status === 'processing') return 'Processing';
+  if (status === 'delayed') return 'Delayed';
+  if (status === 'failed') return 'Failed';
+  if (status === 'returned') return 'Returned';
+  return 'Done';
+}
+
 export function LedgerLine({ entry, last = false, invoiceId }: { entry: LedgerEntry; last?: boolean; invoiceId?: string | null }) {
   const border = last ? '' : 'border-b border-[var(--color-border-default)]';
   if (entry.kind === 'trip') {
@@ -140,7 +148,7 @@ export function LedgerLine({ entry, last = false, invoiceId }: { entry: LedgerEn
       </span>
       <span className="flex shrink-0 flex-col items-end">
         <span className="text-body-14 text-[var(--color-text-primary)]">-{formatEuro(entry.amount)}</span>
-        <span className="text-caption-12 text-[var(--color-text-secondary)]">{entry.status === 'processing' ? 'Processing' : 'Done'}</span>
+        <span className="text-caption-12 text-[var(--color-text-secondary)]">{withdrawalStatusLabel(entry.status)}</span>
       </span>
     </div>;
   }
@@ -673,7 +681,7 @@ export function WithdrawalDetails() {
         </div>
         <div className="flex items-baseline justify-between gap-[var(--spacing-12)]">
           <span className="text-[var(--color-text-secondary)]">Status</span>
-          <span className="text-right text-[var(--color-text-primary)]">{entry.status}</span>
+          <span className="text-right text-[var(--color-text-primary)]">{withdrawalStatusLabel(entry.status)}</span>
         </div>
       </div>
     </Section>

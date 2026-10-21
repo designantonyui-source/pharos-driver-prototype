@@ -233,6 +233,13 @@ it('lists trips and withdrawals in history with rail notes', async () => {
   expect(entry.methodLabel).toBe('Business');
   const ledger = await api.getLedger();
   expect(ledger.some(e => e.kind === 'withdrawal' && e.amount === 100)).toBe(true);
+
+  await api.markWithdrawalDelayed(entry.id);
+  await waitFor(() => expect(screen.getByText('Delayed')).toBeTruthy());
+  await api.markWithdrawalFailed(entry.id, 'Bank rejected the transfer');
+  await waitFor(() => expect(screen.getByText('Failed')).toBeTruthy());
+  await api.returnWithdrawalFunds(entry.id, false);
+  await waitFor(() => expect(screen.getByText('Returned')).toBeTruthy());
 });
 
 it('migrates a Wave-0 stored IBAN into the method list', async () => {
