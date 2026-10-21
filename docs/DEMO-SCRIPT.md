@@ -26,7 +26,7 @@ the transfer the money comes back.
 
 ## Beat 1 · The loads feed (0:00 – 0:45)
 
-**Screen:** `/v2` → screenshot `01-loads-feed.png`
+**Screen:** `/v2`
 
 The map-first feed. Four loads; the first is **NordCargo, Lille → Brussels, €435, €3.54/km,
 111 km, "Paid in 7 days"**.
@@ -36,7 +36,7 @@ The map-first feed. Four loads; the first is **NordCargo, Lille → Brussels, �
 > "Freight apps all look like this. Map, cards, a rate. I'm not going to spend the demo here —
 > the loads feed exists in this prototype to feed the part that actually matters, which is money."
 
-**Tap:** **Apply for €435** → the load sheet opens (screenshot `02-load-details.png`).
+**Tap:** **Apply for €435** → the load sheet opens.
 
 > "One tap to apply, two taps to be in the running. The load says 'paid in 7 days' — hold on to
 > that, it's the reason the balance screen looks the way it does."
@@ -54,7 +54,7 @@ The map-first feed. Four loads; the first is **NordCargo, Lille → Brussels, �
 
 Open the **Walkthrough** pill → **→ dispatcher + customer review** → **→ confirmed** → close the panel.
 
-**Screen:** `/trip/nordcargo` (screenshot `05-trip-assigned.png`)
+**Screen:** `/trip/nordcargo`
 
 > "The trip has stages: at pickup, loaded, at delivery, delivered — and then proof of delivery."
 
@@ -66,8 +66,7 @@ Open the pill → **→ delivered** → **→ POD submitted** → **→ POD acce
 > the money can't just appear on delivery. It's a human on the other end confirming the load
 > arrived."
 
-**Screen:** scroll to the **Earnings** block on the trip (screenshot
-`06-trip-earnings-awaiting-payment.png`)
+**Screen:** scroll to the **Earnings** block on the trip
 
 > "This is the same state the balance screen will show, one screen earlier: €435, awaiting customer
 > payment, expected by 28 Oct. *Money is not available yet — the customer has not paid the
@@ -83,7 +82,7 @@ Open the pill → **→ delivered** → **→ POD submitted** → **→ POD acce
 
 ## Beat 3 · Money lands as *pending* (2:00 – 2:30)
 
-**Screen:** Account → Balance (screenshot `07-balance-pending.png`)
+**Screen:** Account → Balance
 
 Tap the **Account** tab → **Balance**. Or go directly to `/#/v2/account/balance`.
 
@@ -111,7 +110,7 @@ Tap the **Account** tab → **Balance**. Or go directly to `/#/v2/account/balanc
 
 Open the pill → **→ customer paid** → close the panel.
 
-**Screen:** Balance (screenshot `08-balance-available.png`)
+**Screen:** Balance
 
 > "€435 moved from pending to available. Same trip, same €435, now withdrawable."
 
@@ -122,13 +121,13 @@ Open the pill → **→ customer paid** → close the panel.
 
 ## Beat 5 · Set up a payout method (3:00 – 3:45)
 
-**Screen:** `/#/v2/account/balance/method` (screenshot `09-payout-method-iban.png`)
+**Screen:** `/#/v2/account/balance/method`
 
 **Say:**
 
 > "Now the driver needs somewhere to get paid. Two options, and the order matters."
 
-Tap the **Card (instant, EUR 1.50)** tab (screenshot `10-payout-method-card.png`):
+Tap the **Card (instant, EUR 1.50)** tab :
 
 > "A card is the *speed* option: 30 minutes, €1.50. Luhn check, brand detection, expiry and CVC
 > validation. And the important part — the card number is never stored. It gets tokenised down to
@@ -139,13 +138,12 @@ Tap the **Card (instant, EUR 1.50)** tab (screenshot `10-payout-method-card.png`
 > nobody stores one."
 
 Switch back to **Bank (SEPA, free)** and type a bad IBAN first — `DE89 3704 0044 0532 0130 01` —
-to show the mod-97 rejection (screenshot `11-payout-method-iban-rejected.png`):
+to show the mod-97 rejection :
 
 > "The IBAN is validated with a real mod-97 checksum, not a regex. Wrong check digits, it refuses
 > to save — and the Add button stays disabled, so it can't be saved by accident either."
 
-Then type the good one — `DE89 3704 0044 0532 0130 00` (screenshot
-`12-payout-method-iban-validated.png`) and tap **Add bank account**.
+Then type the good one — `DE89 3704 0044 0532 0130 00`  and tap **Add bank account**.
 
 **Say:**
 
@@ -158,7 +156,7 @@ Then type the good one — `DE89 3704 0044 0532 0130 00` (screenshot
 
 ## Beat 6 · Cash out — quote before execute (3:45 – 4:45)
 
-**Screen:** `/#/v2/account/balance/cashout` (screenshot `14-cashout.png`)
+**Screen:** `/#/v2/account/balance/cashout`
 
 **Say:**
 
@@ -166,7 +164,7 @@ Then type the good one — `DE89 3704 0044 0532 0130 00` (screenshot
 
 Type `120`, then tap **Cash out EUR 120.00**.
 
-**Screen:** the confirm sheet (screenshot `16-cashout-confirm-sheet.png`)
+**Screen:** the confirm sheet
 
 **This is the money shot. Point at each line.**
 
@@ -180,7 +178,7 @@ Type `120`, then tap **Cash out EUR 120.00**.
 
 Tap **Confirm EUR 120.00** → **Confirm with bank app** (the SCA challenge).
 
-**Screen:** the operation (screenshot `17-cashout-done.png`)
+**Screen:** the operation
 
 > "The result is a permanent screen with the outcome, not a toast that disappears. If there's a
 > problem, the driver needs a place to go back to."
@@ -189,18 +187,18 @@ Tap **Confirm EUR 120.00** → **Confirm with bank app** (the SCA challenge).
 
 ## Beat 7 · When the bank says no (4:45 – 5:30)
 
-**Screen:** `/#/v2/account/balance/history` (screenshot `18-balance-history.png`)
+**Screen:** `/#/v2/account/balance/history`
 
 **Say:**
 
 > "This is the part most prototypes skip, and it's the part that decides whether a driver trusts
 > the product."
 
-Open the pill → **→ delayed** → close the panel. Show the operation (screenshot `19-payout-delayed.png`).
+Open the pill → **→ delayed** → close the panel. Show the operation.
 
 > "The provider needs more time. The withdrawal says so."
 
-Open the pill → **→ failed** → **→ funds returned** → close the panel. Show the returned operation (screenshot `20-payout-failed-returned.png`).
+Open the pill → **→ failed** → **→ funds returned** → close the panel. Show the returned operation.
 
 > "The bank rejected the transfer. The money comes *back* — the amount is credited to the balance,
 > and the fee is debited unless policy refunds it, because a failed transfer shouldn't cost the
@@ -218,14 +216,14 @@ Open the pill → **→ failed** → **→ funds returned** → close the panel.
 
 ## Beat 8 · Discipline, and the paperwork (5:30 – 6:00)
 
-**Screen:** `/#/v2/account/balance/invoices` (screenshot `21-invoices-list.png`)
+**Screen:** `/#/v2/account/balance/invoices`
 
 **Say:**
 
 > "Every completed trip produces a real invoice. Seller and buyer, both with VAT IDs, a VAT line,
 > and — because these are intra-EU lanes — a reverse-charge note."
 
-Tap **INV-2026-0038** (screenshot `22-invoice-details.png`):
+Tap **INV-2026-0038** :
 
 > "And it prints. A dependency-free A4 PDF with selectable text and exact VAT arithmetic — no
 > jsPDF, no canvas rasterisation, it looks the same on every machine."
@@ -233,7 +231,7 @@ Tap **INV-2026-0038** (screenshot `22-invoice-details.png`):
 > "The invoice links both ways with the trip and the ledger row, so money, paperwork and the work
 > itself are one story instead of three disconnected screens."
 
-**Screen:** `/#/v2/account/balance/schedules` (screenshot `23-auto-withdraw-schedules.png`)
+**Screen:** `/#/v2/account/balance/schedules`
 
 > "Last: payout discipline. Auto-withdraw on a weekly rule or a balance threshold, an adjustment
 > ledger where a dispute or a damage claim is an explicit row with a reason — never a silent edit
@@ -281,7 +279,6 @@ Each scenario button **resets** first, so you can always re-run a beat cleanly.
 | The pill covers a screen | Tap the pill to collapse it (it is a toggle) |
 | Nothing happens on a demo button | The walkthrough panel shows the error inline — read it |
 | Fresh start | Walkthrough pill → `clear storage` |
-| Screens went stale | `pnpm capture:case-study` regenerates `docs/screens/` from the running app |
 
 ## Appendix C — Files behind each beat
 

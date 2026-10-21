@@ -11,7 +11,7 @@ automated quality gate — built as a clickable prototype, then written up.
 ## 1. The brief I set myself
 
 The obvious way to build a freight-app prototype is to start with the map: pins, matching, a
-bottom sheet with a rate. It is what every competitor screenshots, and it is the part that is
+bottom sheet with a rate. It is what every competitor demos, and it is the part that is
 least likely to be wrong.
 
 I wanted to build the part that is hardest to get right and hardest to fake:
@@ -192,7 +192,7 @@ screens (25)  ──▶  lib/api.ts  ──▶  lib/store.ts  (localStorage)
 invoices and the withdrawal screen. Every writer goes through `ensureLedger()`, so a fresh store
 never loses the seeded history. (That was a real bug: delivery on a fresh store dropped the €720 of
 settled history, because the writers built the ledger from scratch. It was caught by a temporary
-screenshot spec, not by a unit test — which is why the capture script became permanent.)
+browser check, not by a unit test — which is why the ledger now has its own regression coverage.)
 
 **The mock backend is one file.** `src/lib/api.ts` is the only place that would change to swap the
 prototype for a real backend.
@@ -300,7 +300,7 @@ List/Map, with its own three-step progress bar. Removed: the card owns waiting s
 *"Open"*). A second progress bar did not help the driver choose a load.
 
 None of these were found by reading the code. The first three were found by *using* the app, the
-fourth and fifth by looking at a screenshot, the sixth and seventh by walking the money loop, and
+fourth and fifth by looking at the rendered screen, the sixth and seventh by walking the money loop, and
 the eighth by pressing the destructive method removal without a confirmation. The last three came
 from the presenter pressing "customer paid" while sitting on the balance screen, using a load
 scheduled for tomorrow, and looking at the feed after applying. The balance bug was visible only
@@ -315,7 +315,6 @@ because the E2E run surfaced a console error that nobody was reading.
 | `pnpm check` | token audit → `tsc --noEmit` → production build | clean |
 | `pnpm test` | Vitest + Testing Library | **210 passing** |
 | `pnpm test:e2e` | Playwright at 402×874 — the money loop as a user walks it | **16 passing** |
-| `pnpm capture:case-study` | regenerates the screenshot set from the running app | 23 screens |
 
 The E2E suite is not a smoke test — `e2e/balance.spec.ts` walks IBAN entry → cash-out → confirm
 sheet → history, a card method with the instant fee quote, the invoice list → details → PDF link,
@@ -361,7 +360,7 @@ The UI marks the prototype policy as a placeholder for the same reason: the fee 
 5. **Reduce the bundle.** 612 kB in a single chunk is fine for a prototype and wrong for a product;
    route-level `React.lazy` on the payments screens is the obvious first move.
 6. **Test the unhappy paths visually.** The state discipline is implemented, but the skeleton and
-   error states have not been screenshotted into the case study yet.
+   error states are implemented but not yet exercised in the demo script.
 
 ---
 
@@ -378,7 +377,6 @@ The UI marks the prototype policy as a placeholder for the same reason: the fee 
 | `src/screens/v2/Invoices.tsx` | Invoice list and details |
 | `src/screens/v2/Schedules.tsx` | Auto-withdraw rules, runs, statement |
 | `tools/audit-tokens.mjs` | The token guard that fails the build |
-| `tools/capture-case-study.mjs` | Regenerates the screenshot set |
 | `design/PAYMENTS-VISION.md` | Payments research, decisions, open questions |
 | `design/figma-map.md` | Figma node ↔ route/component table |
 | `docs/DEMO-SCRIPT.md` | The presenter script |
