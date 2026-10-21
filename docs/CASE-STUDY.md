@@ -296,8 +296,7 @@ cannot resurrect the wait. The screen now reads *"Typical reply: ~15 min · Deci
 **A second status banner duplicated the card.**
 The feed showed *"In review"* on the load card and repeated the same waiting state in a banner above
 List/Map, with its own three-step progress bar. Removed: the card owns waiting status and
-*"View status"*, and only a confirmed trip keeps the active-trip mini-player (km to go, stage,
-*"Open"*). A second progress bar did not help the driver choose a load.
+*"View status"*. A confirmed trip stays first as a booked card and adds a marker to the Trips tab; the large active-trip mini-player was removed as a second navigation/status surface.
 
 None of these were found by reading the code. The first three were found by *using* the app, the
 fourth and fifth by looking at the rendered screen, the sixth and seventh by walking the money loop, and

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Button, ButtonLink } from '../../components/Button';
+import { Button } from '../../components/Button';
 import { Icon } from '../../components/Icon';
 import { StatusPill, type Tone } from '../../components/StatusPill';
 import { type ProgressState, ProgressStep } from '../../components/ProgressStep';
@@ -443,9 +443,8 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
           </section>
 
           {/* Customer + the dispatcher you talk to about this trip.
-              The button names the channel, not just the person: the unlabelled back-bar chat icon that replaced
-              it was a guessing game, and "Contact dispatcher" read as a duplicate of the per-stop call icons —
-              this opens a thread, it does not dial. */}
+              The channel is a row, not a full-width button: it names the
+              action, carries the icon and opens a thread. It does not dial. */}
           <section className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] shadow-card">
             <h2 className="text-label-14 text-[var(--color-text-secondary)]">Customer</h2>
             {/* Company mark, not a face: square reads as an organisation the way the
@@ -463,13 +462,15 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
               </div>
             </div>
             {!cancelled && (
-              <div className="mt-[12px]">
-                <Button
-                  label="Message dispatcher"
-                  appearance="secondary"
-                  icon={<Icon name="message-square" size="sm" />}
-                  onClick={() => navigate(`/trip/${load.id}/chat`)}
-                />
+              <div className="mt-[12px] border-t border-[var(--color-border-default)]">
+                <Link
+                  to={`/trip/${load.id}/chat`}
+                  className="flex min-h-[var(--size-control-mobile)] items-center gap-[8px] text-body-14 text-[var(--color-action-primary)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+                >
+                  <Icon name="message-square" size="sm" />
+                  <span className="flex-1">Message dispatcher</span>
+                  <Icon name="chevron-right" size="sm" />
+                </Link>
               </div>
             )}
           </section>
@@ -511,43 +512,53 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
             <p className="mt-[4px] text-body-14 text-[var(--color-text-secondary)]">
               {navigateTarget === 'pickup' ? `${load.pickupKm} km · ~${load.pickupMin} min` : `${load.km} km loaded`}
             </p>
+            <button
+              type="button"
+              onClick={() => { void goNavigate(navigateStop.key, navigateStop.mapsQuery); }}
+              className="mt-[4px] inline-flex min-h-[var(--size-control-mobile)] items-center text-label-14 text-[var(--color-action-primary)] underline focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+            >
+              Re-open navigation
+            </button>
           </section>
         )}
-        <div className="flex shrink-0 flex-col gap-[8px]">
+        <div className="flex shrink-0 flex-col gap-[12px]">
           {!cancelled && (
-            <Button
-              label={`Documents (${load.documents.length})`}
-              appearance="secondary"
-              icon={<Icon name="file-text" size="sm" />}
-              onClick={() => setDocsOpen(true)}
-            />
-          )}
-          {!cancelled && tripStage !== 'delivered' && (
-            <Button
-              label={delayReport ? `Delay reported · ${delayReport.minutes} min` : 'Report a delay'}
-              appearance="secondary"
-              icon={<Icon name="clock" size="sm" />}
-              onClick={() => { setDelayError(null); setDelayOpen(true); }}
-            />
-          )}
-          {!cancelled && enRouteActive && (
-            <ButtonLink
-              label="Re-open navigation"
-              full
-              onClick={() => { void goNavigate(navigateStop.key, navigateStop.mapsQuery); }}
-            />
+            <div className="overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] shadow-card">
+              <button
+                type="button"
+                onClick={() => setDocsOpen(true)}
+                className="flex min-h-[var(--size-control-mobile)] w-full items-center gap-[12px] px-[16px] text-left focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+              >
+                <Icon name="file-text" size="sm" className="text-[var(--color-action-primary)]" />
+                <span className="flex-1 text-body-14 text-[var(--color-text-primary)]">Documents ({load.documents.length})</span>
+                <Icon name="chevron-right" size="sm" className="text-[var(--color-text-tertiary)]" />
+              </button>
+              {tripStage !== 'delivered' && (
+                <button
+                  type="button"
+                  onClick={() => { setDelayError(null); setDelayOpen(true); }}
+                  className="flex min-h-[var(--size-control-mobile)] w-full items-center gap-[12px] border-t border-[var(--color-border-default)] px-[16px] text-left focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+                >
+                  <Icon name="clock" size="sm" className="text-[var(--color-action-primary)]" />
+                  <span className="flex-1 text-body-14 text-[var(--color-text-primary)]">{delayReport ? `Delay reported · ${delayReport.minutes} min` : 'Report a delay'}</span>
+                  <Icon name="chevron-right" size="sm" className="text-[var(--color-text-tertiary)]" />
+                </button>
+              )}
+            </div>
           )}
           {cancelled && (
             <Button label="Back to loads" onClick={() => navigate('/v2')} />
           )}
-          {/* Destructive action goes last (it is not a peer of the primary) AND is red:
-              as a quiet teal link it hid the fact that the action cannot be undone. */}
+          {/* Destructive action is not a peer of the operational rows: it sits
+              alone, as red text, after the tools card. */}
           {!cancelled && tripStage === 'confirmed' && (
-            <Button
-              label="Cancel trip"
-              appearance="danger"
+            <button
+              type="button"
               onClick={() => setCancelOpen(true)}
-            />
+              className="min-h-[var(--size-control-mobile)] self-center px-[16px] text-label-14 text-[var(--color-status-danger-text)] focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)]"
+            >
+              Cancel trip
+            </button>
           )}
         </div>
         </div>
@@ -560,7 +571,16 @@ export function TripDetailsView({ load, tripId }: { load: V2Load; tripId: string
       {(stickyPrimary || alreadyHere) && (
         <div className="absolute inset-x-0 bottom-[117px] z-20 flex flex-col gap-[8px] border-t border-[var(--color-border-default)] bg-[var(--color-bg-surface)] px-[16px] pb-[12px] pt-[8px]">
           {stickyPrimary && <Button label={stickyPrimary.label} appearance="primary" icon={stickyPrimary.icon} disabled={stickyPrimary.disabled} loading={stickyPrimary.loading} onClick={stickyPrimary.onClick} />}
-          {alreadyHere && <Button label={alreadyHere.label} appearance="secondary" disabled={updatingStage} loading={updatingStage} onClick={alreadyHere.onClick} />}
+          {alreadyHere && (
+            <button
+              type="button"
+              disabled={updatingStage}
+              onClick={alreadyHere.onClick}
+              className="min-h-[var(--size-control-mobile)] px-[16px] text-center text-label-14 text-[var(--color-action-primary)] underline focus-visible:outline-2 focus-visible:outline-[var(--color-focus-ring)] disabled:opacity-50"
+            >
+              {alreadyHere.label}
+            </button>
+          )}
         </div>
       )}
 

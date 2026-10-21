@@ -209,7 +209,7 @@ test('driver submits and the demo review advances to the trip', async ({ page })
   });
 });
 
-test('presenter confirmation opens trip details and active-trip banner', async ({ page, context }) => {
+test('presenter confirmation opens trip details and marks the Trips tab', async ({ page, context }) => {
   await page.goto('/?demo=1#/v2');
   await page.getByRole('button', { name: 'Apply for €435', exact: true }).first().click();
   await page.getByRole('button', { name: 'Send application', exact: true }).click();
@@ -237,8 +237,8 @@ test('presenter confirmation opens trip details and active-trip banner', async (
   await expect(page.getByRole('region', { name: 'Trip summary' })).toContainText('TR-nordcargo');
   await expect(page.getByRole('region', { name: 'Cargo' })).toContainText('Curtainsider');
   await expect(page.getByRole('region', { name: 'Trip progress' })).toContainText('Confirmed');
-  await expect(page.getByRole('button', { name: 'Message dispatcher', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Message dispatcher', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Message dispatcher', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Message dispatcher', exact: true }).click();
   await expect(page).toHaveURL(/#\/trip\/nordcargo\/chat$/);
   await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeVisible();
   await page.goBack();
@@ -264,16 +264,15 @@ test('presenter confirmation opens trip details and active-trip banner', async (
   await expect(page.getByRole('region', { name: 'En route to pickup' })).toBeVisible();
   await expect(page.getByRole('button', { name: "I've arrived at pickup", exact: true })).toBeVisible();
 
-  // Exit to Loads — the mini-player mirrors the active leg and returns to the trip.
+  // Exit to Loads. The active job stays first as a booked card; the Trips tab
+  // carries the persistent marker. There is no second status banner.
   // Use the tab, not page.goto: the test's init script clears storage on every full load.
   await page.getByRole('link', { name: 'Loads', exact: true }).click();
   await expect(page).toHaveURL(/#\/v2$/);
-  const banner = page.getByRole('button', { name: /km to go/ });
-  await expect(banner).toBeVisible();
-  await expect(banner).toContainText('En route to pickup');
-  await expect(banner).toContainText('Open');
-  await page.screenshot({ path: test.info().outputPath('loads-active-trip-banner.png') });
-  await banner.click();
+  await expect(page.getByRole('link', { name: 'Trips, active trip', exact: true })).toBeVisible();
+  const activeCard = page.getByRole('article', { name: 'Load nordcargo' });
+  await expect(activeCard).toContainText('Booked · TR-nordcargo');
+  await activeCard.getByRole('button', { name: 'View trip', exact: true }).click();
   await expect(page).toHaveURL(/#\/trip\/nordcargo$/);
   await page.screenshot({ path: test.info().outputPath('trip-details.png') });
 });

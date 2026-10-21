@@ -1,16 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { dismissLoad, getLoads, restoreLoad, commitRoute } from '../../lib/api';
-import { ApplicationStatus } from '../../lib/models';
 import { useStore } from '../../lib/store';
 import type { V2Load } from '../../lib/v2/loads';
 import { mergeCities } from '../../lib/v2/cities';
-import { directionLabel, feedCount, feedSlice, liveApplications } from '../../lib/v2/feed';
+import { directionLabel, feedCount, feedSlice } from '../../lib/v2/feed';
 import { Icon } from '../../components/Icon';
 import { V2Frame } from '../../components/v2/V2Frame';
 import { LoadSheet } from '../../components/v2/LoadSheet';
 import { Toast, useToast } from '../../components/v2/Toast';
-import { ApplicationBanner } from '../../components/v2/ApplicationBanner';
 import { FiltersButton } from '../../components/FiltersButton';
 import { FILTERS, FiltersSheet } from '../../components/v2/FiltersSheet';
 import { RouteSheet } from '../../components/v2/RouteSheet';
@@ -21,10 +18,10 @@ import { SmartLoadList } from '../../components/v2/SmartLoadList';
  * props: none (state from `useStore`, data from `api.getLoads`)
  * tokens: color-bg-surface, color-text-primary, color-text-secondary, color-action-primary, color-action-text-inverse,
  *         color-border-default, radius-lg, radius-pill, shadow-card
- * epic: pharos-driver-flow-stories.md — S2 (tile → sheet), S4 (CTA), S6/S7 (card status + active-trip mini-player), S8 (two deadlines)
+ * epic: pharos-driver-flow-stories.md — S2 (tile → sheet), S4 (CTA), S6/S7 (card status + Trips tab marker), S8 (two deadlines)
  *
  * No form first: the feed is already there; direction + three quick filters narrow it. Applying is one tap and the
- * driver stays on the current view. Waiting status stays on the card; a confirmed trip adds one active-trip mini-player. Status moves with the Demo panel (→ dispatcher approved, → confirmed).
+ * driver stays on the current view. Waiting status stays on the card; a confirmed trip stays first in the feed and the Trips tab gets a marker. Status moves with the Demo panel (→ dispatcher approved, → confirmed).
  *
  * The direction header states the feed (`Direction: {from → to}, {visible} of {towards} loads`);
  * both sides empty reads "Anywhere → Anywhere", never a hidden city; the subline
@@ -34,7 +31,6 @@ import { SmartLoadList } from '../../components/v2/SmartLoadList';
  * Clear filters and Change direction, so a dead-end route recovers in one tap.
  */
 export function Home() {
-  const navigate = useNavigate();
   const { state } = useStore();
   const [loads, setLoads] = useState<V2Load[] | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -76,9 +72,6 @@ export function Home() {
   );
   const routeLabel = directionLabel(state.route.from, state.route.to);
   const visible = feed.visible;
-  const live = liveApplications(state);
-  const activeApplication = live.find((application) => application.status === ApplicationStatus.CONFIRMED) ?? null;
-  const activeLoad = activeApplication ? loads?.find((load) => load.id === activeApplication.loadId) ?? null : null;
   const open = loads?.find((l) => l.id === openId) ?? null;
   const activeLabels = FILTERS.filter((f) => on.includes(f.id)).map((f) => f.label);
 
@@ -109,12 +102,6 @@ export function Home() {
             <Icon name="chevron-down" size="sm" className="text-[var(--color-action-primary)]" />
           </span>
         </button>
-
-        {activeLoad && activeApplication && <ApplicationBanner
-          load={activeLoad}
-          application={activeApplication}
-          onOpen={() => navigate(`/trip/${activeLoad.id}`)}
-        />}
 
         {loadError ? (
           <div role="alert" className="rounded-[var(--radius-lg)] bg-[var(--color-bg-surface)] p-[16px] text-body-14 text-[var(--color-text-primary)]">

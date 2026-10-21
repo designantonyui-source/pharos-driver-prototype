@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { StatusBar } from '../layout/StatusBar';
 import { HomeIndicator } from '../layout/HomeIndicator';
 import { Icon, type IconName } from '../Icon';
+import { ApplicationStatus } from '../../lib/models';
+import { useStore } from '../../lib/store';
 
 /**
  * v2 · driver app shell — NEW component, does not touch the Figma-measured `layout/*` (AGENTS.md #7 still holds:
@@ -21,6 +23,8 @@ const TABS: { label: string; icon: IconName; to: string }[] = [
 ];
 
 export function V2Frame({ active = 'Loads', children }: { active?: string; children: ReactNode }) {
+  const { state } = useStore();
+  const hasActiveTrip = Object.values(state.applications).some((application) => application.status === ApplicationStatus.CONFIRMED && !application.cancelledAfterConfirm);
   return (
     <div data-load-overlay-root className="relative mx-auto h-[var(--screen-h)] w-full max-w-[var(--screen-w)] overflow-hidden bg-[var(--color-bg-canvas)]">
       <div className="absolute inset-x-0 top-0 z-30">
@@ -38,11 +42,17 @@ export function V2Frame({ active = 'Loads', children }: { active?: string; child
             <Link
               key={label}
               to={to}
+              aria-label={label === 'Trips' && hasActiveTrip ? 'Trips, active trip' : undefined}
               className={`flex h-[50px] w-[110px] flex-col items-center gap-[4px] rounded-[var(--radius-pill)] py-[5px] ${
                 on ? 'bg-[var(--color-bg-subtle)]' : ''
               }`}
             >
-              <Icon name={icon} className="text-[var(--color-text-primary)]" />
+              <span className="relative">
+                <Icon name={icon} className="text-[var(--color-text-primary)]" />
+                {label === 'Trips' && hasActiveTrip && (
+                  <span aria-hidden className="absolute -right-[6px] -top-[2px] h-[6px] w-[6px] rounded-full bg-[var(--color-status-success-text)] ring-2 ring-[var(--color-bg-surface)]" />
+                )}
+              </span>
               <span
                 className={`text-label-12 ${on ? 'text-[var(--color-action-primary)]' : 'text-[var(--color-text-secondary)]'}`}
               >
